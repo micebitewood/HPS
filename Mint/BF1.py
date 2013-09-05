@@ -34,9 +34,9 @@ def getMinScore(denominations, exactChangeNumberArr, left, right, score, minScor
 
 import time
 tic = time.clock()
-N = 2
+N = 12.999999
 denominationsNum = 5
-maxNum = 6
+maxNum = 7
 minScore = 4951
-getMinScore([1], [0, 1] + [100 for i in range(98)], 3, 100 - denominationsNum * 2 + 4, 1, minScore)
+getMinScore([1, 5], [0, 1, 2, 3, 4, 1] + [100 for i in range(94)], 7, 96, 1, minScore)
 print time.clock() - tic
