@@ -1,18 +1,18 @@
-def getScore(denominations, right, exchangeNumberArr, score):
+def getScore(denominations, right, exactChangeNumberArr, score):
     for n in range(denominations[-1] + 1, right):
         for i in denominations:
-            exchangeNumberArr[n] = min(exchangeNumberArr[n], exchangeNumberArr[n - i] + 1)
-        if exchangeNumberArr[n] > maxNum:
+            exactChangeNumberArr[n] = min(exactChangeNumberArr[n], exactChangeNumberArr[n - i] + 1)
+        if exactChangeNumberArr[n] > maxNum:
             return 0
         if n % 5 == 0:
-            score += N * exchangeNumberArr[n]
+            score += N * exactChangeNumberArr[n]
         else:
-            score += exchangeNumberArr[n]
+            score += exactChangeNumberArr[n]
     return score
 
-def getMinScore(denominations, exchangeNumberArr, left, right, score, minScore):
+def getMinScore(denominations, exactChangeNumberArr, left, right, score, minScore):
     if len(denominations) == denominationsNum:
-        newArr = exchangeNumberArr[:]
+        newArr = exactChangeNumberArr[:]
         newScore = getScore(denominations, 100, newArr, score)
         if newScore == 0:
             return minScore
@@ -23,7 +23,7 @@ def getMinScore(denominations, exchangeNumberArr, left, right, score, minScore):
         for i in range(left, right):
             if i > maxNum * denominations[-1]:
                 return minScore
-            newArr = exchangeNumberArr[:]
+            newArr = exactChangeNumberArr[:]
             newArr[i] = 1
             newScore = getScore(denominations, i + 1, newArr, score)
             if newScore == 0:
@@ -34,9 +34,9 @@ def getMinScore(denominations, exchangeNumberArr, left, right, score, minScore):
 
 import time
 tic = time.clock()
-N = 4
+N = 2
 denominationsNum = 5
-maxNum = 5
+maxNum = 6
 minScore = 4951
 getMinScore([1], [0, 1] + [100 for i in range(98)], 3, 100 - denominationsNum * 2 + 4, 1, minScore)
 print time.clock() - tic
