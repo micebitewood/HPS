@@ -26,4 +26,4 @@ N = 1
 minScore = 1000
 arr = [0 for i in range(100)]
 calc([1], 2, 100 - 5 + 1)
-print maxScore
+print minScore
