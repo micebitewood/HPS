@@ -1,5 +1,5 @@
 def calc(denominations, left, right):
-    global maxScore
+    global minScore
     if right != 100:
         for i in range(left, right + 1):
             calc(denominations + [i], i + 1, right + 1)
@@ -19,11 +19,11 @@ def calc(denominations, left, right):
             else:
                 score += arr[n - 1]
         print denominations, score
-        if score < maxScore:
-            maxScore = score
+        if score < minScore:
+            minScore = score
 
 N = 1
-maxScore = 1000
+minScore = 1000
 arr = [0 for i in range(100)]
 calc([1], 2, 100 - 5 + 1)
 print maxScore
