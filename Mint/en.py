@@ -46,6 +46,9 @@ def getBestDenomEn(maxChange, N):
 
 	print enSumMin, denomMin
 
+import time
+tic = time.clock()
 maxChange = 99
 N = 4
 getBestDenomEn(maxChange, N)
+print time.clock() - tic
