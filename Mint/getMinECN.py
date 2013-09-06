@@ -7,7 +7,8 @@ with open('selectedSums', 'r') as f:
         key.append(eval(temp[0]))
         sum1.append(int(temp[1]))
         sum2.append(int(temp[2]))
-N = 15
+import sys
+N = int(sys.argv[1])
 minScore = 9999
 for i in range(len(key)):
     score = sum1[i] + N * sum2[i]

@@ -34,7 +34,8 @@ def getMinScore(denominations, exactChangeNumberArr, left, right, score, minScor
 
 import time
 tic = time.clock()
-N = 15
+import sys
+N = int(sys.argv[1])
 denominationsNum = 5
 maxNum = 7
 minScore = 4951
