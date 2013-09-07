@@ -33,12 +33,11 @@ def calculateEnSum(denom, maxChange, N, ecnLim, enLim):
 def getBestDenomEn(maxChange, N, ecnLim, enLim):
 	enSumMin = 999999
 	
-	for i in range(2, (maxChange+1)/2-1):
-		for j in range(i+1, (maxChange+1)/2):
-			for k in range(j+1, (maxChange+1)/2+1):
-#				for l in range(k+1, (maxChange+1)/2+2):
-#					denom = [1, i, j, k, l]
-					denom = [1, 5, i, j, k]
+	for i in range(2, maxChange-2):
+		for j in range(i+1, maxChange-1):
+			for k in range(j+1, maxChange):
+				for l in range(k+1, maxChange+1):
+					denom = [1, i, j, k, l]
 					enSum = calculateEnSum(denom, maxChange, N, ecnLim, enLim)
 					
 					if enSum < enSumMin:
