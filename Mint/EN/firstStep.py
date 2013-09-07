@@ -2,7 +2,7 @@ def exchangeNumber(numberArr):
     sortedList = [[]]
     for i in range(1, len(numberArr)):
         n = numberArr[i]
-        if len(sortedList) - 1 < n:
+        while len(sortedList) - 1 < n:
             sortedList += [[]]
         sortedList[n] += [i]
     change = 0
@@ -27,11 +27,14 @@ def calc(denominations, right, exactChangeNumberArr):
     for n in range(denominations[-1] + 1, right):
         for i in denominations:
             exactChangeNumberArr[n] = min(exactChangeNumberArr[n], exactChangeNumberArr[n - i] + 1)
+    
 
 def preCalc(denominations, exactChangeNumberArr):
     if len(denominations) == numDenominations:
         newArr = exactChangeNumberArr[:]
         calc(denominations, 100, newArr)
+        for i in range(1, 100):
+            newArr[i] = min(1 + newArr[100 - i], newArr[i])
         (sumOther, sumFive) = exchangeNumber(newArr)
         print denominations, sumOther, sumFive
     else:
