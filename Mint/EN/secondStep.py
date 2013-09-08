@@ -2,14 +2,20 @@ key = []
 sum1 = []
 sum2 = []
 lst = []
+minSum2 = 9999
+minInd = 0
 with open('sums', 'r') as f:
     for line in f:
         temp = line.rsplit(' ', 2)
         key.append(eval(temp[0]))
         sum1.append(int(temp[1]))
-        sum2.append(int(temp[2]))
+        tempSum2 = int(temp[2])
+        sum2.append(tempSum2)
+        if tempSum2 < minSum2:
+            minSum2 = tempSum2
+            minInd = len(sum2) - 1
 for i in range(len(key)):
-    if sum1[i] <= 360:
+    if sum1[i] <= sum1[minInd]:
         lst.append([sum1[i], sum2[i], key[i]])
 key = []
 sum1 = []

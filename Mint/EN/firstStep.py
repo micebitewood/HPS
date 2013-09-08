@@ -1,49 +1,70 @@
-def exchangeNumber(numberArr):
-    sortedList = [[]]
-    for i in range(1, len(numberArr)):
-        n = numberArr[i]
-        while len(sortedList) - 1 < n:
-            sortedList += [[]]
-        sortedList[n] += [i]
-    change = 0
-    for i in range(1, len(sortedList) - 1):
-        for j in range(1, len(sortedList) - i):
-            for price in sortedList[i]:
-                for change in sortedList[j]:
-                    if price > change:
-                        if i + j < numberArr[price - change]:
-                            change += 1
-                            numberArr[price - change] = i + j
+def assign(arr, ind, value, changedNumbers):
+    arr[ind] = value
+    changedNumbers.add(ind)
+    arr[100 - ind] = value
+    changedNumbers.add(100 - ind)
+
+def exchangeNumber(arr):
     sumFive = 0
     sumOther = 0
     for n in range(1, 100):
         if n % 5 == 0:
-            sumFive += numberArr[n]
+            sumFive += arr[n]
         else:
-            sumOther += numberArr[n]
+            sumOther += arr[n]
     return (sumOther, sumFive)
 
-def calc(denominations, right, exactChangeNumberArr):
-    for n in range(denominations[-1] + 1, right):
-        for i in denominations:
-            exactChangeNumberArr[n] = min(exactChangeNumberArr[n], exactChangeNumberArr[n - i] + 1)
-    
+def calc(denominations, right, exchangeNumberArr):
+    n = denominations[-1]
+    changedNumbers = set()
+    if right != 100:
+        assign(exchangeNumberArr, right, 1, changedNumbers)
+    for num in range(n + 1, right):
+        for i in range(1, num / 2 + 1):
+            temp = exchangeNumberArr[i] + exchangeNumberArr[num - i]
+            if temp < exchangeNumberArr[num]:
+                assign(exchangeNumberArr, num, temp, changedNumbers)
+        if exchangeNumberArr[right - num] + 1 < exchangeNumberArr[num]:
+            assign(exchangeNumberArr, num, exchangeNumberArr[right - num] + 1, changedNumbers)
+    if right == 100:
+        changedNumbers.add(0)
+    while len(changedNumbers) != 0:
+        newChangedNumbers = changedNumbers.copy()
+        changedNumbers = set()
+        for num in range(1, right):
+            for i in newChangedNumbers:
+                if i < num:
+                    temp = exchangeNumberArr[i] + exchangeNumberArr[num - i]
+                    if temp < exchangeNumberArr[num]:
+                        assign(exchangeNumberArr, num, temp, changedNumbers)
+                elif i > num:
+                    temp = exchangeNumberArr[i] + exchangeNumberArr[i - num]
+                    if temp < exchangeNumberArr[num]:
+                        assign(exchangeNumberArr, num, temp, changedNumbers)
+                if i + num < right + 1 :
+                    temp = exchangeNumberArr[i] + exchangeNumberArr[i + num]
+                    if temp < exchangeNumberArr[num]:
+                        assign(exchangeNumberArr, num, temp, changedNumbers)
 
-def preCalc(denominations, exactChangeNumberArr):
+def preCalc(denominations, exchangeNumberArr):
     if len(denominations) == numDenominations:
-        newArr = exactChangeNumberArr[:]
+        newArr = exchangeNumberArr[:]
         calc(denominations, 100, newArr)
-        for i in range(1, 100):
-            newArr[i] = min(1 + newArr[100 - i], newArr[i])
         (sumOther, sumFive) = exchangeNumber(newArr)
         print denominations, sumOther, sumFive
     else:
-        for i in range(denominations[-1] + 1, 96 + len(denominations)):
-            newArr = exactChangeNumberArr[:]
-            newArr[i] = 1
-            calc(denominations, i + 1, newArr)
-            newDenominations = denominations + [i]
-            preCalc(newDenominations, newArr)
+        if len(denominations) == 0:
+            for i in range(1, 96):
+                newArr = exchangeNumberArr[:]
+                assign(newArr, i, 1, set())
+                newDenominations = denominations + [i]
+                preCalc(newDenominations, newArr)
+        else:
+            for i in range(denominations[-1] + 1, 96 + len(denominations)):
+                newArr = exchangeNumberArr[:]
+                calc(denominations, i, newArr)
+                newDenominations = denominations + [i]
+                preCalc(newDenominations, newArr)
 
 numDenominations = 5
-preCalc([1], [0, 1] + [100 for i in range(98)])
+preCalc([], [0] + [100 for i in range(99)] + [0])
