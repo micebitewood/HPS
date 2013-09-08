@@ -8,8 +8,9 @@ with open('sums', 'r') as f:
     for line in f:
         temp = line.rsplit(' ', 2)
         key.append(eval(temp[0]))
-        sum1.append(int(temp[1]))
+        tempSum1 = int(temp[1])
         tempSum2 = int(temp[2])
+        sum1.append(tempSum1 + tempSum2)
         sum2.append(tempSum2)
         if tempSum2 < minSum2:
             minSum2 = tempSum2

@@ -11,7 +11,7 @@ import sys
 N = int(sys.argv[1])
 minScore = 9999
 for i in range(len(key)):
-    score = sum1[i] + N * sum2[i]
+    score = sum1[i] + (N - 1) * sum2[i]
     if score <= minScore:
         minScore = score
         print key[i], score
