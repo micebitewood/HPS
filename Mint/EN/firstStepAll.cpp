@@ -100,7 +100,7 @@ int main() {
 	
 	FILE* pOut = fopen("csums", "w");
 	
-	for(int n=1; n<=1; ++n) {
+	for(int n=1; n<=46; ++n) {
 		int nMinDenom = n;
 		
 		pDenom[0] = nMinDenom;
