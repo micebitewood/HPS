@@ -8,6 +8,8 @@ def exchangeNumber(arr):
     sumFive = 0
     sumOther = 0
     for n in range(1, 100):
+        if arr[n] == 100:
+            return (0, 0)
         if n % 5 == 0:
             sumFive += arr[n]
         else:
@@ -51,16 +53,17 @@ def preCalc(denominations, exchangeNumberArr):
         newArr = exchangeNumberArr[:]
         calc(denominations, 100, newArr)
         (sumOther, sumFive) = exchangeNumber(newArr)
-        print denominations, sumOther, sumFive
+        if sumOther != 0 and sumFive != 0:
+            print denominations, sumOther, sumFive
     else:
         if len(denominations) == 0:
-            for i in range(1, 96):
+            for i in range(1, 47):
                 newArr = exchangeNumberArr[:]
                 assign(newArr, i, 1, set())
                 newDenominations = denominations + [i]
                 preCalc(newDenominations, newArr)
         else:
-            for i in range(denominations[-1] + 1, 96 + len(denominations)):
+            for i in range(denominations[-1] + 1, 51):
                 newArr = exchangeNumberArr[:]
                 calc(denominations, i, newArr)
                 newDenominations = denominations + [i]

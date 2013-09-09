@@ -1,17 +1,26 @@
-key = []
-sum1 = []
-sum2 = []
+def printResult(score, denominations):
+    print
+    print "score:", score
+    print "denominations sets:", denominations
+    print
+
+sumAll = []
+sumFive = []
+denominations = []
+n = 0
 with open('selectedSums', 'r') as f:
     for line in f:
-        temp = line.rsplit(' ', 2)
-        key.append(eval(temp[0]))
-        sum1.append(int(temp[1]))
-        sum2.append(int(temp[2]))
+        temp = line.split(' ', 2)
+        sumAll.append(int(temp[0]))
+        sumFive.append(int(temp[1]))
+        denominations.append(eval(temp[2]))
+        n += 1
 import sys
 N = int(sys.argv[1])
-minScore = 9999
-for i in range(len(key)):
-    score = sum1[i] + (N - 1) * sum2[i]
+minScore = sumAll[0] + (N - 1) * sumFive[0]
+printResult(minScore, denominations[0])
+for i in range(1, n):
+    score = sumAll[i] + (N - 1) * sumFive[i]
     if score <= minScore:
         minScore = score
-        print key[i], score
+        printResult(minScore, denominations[i])
