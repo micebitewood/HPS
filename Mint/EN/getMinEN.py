@@ -1,7 +1,7 @@
 def printResult(score, denominations):
     print
     print "score:", score
-    print "denominations sets:", denominations
+    print "denominations:", denominations
     print
 
 sumAll = []
@@ -16,7 +16,7 @@ with open('selectedSums', 'r') as f:
         denominations.append(eval(temp[2]))
         n += 1
 import sys
-N = int(sys.argv[1])
+N = float(sys.argv[1])
 minScore = sumAll[0] + (N - 1) * sumFive[0]
 printResult(minScore, denominations[0])
 for i in range(1, n):
