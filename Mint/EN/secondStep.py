@@ -10,21 +10,15 @@ with open('sums', 'r') as f:
         sumFive = int(temp[2])
         sumAll = sumOther + sumFive
         if (sumAll, sumFive) not in sumDict:
-            sumDict[(sumAll, sumFive)] = len(lst)
-            lst += [[]]
-        ind = sumDict[(sumAll, sumFive)]
-        lst[ind] += [denominations]
-        if sumFive < minSumFive:
-            minSumFive = sumFive
-            sumAllOfMinSumFive = sumAll
+            sumDict[(sumAll, sumFive)] = denominations
 keys = sumDict.keys()
 keys.sort()
 newKeys = []
 i = 0
 newKeys += [keys[0]]
 for j in range(1, len(keys)):
-    if keys[i][1] >= keys[j][1]:
+    if keys[i][1] > keys[j][1]:
         newKeys += [keys[j]] 
         i = j
 for key in newKeys:
-    print key[0], key[1], lst[sumDict[key]]
+    print key[0], key[1], sumDict[key]

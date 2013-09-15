@@ -1,37 +1,71 @@
-import sys
-denominations = [int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5])]
-arr = [100 for i in range(100)]
-arr[0] = 0
-N = 1
-for n in range(1, 100):
-    if arr[n] != 1:
-        for i in denominations:
-            if n == i:
-                arr[i] = 1
-                break
-            elif n > i:
-                temp = arr[n - i] + 1
-                if arr[n] > temp:
-                    arr[n] = temp
-flag = True
-while flag:
-    flag = False
-    for n in range(1, 100):
-        if arr[100 - n] < arr[n]:
-            arr[n] = arr[100 - n]
-            flag = True
-    for n in range(1, 100):
-        if n < 50 and 2 * arr[n] < arr[2 * n]:
-            arr[2 * n] = 2 * arr[n]
-            flag = True
-        for m in range(1, n):
-            if n + m < 100 and arr[n] + arr[m] < arr[n + m]:
-                arr[n + m] = arr[n] + arr[m]
-                flag = True
-            if arr[n] + arr[m] < arr[n - m]:
-                arr[n - m] = arr[n] + arr[m]
-                flag = True
+def assign(arr, ind, value, changedNumbers):
+    arr[ind] = value
+    changedNumbers.add(ind)
+    arr[100 - ind] = value
+    changedNumbers.add(100 - ind)
 
+import sys
+arg = [0 for i in range(5)]
+for i in range(1, 6):
+    arg[i - 1] = min(int(sys.argv[i]), 100 - int(sys.argv[i]))
+arg.sort()
+denominations = arg
+arr = [0] + [100 for i in range(99)] + [0]
+assign(arr, denominations[0], 1, set())
+N = 1
+for i in range(1, 5):
+    n = denominations[i]
+    assign(arr, n, 1, set())
+    m = denominations[i - 1]
+    changedNumbers = set()
+    for num in range(m + 1, n):
+         for j in range(1, num / 2 + 1):
+            temp = arr[j] +  arr[num - j]
+            if temp < arr[num]:
+                assign(arr, num, temp, changedNumbers)
+         if arr[n - num] + 1 < arr[num]:
+            assign(arr, num, arr[n - num] + 1, changedNumbers)
+    while len(changedNumbers) != 0:
+        newChangedNumbers = changedNumbers
+        changedNumbers = set()
+        for num in range(1, n):
+            for j in newChangedNumbers:
+                if j < num:
+                    temp = arr[j] + arr[num - j]
+                elif j > num:
+                    temp = arr[j] + arr[j - num]
+                else:
+                    temp = arr[num]
+                if temp < arr[num]:
+                    assign(arr, num, temp, changedNumbers)
+                if j + num <= n:
+                    temp = arr[j] + arr[j + num]
+                    if temp < arr[num]:
+                        assign(arr, num, temp, changedNumbers)
+changedNumbers = set()
+changedNumbers.add(0)
+for num in range(denominations[-1] + 1, 100):
+    for i in range(1, num / 2 + 1):
+        temp = arr[i] + arr[num - i]
+        if temp < arr[num]:
+            assign(arr, num, temp, changedNumbers)
+while len(changedNumbers) != 0:
+    newChangedNumbers = changedNumbers
+    changedNumbers = set()
+    for num in range(1, 100):
+        for i in newChangedNumbers:
+            if i < num:
+                temp = arr[i] + arr[num - i]
+            elif i > num:
+                temp = arr[i] + arr[i - num]
+            else:
+                temp = arr[num]
+            if temp < arr[num]:
+                assign(arr, num, temp, changedNumbers)
+            if i + num <= 100:
+                temp = arr[i] + arr[i + num]
+                if temp < arr[num]:
+                    assign(arr, num, temp, changedNumbers)
 score = 0
 for n in range(1, 100):
     if n % 5 == 0:
@@ -39,4 +73,5 @@ for n in range(1, 100):
     else:
         score += arr[n]
 print score
+print denominations
 print arr

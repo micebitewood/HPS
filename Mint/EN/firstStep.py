@@ -31,7 +31,7 @@ def calc(denominations, right, exchangeNumberArr):
     if right == 100:
         changedNumbers.add(0)
     while len(changedNumbers) != 0:
-        newChangedNumbers = changedNumbers.copy()
+        newChangedNumbers = changedNumbers
         changedNumbers = set()
         for num in range(1, right):
             for i in newChangedNumbers:

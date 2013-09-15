@@ -1,0 +1,11 @@
+for (( i = 0; i <= $1; i++ ))
+do
+    a=$((RANDOM%99+1))
+    b=$((RANDOM%99+1)) 
+    c=$((RANDOM%99+1)) 
+    d=$((RANDOM%99+1)) 
+    e=$((RANDOM%99+1)) 
+    echo `python testVerify.py $a $b $c $d $e >> a`
+    echo `python verify.py $a $b $c $d $e >> b`
+done
+echo `diff a b`
