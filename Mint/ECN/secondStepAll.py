@@ -14,9 +14,6 @@ with open('sums', 'r') as f:
             lst += [[]]
         ind = sumDict[(sumAll, sumFive)]
         lst[ind] += [denominations]
-        if sumFive < minSumFive:
-            minSumFive = sumFive
-            sumAllOfMinSumFive = sumAll
 keys = sumDict.keys()
 keys.sort()
 newKeys = []

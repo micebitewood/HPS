@@ -11,9 +11,6 @@ with open('sums', 'r') as f:
         sumAll = sumOther + sumFive
         if (sumAll, sumFive) not in sumDict:
             sumDict[(sumAll, sumFive)] = denominations
-            if sumFive < minSumFive:
-                minSumFive = sumFive
-                sumAllOfMinSumFive = sumAll
 keys = sumDict.keys()
 keys.sort()
 newKeys = []
