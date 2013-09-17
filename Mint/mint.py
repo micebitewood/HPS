@@ -22,9 +22,10 @@ elif problemID != 1:
     print "the problem number should be either 1 or 2"
     sys.exit(0)
 N = float(sys.argv[1])
-minScore = 99999999
-minDenominations = []
-for (sumAll, sumFive) in data.keys():
+pairs = data.keys()
+minScore = pairs[0][0] + (N - 1) * pairs[0][1]
+minDenominations = data[pairs[0]]
+for (sumAll, sumFive) in pairs:
     score = sumAll + (N - 1) * sumFive
     if score < minScore:
         minScore = score
