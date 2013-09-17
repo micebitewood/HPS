@@ -1,3 +1,46 @@
+def minimalSpanningTree(citiesConnected, roadVisited):
+    sectionNumForCities = [0 for i in range(1000)]
+    citySections = [[]]#group cities if connected
+    sectionCount = 0#if it's 1 then all the cities are connected
+    citiesVisitedCount = 0
+    distSum = 0
+    for road in distBetweenCitiesList:
+        city1, city2 = road[1], road[2]
+        section1, section2 = sectionNumForCities[city1], sectionNumForCities[city2]
+        if section1 != 0 and section2 != 0:
+            if section1 == section2:
+                continue
+            minSection, maxSection = min(section1, section2), max(section1, section2)
+            for city in citySections[maxSection]:
+                sectionNumForCities[city] = minSection
+                citySections[minSection].append(city)
+            sectionCount -= 1
+        elif section1 == 0 and section2 == 0:
+            sectionNum = len(citySections)
+            sectionNumForCities[city1], sectionNumForCities[city2] = sectionNum, sectionNum
+            citySections.append([city1, city2])
+            citiesVisitedCount += 2
+            sectionCount += 1
+            citiesConnected[city1] = []
+            citiesConnected[city2] = []
+        else:
+            if section1 == 0:
+                sectionNumForCities[city1] = section2
+                citySections[section2].append(city1)
+                citiesConnected[city1] = []
+            else:
+                sectionNumForCities[city2] = section1
+                citySections[section1].append(city2)
+                citiesConnected[city2] = []
+            citiesVisitedCount += 1
+        roadVisited[(city1, city2)] = road[0]
+        distSum += road[0]
+        citiesConnected[city1].append((road[0], city2))
+        citiesConnected[city2].append((road[0], city1))
+        if citiesVisitedCount == 1000 and sectionCount == 1:
+            break;
+    return distSum
+
 def getDist(i, j):
     sumDist = 0
     for k in range(1, 4):
@@ -20,53 +63,15 @@ for i in range(len(cities)):
         distBetweenCitiesDict[(j, i)] = dist
 distBetweenCitiesList.sort()
 
-sectionNumForCities = [0 for i in range(1000)]
-distSum = 0
-citiesVisitedCount = 0
-citySections = [[]]#group cities if connected
 roadVisited = dict()#for further use, [city1, city2] -> dist
-sectionCount = 0#if it's 1 then all the cities are connected
 citiesConnected = dict()#for saving cities which are directly connected, city -> [cities]
-for road in distBetweenCitiesList:
-    city1, city2 = road[1], road[2]#city1 < city2
-    section1, section2 = sectionNumForCities[city1], sectionNumForCities[city2]
-    if section1 != 0 and section2 != 0:
-        if section1 == section2:
-            continue
-        minSection, maxSection = min(section1, section2), max(section1, section2)
-        for city in citySections[maxSection]:
-            sectionNumForCities[city] = minSection
-            citySections[minSection].append(city)
-        sectionCount -= 1
-    elif section1 == 0 and section2 == 0:
-        sectionNum = len(citySections)
-        sectionNumForCities[city1], sectionNumForCities[city2] = sectionNum, sectionNum
-        citySections.append([city1, city2])
-        citiesVisitedCount += 2
-        sectionCount += 1
-        citiesConnected[city1] = []
-        citiesConnected[city2] = []
-    else:
-        if section1 == 0:
-            sectionNumForCities[city1] = section2
-            citySections[section2].append(city1)
-            citiesConnected[city1] = []
-        else:
-            sectionNumForCities[city2] = section1
-            citySections[section1].append(city2)
-            citiesConnected[city2] = []
-        citiesVisitedCount += 1
-    roadVisited[(city1, city2)] = road[0]
-    distSum += road[0]
-    citiesConnected[city1].append(city2)
-    citiesConnected[city2].append(city1)
-    if citiesVisitedCount == 1000 and sectionCount == 1:
-        break;
+distSum = minimalSpanningTree(citiesConnected, roadVisited)
+
 oddCities = []
 for city in citiesConnected.keys():
     if len(citiesConnected[city]) % 2 != 0:
         oddCities.append(city)
-distBetweenOddCities = []
+distBetweenOddCities = []#[(dist, city1, city2)]
 for i in range(len(oddCities)):
     for j in range(i):
         city1, city2 = min(oddCities[i], oddCities[j]), max(oddCities[i], oddCities[j])
@@ -80,15 +85,14 @@ for road in distBetweenOddCities:
     if city1 not in newCitiesVisited and city2 not in newCitiesVisited:
         newCitiesVisited.add(city1)
         newCitiesVisited.add(city2)
-        distSum += road[0]
         maxDist = 0
-        for city3 in citiesConnected[city1]:
-            minCity, maxCity = min(city1, city3), max(city1, city3)
-            if distBetweenCitiesDict[minCity, maxCity] > maxDist:
-                maxDist = distBetweenCitiesDict[minCity, maxCity]
-        for city3 in citiesConnected[city2]:
-            minCity, maxCity = min(city2, city3), max(city2, city3)
-            if distBetweenCitiesDict[minCity, maxCity] > maxDist:
-                maxDist = distBetweenCitiesDict[minCity, maxCity]
+        for (tempDist, city3) in citiesConnected[city1]:
+            if tempDist > maxDist:
+                maxDist = tempDist
+        for (tempDist, city3) in citiesConnected[city2]:
+            if tempDist > maxDist:
+                maxDist = tempDist
+        if 
+        distSum += road[0]
         distSum -= maxDist
 print distSum
