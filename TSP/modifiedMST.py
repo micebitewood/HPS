@@ -124,6 +124,8 @@ while len(citiesWithOneRoad) > 2:
             roadVisited[city1, city2] = road[0]
             distSum -= dist
     citiesWithOneRoad = newCitiesWithOneRoad
+print distSum
+'''
 import matplotlib.pyplot as pyplot
 for road in roadVisited.keys():
     city1 = road[0]
@@ -133,3 +135,4 @@ for road in roadVisited.keys():
     pyplot.plot([x1, x2], [y1, y2], '-')
 pyplot.axis([-100, 30100, -100, 30100])
 pyplot.show()
+'''
