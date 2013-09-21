@@ -1,35 +1,38 @@
 def getLongestRoad(roadVisited, citiesConnected, city1, city2, newCitiesWithOneRoad):
-    '''
-    (dist1, city3, city4) = getLongestRoad(roadVisited, citiesConnected, city1, newCitiesWithOneRoad)
-    (dist2, city5, city6) = getLongestRoad(roadVisited, citiesConnected, city2, newCitiesWithOneRoad)
-    if dist1 > dist2:
-        cities = (min(), max())
-        dist = dist1
-    else:
-        cities = (min(), max())
-        dist = dist2
-'''
-    flag = False
-    citiesConnectedToCity1, citiesConnectedToCity2 = citiesConnected[city1], citiesConnected[city2]
-    dist = 0
-    for (t, city) in citiesConnectedToCity1:
-        if len(citiesConnected[city]) > 2:
-            key = (min(city1, city), max(city1, city))
-            dist = roadVisited.pop(key)
-            citiesConnected[city1].remove((t, city))
-            citiesConnected[city].remove((t, city1))
-            flag = True
-            newCitiesWithOneRoad.append(city1)
-    if flag == True:
-        return dist
-    for (t, city) in citiesConnectedToCity2:
-        if len(citiesConnected[city]) > 2:
-            key = (min(city2, city), max(city2, city))
-            dist = roadVisited.pop(key)
-            citiesConnected[city2].remove((t, city))
-            citiesConnected[city].remove((t, city2))
-            newCitiesWithOneRoad.append(city2)
-    return dist
+    citiesVisited = set()#set([city])
+    while True:
+        citiesVisited.add(city1)
+        citiesVisited.add(city2)
+        flag = False
+        citiesConnectedToCity1, citiesConnectedToCity2 = citiesConnected[city1], citiesConnected[city2]
+        dist = 0
+        city3 = city1
+        city4 = city2
+        for (t, city) in citiesConnectedToCity1:
+            if len(citiesConnected[city]) > 2:
+                key = (min(city1, city), max(city1, city))
+                dist = roadVisited.pop(key)
+                citiesConnected[city1].remove((t, city))
+                citiesConnected[city].remove((t, city1))
+                flag = True
+                newCitiesWithOneRoad.append(city1)
+            elif city not in citiesVisited:
+                city3 = city
+        if flag == True:
+            return dist
+        for (t, city) in citiesConnectedToCity2:
+            if len(citiesConnected[city]) > 2:
+                key = (min(city2, city), max(city2, city))
+                dist = roadVisited.pop(key)
+                citiesConnected[city2].remove((t, city))
+                citiesConnected[city].remove((t, city2))
+                flag = True
+                newCitiesWithOneRoad.append(city2)
+            elif city not in citiesVisited:
+                city4 = city
+        if flag == True:
+            return dist
+        city1, city2 = city3, city4
 
 def minimalSpanningTree(citiesConnected, roadVisited):
     sectionNumForCities = [0 for i in range(1000)]
@@ -100,7 +103,7 @@ roadVisited = dict()#for further use, [city1, city2] -> dist
 citiesConnected = dict()#for saving cities which are directly connected, city -> [cities]
 distSum = minimalSpanningTree(citiesConnected, roadVisited)
 
-citiesWithOneRoad = []
+citiesWithOneRoad = []#[city]
 for city in citiesConnected.keys():
     if len(citiesConnected[city]) == 1:
         citiesWithOneRoad.append(city)
@@ -109,7 +112,7 @@ while len(citiesWithOneRoad) > 2:
     citiesWithOneRoad.sort()
     for i in range(len(citiesWithOneRoad)):
         for j in range(i):
-            city1, city2 = citiesWithOneRoad[j], citiesWithOneRoad[i]
+            city1, city2 = citiesWithOneRoad[j], citiesWithOneRoad[i]#city1 < city2
             distBetweenCitiesWithOneRoad.append((distBetweenCitiesDict[city1, city2], city1, city2))
     distBetweenCitiesWithOneRoad.sort()
     newCitiesVisited = set()
@@ -117,15 +120,50 @@ while len(citiesWithOneRoad) > 2:
     for road in distBetweenCitiesWithOneRoad:
         city1, city2 = road[1], road[2]
         if city1 not in newCitiesVisited and city2 not in newCitiesVisited:
+            citiesWithOneRoad.remove(city1)
+            citiesWithOneRoad.remove(city2)
             distSum += road[0]
             newCitiesVisited.add(city1)
             newCitiesVisited.add(city2)
             dist = getLongestRoad(roadVisited, citiesConnected, city1, city2, newCitiesWithOneRoad)
             roadVisited[city1, city2] = road[0]
+            citiesConnected[city1].append((road[0], city2))
+            citiesConnected[city2].append((road[0], city1))
             distSum -= dist
-    citiesWithOneRoad = newCitiesWithOneRoad
+    citiesWithOneRoad += newCitiesWithOneRoad
+print citiesWithOneRoad
+firstCity = citiesWithOneRoad[0]
+route = [firstCity]
+nextCity = firstCity
+citiesVisited = set()
+citiesVisited.add(firstCity)
+while nextCity != citiesWithOneRoad[1]:
+    length = len(citiesConnected[nextCity])
+    for (dist, thisCity) in citiesConnected[nextCity]:
+        if thisCity not in citiesVisited:
+            citiesVisited.add(thisCity)
+            if len(citiesConnected[nextCity]) > 2:
+                cities = citiesConnected[nextCity]
+                for (dist, thatCity) in cities:
+                    if thatCity in citiesVisited:
+                        cities.remove(dist, thatCity)
+                for i in range(1, len(cities), 2):
+                    city1, city2 = min(cities[i - 1][1], cities[i][1]), max(cities[i - 1][1], cities[i][1])
+                    key = (min(city1, nextCity), max(city1, nextCity))
+                    distSum -= roadVisited.pop(key)
+                    key = (min(city2, nextCity), max(city2, nextCity))
+                    distSum -= roadVisited.pop(key)
+                    key = (city1, city2)
+                    roadVisited[key] = distBetweenCitiesDict[key]
+                    citiesConnected[city1].append(city2)
+                    citiesConnected[city2].append(city1)
+                    citiesConnected[nextCity].remove(city1)
+                    citiesConnected[nextCity].remove(city2)
+            nextCity = thisCity
+            break
+    route.append(nextCity)
+print route
 print distSum
-'''
 import matplotlib.pyplot as pyplot
 for road in roadVisited.keys():
     city1 = road[0]
@@ -135,4 +173,3 @@ for road in roadVisited.keys():
     pyplot.plot([x1, x2], [y1, y2], '-')
 pyplot.axis([-100, 30100, -100, 30100])
 pyplot.show()
-'''
