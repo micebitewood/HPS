@@ -2,16 +2,20 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include <pthread.h>
 
 const int N = 1000;
 const char FILENAME_IN[] = "tsp1000";
 const char FILENAME_OUT[] = "output";
+
+const int NUM_THREADS = 6;
 
 const int NUM_TRIALS = 5;
 const int NUM_ITERATIONS_UNTANGLE = 30000;
 const int NUM_ITERATIONS_INSERT = 10000;
 const int NUM_STEPS = 10000;
 const int CUT = 4;
+const int TIME_LIMIT = 115;
 
 const double TEMP_INIT = 0.005;
 const double TEMP_FINAL = 0.000001;
@@ -26,14 +30,23 @@ typedef struct {
 	int z;
 } pos;
 
-double d[N*N];	// Distance between two cities
-int mst[N-1];	// MST edges
-clock_t start;	// Timer start
-int tmp;
+typedef struct {
+	int* p;
+	int tID;
+	unsigned int seed;
+} thread_data;
 
-inline int randRange(int r) { return rand() % r; }
-inline void swap(int &a, int &b) { tmp = a; a = b; b = tmp; }
-inline double getElapsedTime() { return double(clock()-start)/CLOCKS_PER_SEC; }
+double d[N*N];			// Distance between two cities
+int mst[N-1];			// MST edges
+struct timespec start;	// Timer start
+
+inline int randRange(int r, unsigned int* seedp) { return rand_r(seedp) % r; }
+inline void swap(int &a, int &b) { int tmp = a; a = b; b = tmp; }
+int getElapsedTime() {
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC, &now);
+	return now.tv_sec - start.tv_sec;
+}
 
 void readData() {
 	pos p[N];
@@ -53,7 +66,7 @@ void readData() {
 		for(int j=i+1; j<N; ++j)
 			d[i*N+j] = d[j*N+i] = sqrt(pow(double(p[i].x-p[j].x), 2.0) + pow(double(p[i].y-p[j].y), 2.0) + pow(double(p[i].z-p[j].z), 2.0));
 	
-	printf("Done calculating distances! - %f\n", getElapsedTime());
+	printf("Done calculating distances! - %d\n", getElapsedTime());
 }
 
 void calculateMST() {
@@ -84,7 +97,7 @@ void calculateMST() {
 		a[e%N] = true;
 	}
 	
-	printf("Done calculating MST! - %f\n", getElapsedTime());
+	printf("Done calculating MST! - %d\n", getElapsedTime());
 }
 
 void dfs(int node, int* count, bool f[N], int p[N]) {
@@ -134,7 +147,7 @@ void displayPath(int p[N]) {
 //	for(int i=0; i<N; ++i)
 //		printf("Travel from %d to %d: %f\n", p[i]+1, p[(i+1)%N]+1, d[p[i]*N+p[(i+1)%N]]);
 	
-	printf("Total travel distance: %f - %f\n", calculateTravelDist(p), getElapsedTime());
+	printf("Total travel distance: %f - %d\n", calculateTravelDist(p), getElapsedTime());
 }
 
 void writePath(int p[N]) {
@@ -179,7 +192,12 @@ double untangle2(int p[N], double dist) {
 	return dist;
 }
 
-double runSimulatedAnnealing(int mp[N]) {
+void* runSimulatedAnnealing(void* data) {
+	int* mp = ((thread_data*)data)->p;
+	int tID = ((thread_data*)data)->tID;
+	unsigned int seed = ((thread_data*)data)->seed;
+	srand(seed);
+	
 	double m = INF;
 	bool f[N];
 	int p[N];
@@ -190,13 +208,13 @@ double runSimulatedAnnealing(int mp[N]) {
 	int noUpdate;
 	int n1, n2;
 	
-	for(int trial=0; trial<NUM_TRIALS; ++trial) {
+	for(int trial=0; trial<NUM_TRIALS && getElapsedTime()<TIME_LIMIT; ++trial) {
 		count = 0;
 		noUpdate = 0;
 		for(int i=0; i<N; ++i)
 			f[i] = false;
 		
-		dfs(randRange(N), &count, f, p);
+		dfs(randRange(N, &seed), &count, f, p);
 		dist = calculateTravelDist(p);
 		dist = untangle1(p, dist);
 		dist = untangle2(p, dist);
@@ -216,8 +234,8 @@ double runSimulatedAnnealing(int mp[N]) {
 			
 			for(int i=0; i<NUM_ITERATIONS_UNTANGLE; ++i) {
 				// Untangle phase
-				n1 = randRange(N);
-				n2 = (n1+randRange(N-3)+2)%N;
+				n1 = randRange(N, &seed);
+				n2 = (n1+randRange(N-5, &seed)+3)%N;
 				
 				if(n1 > n2)
 					swap(n1, n2);
@@ -225,7 +243,7 @@ double runSimulatedAnnealing(int mp[N]) {
 				diff = d[p[n2]*N+p[(n1+N-1)%N]] + d[p[n1]*N+p[(n2+1)%N]]
 					 - d[p[n1]*N+p[(n1+N-1)%N]] - d[p[n2]*N+p[(n2+1)%N]];
 				
-				if(diff < 0.0 || diff/m < 0.2 && exp(-diff/m/t)*double(RAND_MAX) > double(rand())) {
+				if(diff < 0.0 || diff/m < 0.2 && exp(-diff/m/t)*double(RAND_MAX) > double(rand_r(&seed))) {
 					for(int j=0; j<(n2-n1+1)/2; ++j)
 						swap(p[n1+j], p[n2-j]);
 					
@@ -243,13 +261,13 @@ double runSimulatedAnnealing(int mp[N]) {
 			
 			for(int i=0; i<NUM_ITERATIONS_INSERT; ++i) {
 				// Insert phase
-				n1 = randRange(N);
-				n2 = (n1+randRange(N-3)+2)%N;
+				n1 = randRange(N, &seed);
+				n2 = (n1+randRange(N-3, &seed)+2)%N;
 				
 				diff = d[p[(n1+N-1)%N]*N+p[(n1+1)%N]] + d[p[n2]*N+p[n1]] + d[p[n1]*N+p[(n2+1)%N]]
 					 - d[p[(n1+N-1)%N]*N+p[n1]] - d[p[n1]*N+p[(n1+1)%N]] - d[p[n2]*N+p[(n2+1)%N]];
 				
-				if(diff < 0.0 || diff/m < 0.2 && exp(-diff/m/t)*double(RAND_MAX) > double(rand())) {
+				if(diff < 0.0 || diff/m < 0.2 && exp(-diff/m/t)*double(RAND_MAX) > double(rand_r(&seed))) {
 					if(n1 > n2)
 						n2 += N;
 					
@@ -285,26 +303,71 @@ double runSimulatedAnnealing(int mp[N]) {
 				if(++noUpdate > CUT)
 					break;
 			
+			if(getElapsedTime() > TIME_LIMIT)
+				break;
+			
 			t *= TEMP_MULT;
 		}
 		
-		printf("Trial %d: %f (min: %f), temp: %f - %f\n", trial, dist, m, -log10(t), getElapsedTime());
+		printf("T%d Trial %d: %f (min: %f), temp: %f - %d\n", tID, trial, dist, m, -log10(t), getElapsedTime());
 //		displayPath(p);
 	}
 	
-	return m;
+	pthread_exit(NULL);
+}
+
+void launchThreads(int p[NUM_THREADS][N]) {
+	pthread_t thr[NUM_THREADS];
+	thread_data data[NUM_THREADS];
+	
+	for(int i=0; i<NUM_THREADS; ++i) {
+		data[i].p = p[i];
+		data[i].tID = i;
+		data[i].seed = time(NULL)+i;
+		
+		int rc = pthread_create(&thr[i], NULL, runSimulatedAnnealing, (void*)&data[i]);
+		
+		if(rc > 0)
+			printf("Error creating thread %d\n", i);
+	}
+	
+	for(int i=0; i<NUM_THREADS; ++i) {
+		int rc = pthread_join(thr[i], NULL);
+		if(rc > 0)
+			printf("Error joining thread %d\n", i);
+	}
+}
+
+void runMultiSimulatedAnnealing(int mp[N]) {
+	int p[NUM_THREADS][N];
+	double dist[NUM_THREADS];
+	double m = INF;
+	int mi;
+	
+	launchThreads(p);
+	
+	for(int i=0; i<NUM_THREADS; ++i) {
+		dist[i] = calculateTravelDist(p[i]);
+		
+		if(dist[i] < m) {
+			m = dist[i];
+			mi = i;
+		}
+	}
+	
+	for(int i=0; i<N; ++i)
+		mp[i] = p[mi][i];
 }
 
 int main() {
-	start = clock();
-	srand(time(NULL));
+	clock_gettime(CLOCK_MONOTONIC, &start);
+//	srand(time(NULL));
 	readData();
 	calculateMST();
 	
 	int p[N];
-//	double m = calculateMinDFS(p);
-	double m = runSimulatedAnnealing(p);
-//	displayPath(p);
+	runMultiSimulatedAnnealing(p);
+	displayPath(p);
 	writePath(p);
 	
 	return 0;
