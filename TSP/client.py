@@ -27,6 +27,9 @@ while True:
 input_data = input_data[:-1]
 with open('input', 'w') as f:
     f.write(input_data)
+import ctypes
+tsp = ctypes.CDLL('/home/jm4911/HPS/TSP/tsp.so')
+tsp.main()
 path = ""
 with open('output', 'r') as f:
     path = f.read()
