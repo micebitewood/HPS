@@ -115,7 +115,7 @@ double calculateTravelDist(int p[N]) {
 	for(int i=0; i<N-1; ++i)
 		s += d[p[i]*N+p[i+1]];
 	
-	s += d[p[N-1]*N+p[0]];
+//	s += d[p[N-1]*N+p[0]];
 	
 	return s;
 }
@@ -144,9 +144,6 @@ double calculateMinDFS(int mp[N]) {
 }
 
 void displayPath(int p[N]) {
-//	for(int i=0; i<N; ++i)
-//		printf("Travel from %d to %d: %f\n", p[i]+1, p[(i+1)%N]+1, d[p[i]*N+p[(i+1)%N]]);
-	
 	printf("Total travel distance: %f - %d\n", calculateTravelDist(p), getElapsedTime());
 }
 
@@ -175,7 +172,7 @@ void writePath(int p[N]) {
 double untangle1(int p[N], double dist) {
 	double diff;
 	
-	for(int i=0; i<N; ++i) {
+	for(int i=0; i<N-3; ++i) {
 		diff = d[p[i]*N+p[(i+2)%N]] + d[p[(i+1)%N]*N+p[(i+3)%N]] - d[p[i]*N+p[(i+1)%N]] - d[p[(i+2)%N]*N+p[(i+3)%N]];
 		
 		if(diff < 0.0) {
@@ -190,7 +187,7 @@ double untangle1(int p[N], double dist) {
 double untangle2(int p[N], double dist) {
 	double diff;
 	
-	for(int i=0; i<N; ++i) {
+	for(int i=0; i<N-4; ++i) {
 		diff = d[p[i]*N+p[(i+3)%N]] + d[p[(i+1)%N]*N+p[(i+4)%N]] - d[p[i]*N+p[(i+1)%N]] - d[p[(i+3)%N]*N+p[(i+4)%N]];
 		
 		if(diff < 0.0) {
@@ -250,10 +247,16 @@ void* runSimulatedAnnealing(void* data) {
 				if(n1 > n2)
 					swap(n1, n2);
 				
-				diff = d[p[n2]*N+p[(n1+N-1)%N]] + d[p[n1]*N+p[(n2+1)%N]]
-					 - d[p[n1]*N+p[(n1+N-1)%N]] - d[p[n2]*N+p[(n2+1)%N]];
+				if(n1 == 0)
+					diff = d[p[n1]*N+p[n2+1]] - d[p[n2]*N+p[n2+1]];
+				else if(n2 == N-1)
+					diff = d[p[n2]*N+p[n1-1]] - d[p[n1]*N+p[n1-1]];
+				else
+					diff = d[p[n2]*N+p[n1-1]] + d[p[n1]*N+p[n2+1]]
+						 - d[p[n1]*N+p[n1-1]] - d[p[n2]*N+p[n2+1]];
 				
 				if(diff < 0.0 || diff/m < 0.2 && exp(-diff/m/t)*double(RAND_MAX) > double(rand_r(&seed))) {
+//					printf("unt %d %d %f %f\n", n1, n2, diff, diff/m);
 					for(int j=0; j<(n2-n1+1)/2; ++j)
 						swap(p[n1+j], p[n2-j]);
 					
@@ -274,17 +277,31 @@ void* runSimulatedAnnealing(void* data) {
 				n1 = randRange(N, &seed);
 				n2 = (n1+randRange(N-3, &seed)+2)%N;
 				
-				diff = d[p[(n1+N-1)%N]*N+p[(n1+1)%N]] + d[p[n2]*N+p[n1]] + d[p[n1]*N+p[(n2+1)%N]]
-					 - d[p[(n1+N-1)%N]*N+p[n1]] - d[p[n1]*N+p[(n1+1)%N]] - d[p[n2]*N+p[(n2+1)%N]];
+				if(n1 == 0)
+					diff = d[p[n2]*N+p[n1]] + d[p[n1]*N+p[n2+1]]
+						 - d[p[n1]*N+p[n1+1]] - d[p[n2]*N+p[n2+1]];
+				else if(n1 == N-1)
+					diff = d[p[n2]*N+p[n1]] + d[p[n1]*N+p[n2+1]]
+						 - d[p[n1-1]*N+p[n1]] - d[p[n2]*N+p[n2+1]];
+				else if(n2 == N-1)
+					diff = d[p[n1-1]*N+p[n1+1]] + d[p[n2]*N+p[n1]]
+						 - d[p[n1-1]*N+p[n1]] - d[p[n1]*N+p[n1+1]];
+				else
+					diff = d[p[n1-1]*N+p[n1+1]] + d[p[n2]*N+p[n1]] + d[p[n1]*N+p[n2+1]]
+						 - d[p[n1-1]*N+p[n1]] - d[p[n1]*N+p[n1+1]] - d[p[n2]*N+p[n2+1]];
 				
 				if(diff < 0.0 || diff/m < 0.2 && exp(-diff/m/t)*double(RAND_MAX) > double(rand_r(&seed))) {
-					if(n1 > n2)
-						n2 += N;
-					
+//					printf("ins %f %f\n", diff, diff/m);
 					int tmp = p[n1];
-					for(int j=n1; j<n2; ++j)
-						p[j%N] = p[(j+1)%N];
-					p[n2%N] = tmp;
+					if(n1 < n2) {
+						for(int j=n1; j<n2; ++j)
+							p[j] = p[j+1];
+						p[n2] = tmp;
+					} else {
+						for(int j=n1; j>n2+1; --j)
+							p[j] = p[j-1];
+						p[n2+1] = tmp;
+					}
 					
 					dist += diff;
 					
