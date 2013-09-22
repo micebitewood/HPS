@@ -1,3 +1,29 @@
+def getNewRoute(i, newRoute):
+    for index in range(1, len(newRoute) + 1 - i):
+        city1, city2 = newRoute[index - 1], newRoute[index - 1 + i]
+        dist = 0
+        if index > 1:
+            city3 = newRoute[index - 2]
+            dist += getDist(city2, city3)
+            dist -= getDist(city1, city3)
+        if index < len(newRoute) - i:
+            city4 = newRoute[index + i]
+            dist += getDist(city1, city4)
+            dist -= getDist(city2, city4)
+        if dist < 0:
+            if index != 1:
+                newRoute[index - 1: index + i] = newRoute[index + i - 1: index - 2: -1]
+            else:
+                newRoute[index - 1: index + i] = newRoute[index + i - 1::-1]
+    return newRoute
+
+def untangle(newRoute):
+    for i in range(500, 0, -1):
+        newRoute = getNewRoute(i, newRoute)
+    for i in range(1, 500):
+        newRoute = getNewRoute(i, newRoute)
+    return newRoute
+
 def reFactor(route):
     MINDIST = 4000
     MAXDIST = 2000
@@ -19,7 +45,6 @@ def reFactor(route):
                 break
         if not hasInserted:
             newRoute.append(city)
-    print newRoute
     return newRoute
 
 def getDist(i, j):
@@ -97,7 +122,8 @@ while citiesCount < citiesNum:
     route.append(nextCity)
     
 route = reFactor(route)
-print route
+route = untangle(route)
+
 import matplotlib.pyplot as plot
 dist = 0
 for i in range(1, citiesNum):
