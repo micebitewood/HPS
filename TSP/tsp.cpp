@@ -165,9 +165,9 @@ void writePath2(int p[N]) {
 void writePath(int p[N]) {
 	FILE* out = fopen(FILENAME_OUT, "w");
 	
-	fprintf(out, "%d", p[0]+1);
 	for(int i=0; i<N-1; ++i)
-		fprintf(out, " %d", p[i]+1);
+		fprintf(out, "%d ", p[i]+1);
+	fprintf(out, "%d", p[N-1]+1);
 	
 	fclose(out);
 }
