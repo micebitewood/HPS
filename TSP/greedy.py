@@ -18,15 +18,43 @@ def getNewRoute(i, newRoute):
     return newRoute
 
 def untangle(newRoute):
+    '''
+    for i in range(999, 0, -1):
+        newRoute = getNewRoute(i, newRoute)
+    for i in range(1, 999):
+        newRoute = getNewRoute(i, newRoute)
     for i in range(500, 0, -1):
         newRoute = getNewRoute(i, newRoute)
-    for i in range(1, 500):
+    for i in range(500, 900):
+        newRoute = getNewRoute(i, newRoute)
+    for i in range(900, 500, -1):
+        newRoute = getNewRoute(i, newRoute)
+    for i in range(1, 100):
+        newRoute = getNewRoute(i, newRoute)
+    for i in range(1, 999):
+        newRoute = getNewRoute(i, newRoute)
+    '''
+    for i in range(999, 0, -1):
+        newRoute = getNewRoute(i, newRoute)
+    for i in range(1, 1000):
+        newRoute = getNewRoute(i, newRoute)
+    for i in range(999, 0, -1):
+        newRoute = getNewRoute(i, newRoute)
+    for i in range(1, 1000):
+        newRoute = getNewRoute(i, newRoute)
+    for i in range(999, 0, -1):
+        newRoute = getNewRoute(i, newRoute)
+    for i in range(1, 1000):
+        newRoute = getNewRoute(i, newRoute)
+    for i in range(999, 0, -1):
+        newRoute = getNewRoute(i, newRoute)
+    for i in range(1, 1000):
         newRoute = getNewRoute(i, newRoute)
     return newRoute
 
 def reFactor(route):
     MINDIST = 4000
-    MAXDIST = 2000
+    MAXDIST = 1500
     maxIndex = 1
     for index in range(1, len(route)):
         city1, city2 = route[index - 1], route[index]
@@ -53,6 +81,8 @@ def getDist(i, j):
         sumDist += (cities[i - 1][k] - cities[j - 1][k]) ** 2
     return math.sqrt(sumDist)
 
+import time
+tic = time.clock()
 import math
 cities = []
 with open('input', 'r') as f:
@@ -123,6 +153,7 @@ while citiesCount < citiesNum:
     
 route = reFactor(route)
 route = untangle(route)
+print time.clock() - tic
 
 import matplotlib.pyplot as plot
 dist = 0
