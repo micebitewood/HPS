@@ -1,1 +1,1 @@
-$ gcc -lm -lpthread -lrt -lstdc++ -O3 siman.cpp
+gcc -lm -lpthread -lrt -lstdc++ -O3 tsp.cpp -o tsp

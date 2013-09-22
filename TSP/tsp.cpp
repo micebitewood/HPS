@@ -5,17 +5,17 @@
 #include <pthread.h>
 
 const int N = 1000;
-const char FILENAME_IN[] = "tsp1000";
+const char FILENAME_IN[] = "input";
 const char FILENAME_OUT[] = "output";
 
-const int NUM_THREADS = 6;
+const int NUM_THREADS = 8;
 
-const int NUM_TRIALS = 5;
-const int NUM_ITERATIONS_UNTANGLE = 30000;
-const int NUM_ITERATIONS_INSERT = 10000;
+const int NUM_TRIALS = 3;
+const int NUM_ITERATIONS_UNTANGLE[NUM_THREADS] = {30000, 30000, 30000, 30000, 28000, 28000, 25000, 25000};
+const int NUM_ITERATIONS_INSERT[NUM_THREADS] = {10000, 10000, 8000, 8000, 8000, 8000, 7000, 7000};
 const int NUM_STEPS = 10000;
-const int CUT = 4;
-const int TIME_LIMIT = 115;
+const int CUT = 6;
+const int TIME_LIMIT = 117;
 
 const double TEMP_INIT = 0.005;
 const double TEMP_FINAL = 0.000001;
@@ -150,7 +150,7 @@ void displayPath(int p[N]) {
 	printf("Total travel distance: %f - %d\n", calculateTravelDist(p), getElapsedTime());
 }
 
-void writePath(int p[N]) {
+void writePath2(int p[N]) {
 	FILE* out = fopen(FILENAME_OUT, "w");
 	
 	fprintf(out, "[");
@@ -159,6 +159,16 @@ void writePath(int p[N]) {
 		fprintf(out, "%d, ", p[i]+1);
 	
 	fprintf(out, "%d]\n", p[N-1]+1);
+	fclose(out);
+}
+
+void writePath(int p[N]) {
+	FILE* out = fopen(FILENAME_OUT, "w");
+	
+	fprintf(out, "%d", p[0]+1);
+	for(int i=0; i<N-1; ++i)
+		fprintf(out, " %d", p[i]+1);
+	
 	fclose(out);
 }
 
@@ -232,7 +242,7 @@ void* runSimulatedAnnealing(void* data) {
 		while(t > TEMP_FINAL) {
 			update = false;
 			
-			for(int i=0; i<NUM_ITERATIONS_UNTANGLE; ++i) {
+			for(int i=0; i<NUM_ITERATIONS_UNTANGLE[tID]; ++i) {
 				// Untangle phase
 				n1 = randRange(N, &seed);
 				n2 = (n1+randRange(N-5, &seed)+3)%N;
@@ -259,7 +269,7 @@ void* runSimulatedAnnealing(void* data) {
 				}
 			}
 			
-			for(int i=0; i<NUM_ITERATIONS_INSERT; ++i) {
+			for(int i=0; i<NUM_ITERATIONS_INSERT[tID]; ++i) {
 				// Insert phase
 				n1 = randRange(N, &seed);
 				n2 = (n1+randRange(N-3, &seed)+2)%N;
