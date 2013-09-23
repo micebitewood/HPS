@@ -10,11 +10,11 @@ const char FILENAME_OUT[] = "output";
 
 const int NUM_THREADS = 8;
 
-const int NUM_TRIALS = 3;
-const int NUM_ITERATIONS_UNTANGLE[NUM_THREADS] = {30000, 30000, 30000, 30000, 28000, 28000, 25000, 25000};
-const int NUM_ITERATIONS_INSERT[NUM_THREADS] = {10000, 10000, 8000, 8000, 8000, 8000, 7000, 7000};
+const int NUM_TRIALS = 20;
+const int NUM_ITERATIONS_UNTANGLE[NUM_THREADS] = {28000, 28000, 28000, 28000, 30000, 30000, 33000, 33000};
+const int NUM_ITERATIONS_INSERT[NUM_THREADS] = {8000, 8000, 10000, 10000, 10000, 10000, 12000, 12000};
 const int NUM_STEPS = 10000;
-const int CUT = 6;
+const int CUT = 100;
 const int TIME_LIMIT = 117;
 
 const double TEMP_INIT = 0.005;
@@ -39,6 +39,7 @@ typedef struct {
 double d[N*N];			// Distance between two cities
 int mst[N-1];			// MST edges
 struct timespec start;	// Timer start
+int label[N];
 
 inline int randRange(int r, unsigned int* seedp) { return rand_r(seedp) % r; }
 inline void swap(int &a, int &b) { int tmp = a; a = b; b = tmp; }
@@ -52,12 +53,10 @@ void readData() {
 	pos p[N];
 	FILE* in = fopen(FILENAME_IN, "r");
 	int index;
+	int x, y, z;
 	
-	for(int i=0; i<N; ++i) {
-		fscanf(in, "%d %d %d %d", &index, &p[i].x, &p[i].y, &p[i].z);
-//		if(index != i+1)
-//			printf("This is not cool...\n");
-	}
+	for(int i=0; i<N; ++i)
+		fscanf(in, "%d %d %d %d", &label[i], &p[i].x, &p[i].y, &p[i].z);
 	
 	fclose(in);
 	
@@ -143,8 +142,8 @@ double calculateMinDFS(int mp[N]) {
 	return m;
 }
 
-void displayPath(int p[N]) {
-	printf("Total travel distance: %f - %d\n", calculateTravelDist(p), getElapsedTime());
+void displayPath(int p[N], int mi) {
+	printf("Total travel distance: %f, found by T%d - %d\n", calculateTravelDist(p), mi, getElapsedTime());
 }
 
 void writePath2(int p[N]) {
@@ -153,9 +152,9 @@ void writePath2(int p[N]) {
 	fprintf(out, "[");
 	
 	for(int i=0; i<N-1; ++i)
-		fprintf(out, "%d, ", p[i]+1);
+		fprintf(out, "%d, ", label[p[i]]);
 	
-	fprintf(out, "%d]\n", p[N-1]+1);
+	fprintf(out, "%d]\n", label[p[N-1]]);
 	fclose(out);
 }
 
@@ -163,8 +162,8 @@ void writePath(int p[N]) {
 	FILE* out = fopen(FILENAME_OUT, "w");
 	
 	for(int i=0; i<N-1; ++i)
-		fprintf(out, "%d ", p[i]+1);
-	fprintf(out, "%d", p[N-1]+1);
+		fprintf(out, "%d ", label[p[i]]);
+	fprintf(out, "%d", label[p[N-1]]);
 	
 	fclose(out);
 }
@@ -365,7 +364,7 @@ void launchThreads(int p[NUM_THREADS][N]) {
 	}
 }
 
-void runMultiSimulatedAnnealing(int mp[N]) {
+int runMultiSimulatedAnnealing(int mp[N]) {
 	int p[NUM_THREADS][N];
 	double dist[NUM_THREADS];
 	double m = INF;
@@ -384,6 +383,8 @@ void runMultiSimulatedAnnealing(int mp[N]) {
 	
 	for(int i=0; i<N; ++i)
 		mp[i] = p[mi][i];
+	
+	return mi;
 }
 
 int main() {
@@ -393,8 +394,8 @@ int main() {
 	calculateMST();
 	
 	int p[N];
-	runMultiSimulatedAnnealing(p);
-	displayPath(p);
+	int mi = runMultiSimulatedAnnealing(p);
+	displayPath(p, mi);
 	writePath(p);
 	
 	return 0;
