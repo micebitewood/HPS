@@ -20,7 +20,7 @@ def getPossibleWeights(weights, total, score):
     return possibleWeights
 
 def addPhase(red, redWeights, total, blueWeights, score, isRedTurn, count):
-    if count == 21:
+    if count == 25:
         print red
         print total
         print score
