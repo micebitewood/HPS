@@ -21,9 +21,11 @@ def getPossibleWeights(weights, total, score):
 
 def addPhase(red, redWeights, total, blueWeights, score, isRedTurn, count):
     if count == 25:
-        print red
-        print total
-        print score
+        for key in red.keys():
+            print key, red[key], 
+        for key in total.keys():
+            print key, total[key],
+        print score[0], score[1], 
         return True
     if isRedTurn:
         flag = True
