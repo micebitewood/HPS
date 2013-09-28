@@ -11,7 +11,7 @@ def valid(score, position, weight):
 
 def getPossibleWeights(weights, total, score):
     possibleWeights = []
-    for weight in range(1, 11):
+    for weight in range(1, 13):
         if weight not in weights:
             for position in range(31):
                 if position not in total.keys() and valid(score, position, weight):
