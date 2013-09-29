@@ -119,6 +119,7 @@ public class NoTipping extends Thread {
         for (int position : total.keySet()) {
             incScore(score, position, total.get(position));
         }
+        incScore(score, 0, 3);
         for (int position : total.keySet()) {
             int weight = total.get(position);
             if (removeValid(score, position, weight)) {
@@ -150,6 +151,7 @@ public class NoTipping extends Thread {
         for (int position : total.keySet()) {
             incScore(score, position, total.get(position));
         }
+        incScore(score, 0, 3);
 
         if (red.size() != 0) {
             for (int position : red.keySet()) {
@@ -200,6 +202,7 @@ public class NoTipping extends Thread {
         int[] score = {0, 0 };
         for (int position : total.keySet())
             incScore(score, position, total.get(position));
+        incScore(score, 0, 3);
         if (!total.containsKey(-3)) {
             for (int weight = 12; weight > 0; weight--)
                 if (!blueWeights.contains(weight)) {
@@ -245,6 +248,7 @@ public class NoTipping extends Thread {
         int[] score = {0, 0 };
         for (int position : total.keySet())
             incScore(score, position, total.get(position));
+        incScore(score, 0, 3);
         if (!total.containsKey(-3)) {
             for (int weight = 12; weight > 0; weight--)
                 if (!redWeights.contains(weight)) {
