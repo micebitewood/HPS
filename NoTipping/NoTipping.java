@@ -202,19 +202,19 @@ public class NoTipping extends Thread {
             incScore(score, position, total.get(position));
         if (!total.containsKey(-3)) {
             for (int weight = 12; weight > 0; weight--)
-                if (blueWeights.contains(weight)) {
+                if (!blueWeights.contains(weight)) {
                     int[] ret = {-3, weight };
                     return ret;
                 }
         } else if (!total.containsKey(-2)) {
             for (int weight = 12; weight > 0; weight--)
-                if (blueWeights.contains(weight)) {
+                if (!blueWeights.contains(weight)) {
                     int[] ret = {-2, weight };
                     return ret;
                 }
         } else if (!total.containsKey(-1)) {
             for (int weight = 12; weight > 0; weight--)
-                if (blueWeights.contains(weight)) {
+                if (!blueWeights.contains(weight)) {
                     int[] ret = {-1, weight };
                     return ret;
                 }
@@ -247,19 +247,19 @@ public class NoTipping extends Thread {
             incScore(score, position, total.get(position));
         if (!total.containsKey(-3)) {
             for (int weight = 12; weight > 0; weight--)
-                if (redWeights.contains(weight)) {
+                if (!redWeights.contains(weight)) {
                     int[] ret = {-3, weight };
                     return ret;
                 }
         } else if (!total.containsKey(-2)) {
             for (int weight = 12; weight > 0; weight--)
-                if (redWeights.contains(weight)) {
+                if (!redWeights.contains(weight)) {
                     int[] ret = {-2, weight };
                     return ret;
                 }
         } else if (!total.containsKey(-1)) {
             for (int weight = 12; weight > 0; weight--)
-                if (redWeights.contains(weight)) {
+                if (!redWeights.contains(weight)) {
                     int[] ret = {-1, weight };
                     return ret;
                 }
