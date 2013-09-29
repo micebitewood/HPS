@@ -13,7 +13,12 @@ def valid(score, position, weight):
         return True
     return False
 
-def traversal(score, total, red, isRedTurn, lastPosition):
+def traversal(score, red, total, isRedTurn, lastPosition):
+    print score
+    print red
+    print total
+    print isRedTurn
+    print lastPosition
     if isRedTurn:
         if len(red) != 0:
             for position in red.keys():
@@ -73,18 +78,17 @@ def getNextMove(total, red):
         if valid(score, position, weight):
             newScore = score[:]
             decScore(newScore, position, weight)
-            newBoard = total.copy()
-            newBoard[position] = 0
+            newTotal = total.copy()
+            newTotal.pop(position)
             newRed = red.copy()
             if position in red.keys():
                 newRed.pop(position)
             print "blue chooses {0}".format(position)
-            (blueWins, newPosition) = traversal(newScore, newBoard, newRed, True, position)
+            (blueWins, newPosition) = traversal(newScore, newRed, newTotal, True, position)
             if blueWins:
                 return (position, total[position])
     for position in total.keys():
-        if total[position] != 0:
-            return (position, total[position])
+        return (position, total[position])
 
 import sys
 mode = eval(sys.argv[1])
