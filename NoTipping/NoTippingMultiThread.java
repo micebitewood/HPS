@@ -397,10 +397,10 @@ public class NoTippingMultiThread implements Callable<Boolean> {
             }
         } else {
             if (playerNum == 1) {
-                int[] res = getNextRemoveForRed(total, red);
+                int[] res = getNextRemoveForRed(red, total);
                 System.out.println(res[0] + " " + res[1]);
             } else {
-                int[] res = getNextRemoveForBlue(total, red);
+                int[] res = getNextRemoveForBlue(red, total);
                 System.out.println(res[0] + " " + res[1]);
             }
         }
