@@ -30,7 +30,7 @@ public class NoTipping extends Thread {
     private static boolean removeValid(int[] score, int position, int weight) {
         int[] newScore = Arrays.copyOf(score, 2);
         decScore(newScore, position, weight);
-        if (newScore[0] < 0 && newScore[1] > 0)
+        if (newScore[0] <= 0 && newScore[1] >= 0)
             return true;
         return false;
     }
@@ -38,7 +38,7 @@ public class NoTipping extends Thread {
     private static boolean moveValid(int[] score, int position, int weight) {
         int[] newScore = Arrays.copyOf(score, 2);
         incScore(newScore, position, weight);
-        if (newScore[0] < 0 && newScore[1] > 0)
+        if (newScore[0] <= 0 && newScore[1] >= 0)
             return true;
         return false;
     }
@@ -321,7 +321,8 @@ public class NoTipping extends Thread {
         if (mode == 1) {
             NoTipping game = new NoTipping(blueWeights, redWeights);
             if (playerNum == 1) {
-                redSum /= redWeights.size();
+                if (!redWeights.isEmpty())
+                    redSum /= redWeights.size();
                 int[] res = game.getNextMoveForRed(total, redSum);
                 System.out.println(res[0] + " " + res[1]);
             } else {
