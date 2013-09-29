@@ -14,6 +14,11 @@ def valid(score, position, weight):
     return False
 
 def traversal(score, red, total, isRedTurn, lastPosition):
+    print score
+    print red
+    print total
+    print isRedTurn
+    print lastPosition
     if isRedTurn:
         if len(red) != 0:
             for position in red.keys():
@@ -25,8 +30,10 @@ def traversal(score, red, total, isRedTurn, lastPosition):
                     newTotal.pop(position)
                     newRed = red.copy()
                     newRed.pop(position)
+                    print "red chooses {0}".format(position)
                     (redWins, newPosition) = traversal(newScore, newRed, newTotal, False, position)
                     if redWins:
+                        print "red wins by choosing {0}".format(position)
                         return (False, position)
         else:
             for position in total.keys():
@@ -36,9 +43,12 @@ def traversal(score, red, total, isRedTurn, lastPosition):
                     decScore(newScore, position, weight)
                     newTotal = total.copy()
                     newTotal.pop(position)
+                    print "red chooses {0}".format(position)
                     (redWins, newPosition) = traversal(newScore, red, newTotal, False, position)
                     if redWins:
+                        print "red wins by choosing {0}".format(position)
                         return (False, position)
+        print "if blue chooses {0}, red will lose".format(lastPosition)
         return (True, 0)
     else:
         for position in total.keys():
@@ -51,9 +61,12 @@ def traversal(score, red, total, isRedTurn, lastPosition):
                 newRed = red.copy()
                 if position in red.keys():
                     newRed.pop(position)
+                print "blue chooses {0}".format(position)
                 (blueWins, newPosition) = traversal(newScore, newRed, newTotal, True, position)
                 if blueWins:
+                    print "blue wins by choosing {0}".format(position)
                     return (False, position)
+        print "if red chooses {0}, blue will lose".format(lastPosition)
         return (True, 0)
         
 def getNextMove(total, red):
@@ -70,6 +83,7 @@ def getNextMove(total, red):
             newRed = red.copy()
             if position in red.keys():
                 newRed.pop(position)
+            print "blue chooses {0}".format(position)
             (blueWins, newPosition) = traversal(newScore, newRed, newTotal, True, position)
             if blueWins:
                 return (position, total[position])

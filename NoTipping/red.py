@@ -60,21 +60,35 @@ def getNextMove(total, red):
     score = [0, 0]
     for position in total.keys():
         incScore(score, position, total[position])
-    for position in total.keys():
-        weight = total[position]
-        if valid(score, position, weight):
-            newScore = score[:]
-            decScore(newScore, position, weight)
-            newTotal = total.copy()
-            newTotal.pop(position)
-            newRed = red.copy()
-            if position in red.keys():
+        
+    if len(red) != 0:
+        for position in red.keys():
+            weight = red[position]
+            if valid(score, position, weight):
+                newScore = score[:]
+                decScore(newScore, position, weight)
+                newTotal = total.copy()
+                newTotal.pop(position)
+                newRed = red.copy()
                 newRed.pop(position)
-            (blueWins, newPosition) = traversal(newScore, newRed, newTotal, True, position)
-            if blueWins:
-                return (position, total[position])
-    for position in total.keys():
-        return (position, total[position])
+                (redWins, newPosition) = traversal(newScore, newRed, newTotal, False, position)
+                if redWins:
+                    return (position, total[position])
+        for position in red.keys():
+            return (position, total[position])
+    else:
+        for position in total.keys():
+            weight = total[position]
+            if valid(score, position, weight):
+                newScore = score[:]
+                decScore(newScore, position, weight)
+                newTotal = total.copy()
+                newTotal.pop(position)
+                (redWins, newPosition) = traversal(newScore, red, newTotal, False, position)
+                if redWins:
+                    return (position, total[position])
+        for position in total.keys():
+            return (position, total[position])
 
 import sys
 mode = eval(sys.argv[1])
@@ -92,3 +106,4 @@ with open('board.txt', 'r') as f:
                 red[temp[0]] = temp[1]
 (position, weight) = getNextMove(total, red)
 print position, weight
+
