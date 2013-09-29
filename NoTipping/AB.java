@@ -89,6 +89,7 @@ public class AB {
     }
 
     public static void main(String[] args) {
+        long startTime = System.currentTimeMillis() / 1000;
         Map<Integer, Integer> red = new HashMap<Integer, Integer>();
         Map<Integer, Integer> total = new HashMap<Integer, Integer>();
         for (int i = 0; i < 13; i++)
@@ -122,5 +123,6 @@ public class AB {
         AB ab = new AB();
         Child child = ab.traversal(score, red, total, true, 0);
         System.out.println(child.possibility + " " + child.position);
+        System.out.println(System.currentTimeMillis() / 1000 - startTime);
     }
 }
