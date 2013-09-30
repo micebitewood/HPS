@@ -1,4 +1,6 @@
-for (( i = 0; i <= 100; i++ ))
+for ((i = 0; i <= 100; i++ ))
 do
-    echo `python randomAdding.py > input; java AB $(tail input) >> re`
+    echo `python randomAdding.py > board.txt`
+    echo `java NoTippingMultiThread 2 1 100`
+    echo `java NoTipping 2 1 100`
 done

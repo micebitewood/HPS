@@ -171,6 +171,9 @@ public class NoTippingMultiThread implements Callable<Boolean> {
             }
         }
 
+        if (lst.size() == 0) {
+            return true;
+        }
         ExecutorService executorService = Executors.newFixedThreadPool(lst.size());
         List<Future<Boolean>> tasks = executorService.invokeAll(lst);
         executorService.shutdown();
@@ -362,6 +365,7 @@ public class NoTippingMultiThread implements Callable<Boolean> {
     }
 
     public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
+//        long startTime = System.currentTimeMillis() / 1000;
         int mode = Integer.parseInt(args[0]);
         int playerNum = Integer.parseInt(args[1]);
         // double remainingTime = Double.parseDouble(args[2]);
@@ -413,6 +417,7 @@ public class NoTippingMultiThread implements Callable<Boolean> {
                 System.out.println(res[0] + " " + res[1]);
             }
         }
+//        System.out.println(System.currentTimeMillis() / 1000 - startTime);
     }
 
 }
