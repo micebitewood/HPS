@@ -211,6 +211,11 @@ public class NoTippingMultiThread implements Callable<Boolean> {
                 }
             }
         }
+        for (int position : total.keySet())
+            if(removeValid(score, position, total.get(position))) {
+                int[] ret = {position, total.get(position) };
+                return ret;
+            }
         for (int position : total.keySet()) {
             int[] ret = {position, total.get(position) };
             return ret;
@@ -244,6 +249,11 @@ public class NoTippingMultiThread implements Callable<Boolean> {
                     }
                 }
             }
+            for (int position : red.keySet())
+                if(removeValid(score, position, red.get(position))) {
+                    int[] ret = {position, red.get(position) };
+                    return ret;
+                }
             for (int position : red.keySet()) {
                 int[] ret = {position, red.get(position) };
                 return ret;
@@ -263,6 +273,11 @@ public class NoTippingMultiThread implements Callable<Boolean> {
                     }
                 }
             }
+            for (int position : total.keySet())
+                if(removeValid(score, position, total.get(position))) {
+                    int[] ret = {position, total.get(position) };
+                    return ret;
+                }
             for (int position : total.keySet()) {
                 int[] ret = {position, total.get(position) };
                 return ret;
