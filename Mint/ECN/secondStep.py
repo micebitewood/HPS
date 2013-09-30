@@ -1,28 +1,24 @@
-key = []
-sum1 = []
-sum2 = []
 lst = []
-minSum2 = 9999
-minInd = 0
+sumDict = dict()
+minSumFive = 999999
+sumOtherOfMinSumFive = 0
 with open('sums', 'r') as f:
     for line in f:
         temp = line.rsplit(' ', 2)
-        key.append(eval(temp[0]))
-        sum1.append(int(temp[1]))
-        tempSum2 = int(temp[2])
-        sum2.append(tempSum2)
-        if tempSum2 < minSum2:
-            minSum2 = tempSum2
-            minInd = len(sum2) - 1
-for i in range(len(key)):
-    if sum1[i] <= sum1[minInd]:
-        lst.append([sum1[i], sum2[i], key[i]])
-key = []
-sum1 = []
-sum2 = []
-lst.sort()
+        denominations = eval(temp[0])
+        sumOther = int(temp[1])
+        sumFive = int(temp[2])
+        sumAll = sumOther + sumFive
+        if (sumAll, sumFive) not in sumDict:
+            sumDict[(sumAll, sumFive)] = denominations
+keys = sumDict.keys()
+keys.sort()
+newKeys = []
 i = 0
-for j in range(1, len(lst)):
-    if lst[i][1] >= lst[j][1]:
-        print lst[j][2], lst[j][0], lst[j][1]
+newKeys += [keys[0]]
+for j in range(1, len(keys)):
+    if keys[i][1] > keys[j][1]:
+        newKeys += [keys[j]] 
         i = j
+for key in newKeys:
+    print key[0], key[1], sumDict[key]

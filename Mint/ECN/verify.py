@@ -1,8 +1,9 @@
-denominations = [1, 5, 7, 25, 40]
+import sys
+denominations = [int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5])]
 arr = [100 for i in range(100)]
 arr[0] = 0
 score = 0
-N = 2
+N = 1
 for i in denominations:
     arr[i] = 1
 for n in range(1, 100):
