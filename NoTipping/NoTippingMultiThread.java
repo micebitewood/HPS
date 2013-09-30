@@ -287,7 +287,7 @@ public class NoTippingMultiThread implements Callable<Boolean> {
         return ret;
     }
 
-    public int[] getNextMoveForBlue(Map<Integer, Integer> total) {
+    public int[] getNextMoveForBlue(Map<Integer, Integer> total, int blueSum) {
         int[] score = {0, 0 };
         for (int position : total.keySet())
             incScore(score, position, total.get(position));
@@ -310,8 +310,8 @@ public class NoTippingMultiThread implements Callable<Boolean> {
                     int[] ret = {-1, weight };
                     return ret;
                 }
-        } else if (-score[0] > score[1]) {
-            for (int weight = 1; weight < 13; weight++)
+        } else if (blueSum > -2) {
+            for (int weight = 12; weight > 0; weight--)
                 if (!blueWeights.contains(weight))
                     for (int position = -15; position < 16; position++) {
                         if (!total.containsKey(position) && moveValid(score, position, weight)) {
@@ -320,7 +320,7 @@ public class NoTippingMultiThread implements Callable<Boolean> {
                         }
                     }
         } else {
-            for (int weight = 1; weight < 13; weight++)
+            for (int weight = 12; weight > 0; weight--)
                 if (!blueWeights.contains(weight))
                     for (int position = 15; position >= -15; position--) {
                         if (!total.containsKey(position) && moveValid(score, position, weight)) {
@@ -392,6 +392,7 @@ public class NoTippingMultiThread implements Callable<Boolean> {
         BufferedReader br = new BufferedReader(new FileReader("board.txt"));
         String line;
         int redSum = 0;
+        int blueSum = 0;
         while ((line = br.readLine()) != null) {
             String[] temp = line.split(" ");
             int position = Integer.parseInt(temp[0]);
@@ -407,6 +408,7 @@ public class NoTippingMultiThread implements Callable<Boolean> {
                     }
                 } else {
                     blueWeights.add(weight);
+                    blueSum += position;
                 }
 
             }
@@ -420,7 +422,9 @@ public class NoTippingMultiThread implements Callable<Boolean> {
                 int[] res = game.getNextMoveForRed(total, redSum);
                 System.out.println(res[0] + " " + res[1]);
             } else {
-                int[] res = game.getNextMoveForBlue(total);
+                if (!blueWeights.isEmpty())
+                    blueSum /= blueWeights.size();
+                int[] res = game.getNextMoveForBlue(total, blueSum);
                 System.out.println(res[0] + " " + res[1]);
             }
         } else {
