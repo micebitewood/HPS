@@ -1,3 +1,4 @@
+
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
@@ -172,6 +173,7 @@ public class NoTippingMultiThread implements Callable<Boolean> {
 
         ExecutorService executorService = Executors.newFixedThreadPool(lst.size());
         List<Future<Boolean>> tasks = executorService.invokeAll(lst);
+        executorService.shutdown();
 
         for (Future<Boolean> task : tasks) {
             if (task.get()) {
@@ -181,7 +183,8 @@ public class NoTippingMultiThread implements Callable<Boolean> {
         return true;
     }
 
-    public static int[] getNextRemoveForBlue(Map<Integer, Integer> red, Map<Integer, Integer> total) {
+    public static int[] getNextRemoveForBlue(Map<Integer, Integer> red, Map<Integer, Integer> total)
+            throws InterruptedException, ExecutionException {
         int[] score = {0, 0 };
         for (int position : total.keySet()) {
             incScore(score, position, total.get(position));
@@ -198,7 +201,7 @@ public class NoTippingMultiThread implements Callable<Boolean> {
                 if (red.keySet().contains(position)) {
                     newRed.remove(position);
                 }
-                boolean blueWins = traversal(newScore, newRed, newTotal, true);
+                boolean blueWins = createThreads(newScore, newRed, newTotal, true);
                 if (blueWins) {
                     int[] ret = {position, weight };
                     return ret;
@@ -213,7 +216,8 @@ public class NoTippingMultiThread implements Callable<Boolean> {
         return ret;
     }
 
-    public static int[] getNextRemoveForRed(Map<Integer, Integer> red, Map<Integer, Integer> total) {
+    public static int[] getNextRemoveForRed(Map<Integer, Integer> red, Map<Integer, Integer> total)
+            throws InterruptedException, ExecutionException {
         int[] score = {0, 0 };
         for (int position : total.keySet()) {
             incScore(score, position, total.get(position));
@@ -230,7 +234,7 @@ public class NoTippingMultiThread implements Callable<Boolean> {
                     newTotal.remove(position);
                     Map<Integer, Integer> newRed = new HashMap<Integer, Integer>(red);
                     newRed.remove(position);
-                    boolean redWins = traversal(newScore, newRed, newTotal, false);
+                    boolean redWins = createThreads(newScore, newRed, newTotal, false);
                     if (redWins) {
                         int[] ret = {position, weight };
                         return ret;
@@ -249,7 +253,7 @@ public class NoTippingMultiThread implements Callable<Boolean> {
                     decScore(newScore, position, weight);
                     Map<Integer, Integer> newTotal = new HashMap<Integer, Integer>(total);
                     newTotal.remove(position);
-                    boolean redWins = traversal(newScore, red, newTotal, false);
+                    boolean redWins = createThreads(newScore, red, newTotal, false);
                     if (redWins) {
                         int[] ret = {position, weight };
                         return ret;
@@ -357,7 +361,7 @@ public class NoTippingMultiThread implements Callable<Boolean> {
         return ret;
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
         int mode = Integer.parseInt(args[0]);
         int playerNum = Integer.parseInt(args[1]);
         // double remainingTime = Double.parseDouble(args[2]);
