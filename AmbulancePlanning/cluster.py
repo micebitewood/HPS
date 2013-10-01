@@ -52,3 +52,10 @@ while needClustering:
             needClustering = True
         locations[ind] = sumXY[ind]
 print locations
+
+import matplotlib.pyplot as plot
+for person in people.keys():
+    plot.plot(person[0], person[1], 'ro')
+for location in locations:
+    plot.plot(location[0], location[1], 'bo')
+plot.show()
