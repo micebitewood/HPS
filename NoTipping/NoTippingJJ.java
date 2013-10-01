@@ -17,7 +17,7 @@ import java.util.concurrent.Future;
 
 public class NoTippingJJ implements Callable<Boolean> {
 
-    static final long TIME_LIMIT = 90;
+    static final long TIME_LIMIT = 80;
 
     private Set<Integer> blueWeights;
     private Set<Integer> redWeights;
@@ -337,6 +337,14 @@ public class NoTippingJJ implements Callable<Boolean> {
                         }
                     }
         }
+        for (int weight = 12; weight > 0; weight--)
+            if (!blueWeights.contains(weight))
+                for (int position = 15; position >= -15; position--) {
+                    if (!total.containsKey(position)) {
+                        int[] ret = {position, weight };
+                        return ret;
+                    }
+                }
         int[] ret = {0, 0 };
         return ret;
     }
@@ -383,6 +391,14 @@ public class NoTippingJJ implements Callable<Boolean> {
                         }
                     }
         }
+        for (int weight = 1; weight < 13; weight++)
+            if (!redWeights.contains(weight))
+                for (int position = 15; position >= -15; position--) {
+                    if (!total.containsKey(position)) {
+                        int[] ret = {position, weight };
+                        return ret;
+                    }
+                }
         int[] ret = {0, 0 };
         return ret;
     }
