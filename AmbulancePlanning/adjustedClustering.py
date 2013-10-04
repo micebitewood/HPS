@@ -26,7 +26,6 @@ def move(location, victimsInLocation, directions):
                     directions[5 - indY] -= 1
                 elif victim[1] == location[0]:
                     directions[indY] += 1
-        print "after move:", directions
         return True
     return False
 
@@ -44,7 +43,6 @@ def adjust(locations):
                 directions[2] += 1
             elif victim[1] < location[1]:
                 directions[3] += 1
-        print "original:", directions
         while True:
             if not move(location, victimsInLocation, directions):
                 break
@@ -120,7 +118,7 @@ while needClustering:
         locations[ind] = sumXY[ind]
 
 adjust(locations)
-print "hospitals[locX, locY, #ambulances]:", locations
+print "hospitals[locX, locY, #victims]:", locations
 print "ambulances in hospitals:", hospitals
 
 import matplotlib.pyplot as plot
