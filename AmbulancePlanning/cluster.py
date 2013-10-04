@@ -1,8 +1,8 @@
 def getAbsSum(x1, y1, x2, y2):
     return abs(x1 - x2) + abs(y1 - y2)
 minX, maxX, minY, maxY = 100, -100, 100, -100
-people = dict() #(x, y)->time
-with open('people', 'r') as f:
+victims = dict() #(x, y)->time
+with open('victims', 'r') as f:
     for line in f:
         temp = map(int, line.split(','))
         if temp[0] < minX:
@@ -13,7 +13,7 @@ with open('people', 'r') as f:
             minY = temp[1]
         elif temp[1] > maxY:
             maxY = temp[1]
-        people[(temp[0], temp[1])] = temp[2]
+        victims[(temp[0], temp[1])] = temp[2]
 
 hospitals = [] #ambulanceNumber
 with open('hospital', 'r') as f:
@@ -30,17 +30,17 @@ while needClustering:
     needClustering = False
     sumXY = [[0, 0] for i in range(numOfHospitals)]
     numOfPeople = [0 for i in range(numOfHospitals)]
-    for person in people.keys():
+    for victim in victims.keys():
         minDist = 100000
         closestPoint = 0
         for ind in range(numOfHospitals):
             location = locations[ind]
-            dist = getAbsSum(person[0], person[1], location[0], location[1])
+            dist = getAbsSum(victim[0], victim[1], location[0], location[1])
             if dist < minDist:
                 minDist = dist
                 closestPoint = ind
-        sumXY[closestPoint][0] += person[0]
-        sumXY[closestPoint][1] += person[1]
+        sumXY[closestPoint][0] += victim[0]
+        sumXY[closestPoint][1] += victim[1]
         numOfPeople[closestPoint] += 1
     for ind in range(numOfHospitals):
         if numOfPeople[ind] != 0:
@@ -52,10 +52,11 @@ while needClustering:
             needClustering = True
         locations[ind] = sumXY[ind]
 print locations
+print hospitals
 
 import matplotlib.pyplot as plot
-for person in people.keys():
-    plot.plot(person[0], person[1], 'ro')
+for victim in victims.keys():
+    plot.plot(victim[0], victim[1], 'ro')
 for location in locations:
     plot.plot(location[0], location[1], 'bo')
 plot.show()
