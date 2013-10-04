@@ -43,7 +43,9 @@ def adjust(locations):
                 directions[2] += 1
             elif victim[1] < location[1]:
                 directions[3] += 1
-        while True:
+        count = 0
+        while count < 1000:
+            count += 1
             if not move(location, victimsInLocation, directions):
                 break
 
@@ -118,8 +120,13 @@ while needClustering:
         locations[ind] = sumXY[ind]
 
 adjust(locations)
-print "hospitals[locX, locY, #victims]:", locations
-print "ambulances in hospitals:", hospitals
+numFirstLocations = []
+for location in locations:
+    numFirstLocations.append((location[2], location[0], location[1]))
+numFirstLocations.sort()
+hospitals.sort()
+for i in range(numOfHospitals):
+    print numFirstLocations[i][1], ",", numFirstLocations[i][2], ",", hospitals[i]
 
 import matplotlib.pyplot as plot
 for victim in victims.keys():
