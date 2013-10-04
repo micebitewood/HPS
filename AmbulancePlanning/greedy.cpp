@@ -8,19 +8,28 @@
 using namespace std;
 
 const int NUM_TRIALS = 10;
-const bool VERBOSE = false;
+const bool VERBOSE = NUM_TRIALS == 1;
 
 const int NUM_HOSPITALS = 5;
 const int NUM_VICTIMS = 300;
 
+//const char FILENAME_HOSPITAL[] = "hospitals";
 const char FILENAME_HOSPITAL[] = "cluster_output";
 const char FILENAME_VICTIMS[] = "victims";
 
 const int TIME_LOAD = 1;
 const int TIME_UNLOAD = 1;
 const int AMB_CAPACITY = 4;
-const int NUM_MAGIC_CONSTS = 8;
-const int MAGIC_CONST[NUM_MAGIC_CONSTS] = {50, 30, 20, 10, 3, 2, 1, 0};
+const int PLAN_LENGTH = 8;
+const int NUM_PLANS = 6;
+const int PLAN[NUM_PLANS][PLAN_LENGTH] = {
+	{30, 20, 10, 5, 3, 2, 1, 0},
+	{50, 30, 20, 10, 3, 2, 1, 0},
+	{70, 60, 50, 40, 30, 10, 1, 0},
+	{50, 30, 20, 10, 3, 2, 1, 0},
+	{70, 50, 30, 20, 10, 2, 1, 0},
+	{50, 30, 20, 10, 3, 2, 1, 0},
+};
 
 typedef struct {
 	int x;
@@ -167,7 +176,7 @@ void goSavePeople() {
 		int saved = 0;
 		if(VERBOSE)
 			printf("[Amb %2d] time %3d: Leaves (%2d, %2d)\n", iAmb, time, loc.x, loc.y);
-		for(int i=0; i<NUM_MAGIC_CONSTS; ++i) {
+		for(int i=0; i<PLAN_LENGTH; ++i) {
 			// Calculate priority score
 			for(it=q.begin(); it!=q.end(); ++it) {
 				switch(iAmb%15) {
@@ -198,14 +207,14 @@ void goSavePeople() {
 			}
 			
 			it = q.begin();
-			while((it->slack < MAGIC_CONST[i] || v[it->id].minAmbDist + 15 < getDist(loc, v[it->id].loc)) && it != q.end())
+			while((it->slack < PLAN[iAmb%NUM_PLANS][i] || v[it->id].minAmbDist + 15 < getDist(loc, v[it->id].loc)) && it != q.end())
 				++it;
 			
 			if(it == q.end()) {
-				break;
+				continue;
 			}
 			
-			if(i > 0 && slack + v[lastId].minHospDist - getDist(loc, v[it->id].loc) - v[it->id].minHospDist - TIME_LOAD - TIME_UNLOAD < 0) {
+			if(slack + v[lastId].minHospDist - getDist(loc, v[it->id].loc) - v[it->id].minHospDist - TIME_LOAD - TIME_UNLOAD < 0) {
 				continue;
 			}
 			slack = min(slack + v[lastId].minHospDist, v[it->id].time - time - TIME_UNLOAD) - getDist(loc, v[it->id].loc) - TIME_LOAD - v[it->id].minHospDist;
@@ -237,6 +246,7 @@ int main(int argc, char** argv) {
 	int maxNumSaved = 0;
 	int bestSeed;
 	int seed = 0;
+	int sum = 0;
 	
 	if(argc > 1)
 		seed = atoi(argv[1]);
@@ -254,7 +264,12 @@ int main(int argc, char** argv) {
 			maxNumSaved = numSaved;
 			bestSeed = seed+i;
 		}
+		
+		sum += numSaved;
 	}
 	
 	printf("%d\n", maxNumSaved);
+	
+//	if(VERBOSE)
+		printf("Average: %f\n", (double)sum / (double)NUM_TRIALS);
 }
