@@ -11,26 +11,29 @@ def isValid(ambulance, visitedVictims):
 
 def getFinishTime(ambulance, victim):
     timeTillLoadVictim = getDist(ambulance, victim) + 1 + ambulance[2]
-    timeBackToHospital = victims[victim][2] + 1 + ambulance[2]
+    timeBackToHospital = victims[victim][2] + 1
     return (timeTillLoadVictim, timeBackToHospital)
 
 def getSavedCount(ambulances, originalVisitedVictims):
-    #print "start:"
+    print "start:"
     visitedVictims = originalVisitedVictims.copy()
     newAmbulances = ambulances[:]
     random.shuffle(newAmbulances)
     for originalAmbulance in newAmbulances:
-        #print "new ambulance", originalAmbulance
-        #print "will there be victims saved?"
-        #for victim in visitedVictims.keys():
-            #if visitedVictims[victim]:
-                #print victim,
-        #print "Y or N?"
+        print "new ambulance", originalAmbulance
+        print "will there be victims saved?"
+        for victim in visitedVictims.keys():
+            if visitedVictims[victim]:
+                print victim,
+        print "Y or N?"
         maxCount = 0
         mostSavedVictims = []
+        finalPath = []
         for i in range(100): #try to get the maximum number of victims this ambulance can save
-            #print i
+            print i
             ambulance = originalAmbulance[:]
+            path = []
+            path.append(ambulance[:])
             newVisitedVictims = visitedVictims.copy()
             savedVictims = [] #(locX, locY, num)
             savedVictimsCount = 0
@@ -39,12 +42,16 @@ def getSavedCount(ambulances, originalVisitedVictims):
                     break
                 ind = random.randint(0, len(victimKeys) - 1)
                 victim = victimKeys[ind] #(locX, locY, num)
+                while newVisitedVictims[victim]:
+                    ind = random.randint(0, len(victimKeys) - 1)
+                    victim = victimKeys[ind]
                 (timeTillLoadVictim, timeBackToHospital) = getFinishTime(ambulance, victim)
                 if timeTillLoadVictim + timeBackToHospital < victims[victim][0]:
-                    #print "saved victim", victim
+                    print "saved victim", victim
                     lastTimeTillLoadVictim = timeTillLoadVictim
                     lastTimeBackToHospital = timeBackToHospital
-                    #print "total time", lastTimeTillLoadVictim, lastTimeBackToHospital
+                    print "time, nearestHospital:", victims[victim][0], hospitals[victims[victim][1]]
+                    print "total time", lastTimeTillLoadVictim, lastTimeBackToHospital
                     victimsInAmbulance = [] #(locX, locY, num)
                     currVictim = victim
                     victimsInAmbulance.append(victim)
@@ -65,13 +72,16 @@ def getSavedCount(ambulances, originalVisitedVictims):
                                 if timeTillLoadVictim + timeBackToHospital > victims[victimInAmbulance][0]:
                                     skip = True
                                     break
+                            if timeTillLoadVictim + timeBackToHospital > victims[key][0]:
+                                skip = True
                             if skip:
                                 continue
                             newVisitedVictims[key] = True
-                            #print "saved", otherVictim
+                            print "saved", otherVictim
                             lastTimeTillLoadVictim = timeTillLoadVictim
                             lastTimeBackToHospital = timeBackToHospital
-                            #print "total time", lastTimeTillLoadVictim, lastTimeBackToHospital
+                            print "time, nearestHospital:", victims[key][0], hospitals[victims[key][1]]
+                            print "total time", lastTimeTillLoadVictim, lastTimeBackToHospital
                             victimsInAmbulance.append(key)
                             savedVictimsCount += 1
                             hasNextVictim = True
@@ -83,16 +93,25 @@ def getSavedCount(ambulances, originalVisitedVictims):
                         break
                     returnHospital = hospitals[victims[victimsInAmbulance[-1]][1]]
                     finishTime = lastTimeTillLoadVictim + lastTimeBackToHospital
+                    pathTuple = []
+                    for victim in victimsInAmbulance:
+                        pathTuple.append((victim[0], victim[1], victims[victim][0]))
+                    path.append(pathTuple[:])
                     savedVictims += victimsInAmbulance
-                    #print "savedVictims in by this ambulance:", savedVictims
+                    print "savedVictims in by this ambulance:", savedVictims
                     ambulance[0] = returnHospital[0]
                     ambulance[1] = returnHospital[1]
-                    ambulance[2] += finishTime
-                    #print "ambulance:", ambulance
-            #print "savedVictimsCount", savedVictimsCount
+                    ambulance[2] = finishTime
+                    path.append(ambulance[:])
+                    print "ambulance:", ambulance
+            print "savedVictimsCount", savedVictimsCount
             if savedVictimsCount > maxCount:
                 maxCount = savedVictimsCount
                 mostSavedVictims = savedVictims
+                finalPath = path[:]
+        print "path for ambulance: "
+        print "ambulance", originalAmbulance
+        print "path", finalPath
         for victim in mostSavedVictims:
             visitedVictims[victim] = True
     count = 0
@@ -152,6 +171,12 @@ for i in range(numOfVictims):
 
 import random
 maxPeopleSaved = 0
-for i in range(10):
-    count = getSavedCount(ambulances, visitedVictims)
-    print "trial", i, "saved", count, "people"
+with open('output', 'w') as f:
+    for i in range(10):
+        count = getSavedCount(ambulances, visitedVictims)
+        f.write("trial ")
+        f.write(str(i))
+        f.write(" saved ")
+        f.write(str(count))
+        f.write(" people\n")
+        f.flush()
