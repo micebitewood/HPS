@@ -54,26 +54,35 @@ def getAbsSum(x1, y1, x2, y2):
 
 minX, maxX, minY, maxY = 100, -100, 100, -100
 victims = dict() #(locX, locY, num)->time
-num = 0
-with open('victims', 'r') as f:
-    for line in f:
-        temp = map(int, line.split(','))
-        if temp[0] < minX:
-            minX = temp[0]
-        elif temp[0] > maxX:
-            maxX = temp[0]
-        if temp[1] < minY:
-            minY = temp[1]
-        elif temp[1] > maxY:
-            maxY = temp[1]
-        victims[(temp[0], temp[1], num)] = temp[2]
-        num += 1
-
 hospitals = [] #ambulanceNumber
-with open('hospital', 'r') as f:
+num = 0
+startVictims = False
+startHospitals = False
+with open('input', 'r') as f:
     for line in f:
-        temp = map(int, line.split(','))
-        hospitals.append(temp[2])
+        line = line.strip().lower()
+        if not line:
+            continue
+        if "person" in line:
+            startVictims = True
+        elif "hospital" in line:
+            startHospitals = True
+        elif startHospitals:
+            temp = int(line)
+            hospitals.append(temp)
+        elif startVictims:
+            temp = map(int, line.split(','))
+            if temp[0] < minX:
+                minX = temp[0]
+            elif temp[0] > maxX:
+                maxX = temp[0]
+            if temp[1] < minY:
+                minY = temp[1]
+            elif temp[1] > maxY:
+                maxY = temp[1]
+            victims[(temp[0], temp[1], num)] = temp[2]
+            num += 1
+
 numOfHospitals = len(hospitals)
 locations = [] #[locX, locY, numOfVictims]
 
@@ -124,14 +133,25 @@ numFirstLocations = []
 for location in locations:
     numFirstLocations.append((location[2], location[0], location[1]))
 numFirstLocations.sort()
-hospitals.sort()
-for i in range(numOfHospitals):
-    print numFirstLocations[i][1], ",", numFirstLocations[i][2], ",", hospitals[i]
+newHospitals = hospitals[:]
+newHospitals.sort()
+result = []
 
+for i in range(numOfHospitals):
+    result.append((newHospitals[i], numFirstLocations[i][1], numFirstLocations[i][2]))
+used = [False for i in range(numOfHospitals)]
+for i in hospitals:
+    for j in range(numOfHospitals):
+        if not used[j]:
+            res = result[j]
+            if res[0] == i:
+                print res[1], res[2], res[0]
+                used[j] = True
+'''
 import matplotlib.pyplot as plot
 for victim in victims.keys():
     plot.plot(victim[0], victim[1], 'ro')
 for location in locations:
     plot.plot(location[0], location[1], 'bo')
 plot.show()
-
+'''
