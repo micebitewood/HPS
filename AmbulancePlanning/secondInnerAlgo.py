@@ -14,7 +14,7 @@ def getFinishTime(ambulance, victim):
     timeBackToHospital = victims[victim][2] + 1
     return (timeTillLoadVictim, timeBackToHospital)
 
-def getSavedCount(ambulances, originalVisitedVictims):
+def getSavedCount(ambulances, originalVisitedVictims, f):
     visitedVictims = originalVisitedVictims.copy()
     newAmbulances = ambulances[:]
     random.shuffle(newAmbulances)
@@ -89,12 +89,13 @@ def getSavedCount(ambulances, originalVisitedVictims):
                 maxCount = savedVictimsCount
                 mostSavedVictims = savedVictims
                 finalPath = path[:]
-        print "ambulance", ambulance[3], 
+        f.write("ambulance " + str(ambulance[3]) + " ")
         for path in finalPath:
             if type(path[1]) == int:
-                print path
+                f.write("(" + str(path[0]) + ", " + str(path[1]) + "); ")
             else:
-                print path[0], path[1], ";", 
+                f.write(str(path[0]) + " " + "(" + str(path[1][0]) + ", " + str(path[1][1]) + ", " + str(path[1][2]) + "); ")
+        f.write("\n")
         for victim in mostSavedVictims:
             visitedVictims[victim] = True
     count = 0
@@ -169,12 +170,11 @@ for i in range(numOfVictims):
 
 import random
 maxPeopleSaved = 0
-with open('output', 'w') as f:
+with open('path', 'w') as f:
+    f.write("hospitals ")
+    for i in range(len(hospitals)):
+        f.write(str(i) + " ")
+        f.write("(" + str(hospitals[i][0]) + ", " + str(hospitals[i][1]) + "); ")
+    f.write('\n')
     for i in range(1):
-        count = getSavedCount(ambulances, visitedVictims)
-        f.write("trial ")
-        f.write(str(i))
-        f.write(" saved ")
-        f.write(str(count))
-        f.write(" people\n")
-        f.flush()
+        count = getSavedCount(ambulances, visitedVictims, f)

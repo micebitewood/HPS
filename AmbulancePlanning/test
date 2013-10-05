@@ -1,3 +1,4 @@
 echo `python adjustedClustering.py > cluster_output`
-echo `python verboseSecondInnerAlgo.py > log`
+echo `python secondInnerAlgo.py`
+#echo `python verboseSecondInnerAlgo.py > log`
 echo `python validator.py input path`

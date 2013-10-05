@@ -112,9 +112,10 @@ def getSavedCount(ambulances, originalVisitedVictims, f):
         f.write("ambulance " + str(ambulance[3]) + " ")
         for path in finalPath:
             if type(path[1]) == int:
-                f.write("(" + str(path[0]) + ", " + str(path[1]) + ") \n")
+                f.write("(" + str(path[0]) + ", " + str(path[1]) + "); ")
             else:
                 f.write(str(path[0]) + " " + "(" + str(path[1][0]) + ", " + str(path[1][1]) + ", " + str(path[1][2]) + "); ")
+        f.write("\n")
         for victim in mostSavedVictims:
             visitedVictims[victim] = True
     count = 0
