@@ -15,21 +15,21 @@ def getFinishTime(ambulance, victim):
     return (timeTillLoadVictim, timeBackToHospital)
 
 def getSavedCount(ambulances, originalVisitedVictims):
-    print "start:"
+    #print "start:"
     visitedVictims = originalVisitedVictims.copy()
     newAmbulances = ambulances[:]
     random.shuffle(newAmbulances)
     for originalAmbulance in newAmbulances:
-        print "new ambulance", originalAmbulance
-        print "will there be victims saved?"
+        #print "new ambulance", originalAmbulance
+        #print "will there be victims saved?"
         for victim in visitedVictims.keys():
             if visitedVictims[victim]:
-                print victim,
-        print "Y or N?"
+                #print victim,
+        #print "Y or N?"
         maxCount = 0
         mostSavedVictims = []
         for i in range(100): #try to get the maximum number of victims this ambulance can save
-            print i
+            #print i
             ambulance = originalAmbulance[:]
             newVisitedVictims = visitedVictims.copy()
             savedVictims = [] #(locX, locY, num)
@@ -41,10 +41,10 @@ def getSavedCount(ambulances, originalVisitedVictims):
                 victim = victimKeys[ind] #(locX, locY, num)
                 (timeTillLoadVictim, timeBackToHospital) = getFinishTime(ambulance, victim)
                 if timeTillLoadVictim + timeBackToHospital < victims[victim][0]:
-                    print "saved victim", victim
+                    #print "saved victim", victim
                     lastTimeTillLoadVictim = timeTillLoadVictim
                     lastTimeBackToHospital = timeBackToHospital
-                    print "total time", lastTimeTillLoadVictim, lastTimeBackToHospital
+                    #print "total time", lastTimeTillLoadVictim, lastTimeBackToHospital
                     victimsInAmbulance = [] #(locX, locY, num)
                     currVictim = victim
                     victimsInAmbulance.append(victim)
@@ -68,10 +68,10 @@ def getSavedCount(ambulances, originalVisitedVictims):
                             if skip:
                                 continue
                             newVisitedVictims[key] = True
-                            print "saved", otherVictim
+                            #print "saved", otherVictim
                             lastTimeTillLoadVictim = timeTillLoadVictim
                             lastTimeBackToHospital = timeBackToHospital
-                            print "total time", lastTimeTillLoadVictim, lastTimeBackToHospital
+                            #print "total time", lastTimeTillLoadVictim, lastTimeBackToHospital
                             victimsInAmbulance.append(key)
                             savedVictimsCount += 1
                             hasNextVictim = True
@@ -84,12 +84,12 @@ def getSavedCount(ambulances, originalVisitedVictims):
                     returnHospital = hospitals[victims[victimsInAmbulance[-1]][1]]
                     finishTime = lastTimeTillLoadVictim + lastTimeBackToHospital
                     savedVictims += victimsInAmbulance
-                    print "savedVictims in by this ambulance:", savedVictims
+                    #print "savedVictims in by this ambulance:", savedVictims
                     ambulance[0] = returnHospital[0]
                     ambulance[1] = returnHospital[1]
                     ambulance[2] += finishTime
-                    print "ambulance:", ambulance
-            print "savedVictimsCount", savedVictimsCount
+                    #print "ambulance:", ambulance
+            #print "savedVictimsCount", savedVictimsCount
             if savedVictimsCount > maxCount:
                 maxCount = savedVictimsCount
                 mostSavedVictims = savedVictims
@@ -155,4 +155,3 @@ maxPeopleSaved = 0
 for i in range(10):
     count = getSavedCount(ambulances, visitedVictims)
     print "trial", i, "saved", count, "people"
-    print count
