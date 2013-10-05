@@ -22,8 +22,8 @@ def getSavedCount(ambulances, originalVisitedVictims):
     for originalAmbulance in newAmbulances:
         #print "new ambulance", originalAmbulance
         #print "will there be victims saved?"
-        for victim in visitedVictims.keys():
-            if visitedVictims[victim]:
+        #for victim in visitedVictims.keys():
+            #if visitedVictims[victim]:
                 #print victim,
         #print "Y or N?"
         maxCount = 0
