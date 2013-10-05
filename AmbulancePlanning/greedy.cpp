@@ -15,6 +15,7 @@ const int NUM_VICTIMS = 300;
 
 //const char FILENAME_HOSPITAL[] = "hospitals";
 const char FILENAME_HOSPITAL[] = "cluster_output";
+//const char FILENAME_HOSPITAL[] = "eval_in";
 const char FILENAME_VICTIMS[] = "victims";
 
 const int TIME_LOAD = 1;
@@ -31,6 +32,8 @@ const int PLAN[NUM_PLANS][PLAN_LENGTH] = {
 	{50, 30, 20, 10, 3, 2, 1, 0},
 };
 
+const int INF = 99999999;
+
 typedef struct {
 	int x;
 	int y;
@@ -41,7 +44,6 @@ typedef struct {
 	int time;         // Rescue time
 	int minHospDist;  // Distance to the closest hospital
 	location minHospLoc;
-	int minAmbDist;
 } victim;
 
 typedef struct {
@@ -58,7 +60,7 @@ typedef struct {
 
 location h[NUM_HOSPITALS];
 vector<victim> v;
-vector<ambulance> ambulances;
+vector<ambulance> ambInit;  // Initial state that we will copy over to a
 vector<ambulance> a;
 list<vicdata> q;
 int numSaved;
@@ -69,10 +71,6 @@ inline int getDist(location a, location b) {
 
 inline int min(int a, int b) {
 	return a<b?a:b;
-}
-
-bool compareAmbs(ambulance a1, ambulance a2) {
-	return a1.rand < a2.rand;
 }
 
 void getData() {
@@ -91,7 +89,7 @@ void getData() {
 			amb.loc.x = x;
 			amb.loc.y = y;
 			amb.time = 0;
-			ambulances.push_back(amb);
+			ambInit.push_back(amb);
 		}
 	}
 	fclose(in);
@@ -118,10 +116,14 @@ void getData() {
 	fclose(in);
 }
 
+bool compareAmbs(ambulance a1, ambulance a2) {
+	return a1.rand < a2.rand;
+}
+
 void setup(int seed) {
 	srand(seed);
 	
-	a = ambulances;
+	a = ambInit;
 	
 	for(int i=0; i<a.size(); ++i)
 		a[i].rand = rand();
@@ -137,13 +139,9 @@ void setup(int seed) {
 	numSaved = 0;
 }
 
-bool comparePriority(vicdata& d1, vicdata& d2) {
-	return d1.pr < d2.pr;
-}
-
 void goSavePeople() {
 	while(true) {
-		int minAmbTime = 999999;
+		int minAmbTime = INF;
 		int iAmb;
 		
 		for(int i=0; i<a.size(); ++i) {
@@ -171,7 +169,7 @@ void goSavePeople() {
 		
 		int time = minAmbTime;
 		location loc = a[iAmb].loc;
-		int slack = 999999;
+		int slack = INF;
 		int lastId = 0;
 		int saved = 0;
 		if(VERBOSE)
@@ -192,23 +190,17 @@ void goSavePeople() {
 						- v[it->id].minHospDist - TIME_UNLOAD;
 			}
 			
-			q.sort(comparePriority);
+			list<vicdata>::iterator target = q.end();
+			int minPr = INF;
 			
-			// Find nearest ambulance
 			for(it=q.begin(); it!=q.end(); ++it) {
-				v[it->id].minAmbDist = 999999;
-				for(int j=0; j<a.size(); ++j) {
-				    if(a[j].time > time) continue;
-					int tmpDist = getDist(v[it->id].loc, a[j].loc);
-					if(tmpDist < v[it->id].minAmbDist) {
-						v[it->id].minAmbDist = tmpDist;
-					}
+				if(it->slack >= PLAN[iAmb%NUM_PLANS][i] && v[it->id].minHospDist + 18 >= getDist(loc, v[it->id].loc) && it->pr < minPr) {
+					minPr = it->pr;
+					target = it;
 				}
 			}
 			
-			it = q.begin();
-			while((it->slack < PLAN[iAmb%NUM_PLANS][i] || v[it->id].minAmbDist + 15 < getDist(loc, v[it->id].loc)) && it != q.end())
-				++it;
+			it = target;
 			
 			if(it == q.end()) {
 				continue;
@@ -231,8 +223,8 @@ void goSavePeople() {
 				break;
 		}
 		
-		if(slack == 999999) {
-			a[iAmb].time = 999999;
+		if(slack == INF) {
+			a[iAmb].time = INF;
 			continue;
 		}
 		a[iAmb].time = time + v[lastId].minHospDist + TIME_UNLOAD;
