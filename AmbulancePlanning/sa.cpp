@@ -9,8 +9,8 @@ const char FILENAME_EVAL_IN[] = "eval_in";
 const char FILENAME_EVAL_OUT[] = "eval_out";
 
 const int NUM_TRIALS = 1;
-const int NUM_ITERATIONS = 10;
-const int NUM_STEPS = 10;
+const int NUM_ITERATIONS = 30;
+const int NUM_STEPS = 30;
 
 const int JUMP_RANGE = 2;
 
@@ -43,6 +43,7 @@ int eval(int s[N*3]) {
 	
 	FILE* in = fopen(FILENAME_EVAL_OUT, "r");
 	fscanf(in, "%d", &result);
+	fclose(in);
 	
 	return result;
 }
@@ -86,6 +87,7 @@ double runSimulatedAnnealing() {
 				if(var[j*3] > 100) var[j*3] = 100;
 				if(var[j*3+1] < 1) var[j*3+1] = 1;
 				if(var[j*3+1] > 100) var[j*3+1] = 100;
+				if(var[j*3] == cur[j*3] && var[j*3+1] == cur[j*3+1]) continue;
 				
 //				printSol(cur);
 //				printSol(var);
@@ -118,6 +120,7 @@ int main() {
 	readData();
 	
 	int m = runSimulatedAnnealing();
+	eval(sol);
 	printf("%d\n", m);
 	
 	return 0;
