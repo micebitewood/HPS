@@ -99,15 +99,15 @@ public class ClusterMaximization {
 }
 
 class MultiRun implements Callable<Paths> {
-    private Location[] locations;
-    private List<Integer> ambulanceNumbers;
-    private Ambulance[] ambulances;
-    private Map<Victim, Integer> victims;
+    private Location[] locations;// used for clustering
+    private List<Integer> ambulanceNumbers;// used for clustering
+    private Ambulance[] ambulances;// used for locating
+    private Map<Victim, Integer> victims;// Victim->time, used for both parts
     private int minX;
     private int maxX;
     private int minY;
     private int maxY;
-    private List<Victim>[] victimsInLocations;
+    private List<Victim>[] victimsInLocations;// used for clustering
 
     private int getAbsSum(int x1, int y1, int x2, int y2) {
         return Math.abs(x1 - x2) + Math.abs(y1 - y2);
@@ -288,6 +288,12 @@ class MultiRun implements Callable<Paths> {
     @Override
     public Paths call() throws Exception {
         cluster();
+        Paths paths = pathSearch();
+        return paths;
+    }
+
+    private Paths pathSearch() {
+        // TODO Auto-generated method stub
         return null;
     }
 
@@ -308,11 +314,12 @@ class Ambulance {
 }
 
 class Paths {
-    public List<Path> paths;
+    public Map<Integer, List<Path>> paths;// numOfAmbulance->List<Path>
+    public int savedCount;
 
     class Path {
-        public int[] victim;
-        public int[] hospital;
+        public int[] victim;// (numOfvictim)
+        public int[] hospital;// (locX, locY)
 
     }
 }
