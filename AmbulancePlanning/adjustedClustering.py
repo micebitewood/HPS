@@ -2,30 +2,34 @@ def move(location, victimsInLocation, directions):
     moved = False
     indX = -1
     indY = -1   
-    if directions[0] > directions[1] + 4: #move left
-        indX = 1
-        moved = True
-    elif directions[0] < directions[1] - 4: #move right
+    if directions[0] > directions[1] + 4: #move right
         indX = 0
         moved = True
+    elif directions[0] < directions[1] - 4: #move left
+        indX = 1
+        moved = True
     if directions[2] > directions[3] + 4: #move up
-        indY = 3
+        indY = 2
         moved = True
     elif directions[2] < directions[3] - 4: #move down
-        indY = 2
+        indY = 3
         moved = True
     if moved:
         for victim in victimsInLocation:
             if indX != -1:
                 if victim[0] == location[0] - indX * 2 + 1:
-                    directions[1 - indX] -= 1
+                    directions[indX] -= 1
                 elif victim[0] == location[0]:
-                    directions[indX] += 1
+                    directions[1 - indX] += 1
             if indY != -1:
-                if victim[1] == location[1] + indY * 2 - 5: #if indY == 3, location[1] + 1
-                    directions[5 - indY] -= 1
-                elif victim[1] == location[0]:
-                    directions[indY] += 1
+                if victim[1] == location[1] - indY * 2 + 5: #if indY == 3, location[1] + 1
+                    directions[indY] -= 1
+                elif victim[1] == location[1]:
+                    directions[5 - indY] += 1
+        if indX != -1:
+            location[0] = location[0] - indX * 2 + 1
+        if indY != -1:
+            location[1] = location[1] - indY * 2 + 5
         return True
     return False
 
@@ -33,21 +37,23 @@ def adjust(locations):
     for index in range(len(locations)):
         location = locations[index]
         victimsInLocation = victimLocations[index]
-        directions = [0 for i in range(4)] #[left, right, up, down]
+        directions = [0 for i in range(4)] #[right, left, up, down]
         for victim in victimsInLocation:
-            if victim[0] < location[0]:
+            if victim[0] > location[0]:
                 directions[0] += 1
-            elif victim[0] > location[0]:
+            elif victim[0] < location[0]:
                 directions[1] += 1
             if victim[1] > location[1]:
                 directions[2] += 1
             elif victim[1] < location[1]:
                 directions[3] += 1
         count = 0
+        print "before adjusting", location
         while count < 1000:
             count += 1
             if not move(location, victimsInLocation, directions):
                 break
+        print "after adjusting", location, count
 
 def getAbsSum(x1, y1, x2, y2):
     return abs(x1 - x2) + abs(y1 - y2)
@@ -145,7 +151,7 @@ for i in hospitals:
         if not used[j]:
             res = result[j]
             if res[0] == i:
-                print res[1], res[2], res[0]
+                #print res[1], res[2], res[0]
                 used[j] = True
 '''
 import matplotlib.pyplot as plot

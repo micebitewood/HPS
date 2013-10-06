@@ -128,10 +128,6 @@ with open('cluster_output', 'r') as f:
         for i in range(temp[2]):
             ambulances.append([temp[0], temp[1], 0, num])
             num += 1
-print "hospitals",
-for i in range(len(hospitals)):
-    print i, hospitals[i], ";",
-print
 distBetweenVictims = dict() #(locX, locY, num) -> [(dist, (locX, locY, num))]
 visitedVictims = dict() #(locX, locY, num) -> boolean False means unvisited
 victims = dict() #(locX, locY, num)->(time, nearestHospital, timeToNearestHospital)
