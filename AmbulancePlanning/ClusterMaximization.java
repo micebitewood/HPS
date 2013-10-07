@@ -120,7 +120,7 @@ public class ClusterMaximization {
         ClusterMaximization cm = new ClusterMaximization();
         cm.parseFile("input");
         List<Callable<Paths>> lst = new ArrayList<Callable<Paths>>();
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 100; i++) {
             lst.add(new MultiRun(cm));
         }
         ExecutorService executorService = Executors.newFixedThreadPool(lst.size());
@@ -324,7 +324,8 @@ class MultiRun implements Callable<Paths> {
                 locations[i] = new Location(sumXY[i][0], sumXY[i][1], sumXY[i][2]);
             }
         }
-        adjust();
+        if (Math.random() < 0.5)
+            adjust();
         pairUp();
 
     }

@@ -1,4 +1,2 @@
-echo `python adjustedClustering.py > cluster_output`
-echo `python secondInnerAlgo.py`
-#echo `python verboseSecondInnerAlgo.py > log`
+echo `java ClusterMaximization > path`
 echo `python validator.py input path`
