@@ -81,6 +81,7 @@ public class ClusterMaximization {
                 num++;
             }
         }
+        br.close();
     }
 
     public void print() {
