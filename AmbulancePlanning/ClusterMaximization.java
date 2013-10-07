@@ -17,7 +17,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class ClusterMaximization {
-    static final int NUM_THREADS = 64;
+    static final int NUM_THREADS = 40;
 
     private Map<Victim, Integer> victims;
     private List<Integer> hospitals;
