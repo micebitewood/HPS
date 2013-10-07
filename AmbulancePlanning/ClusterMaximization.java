@@ -11,17 +11,26 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class ClusterMaximization {
+    static final int NUM_THREADS = 64;
+
     private Map<Victim, Integer> victims;
     private List<Integer> hospitals;
+    private static List<Victim> victimList;
+    private Map<Victim, List<VicDist>> distBetweenVictims;
     private int minX = 100;
     private int maxX = -100;
     private int minY = 100;
     private int maxY = -100;
+
+    public Map<Victim, List<VicDist>> getDistBetweenVictims() {
+        return this.distBetweenVictims;
+    }
 
     public Map<Victim, Integer> getVictims() {
         return victims;
@@ -40,10 +49,16 @@ public class ClusterMaximization {
         return range;
     }
 
+    private int getDist(int x1, int y1, int x2, int y2) {
+        return Math.abs(x1 - x2) + Math.abs(y1 - y2);
+    }
+
     public void parseFile(String input) throws IOException {
 
         victims = new HashMap<Victim, Integer>();
         hospitals = new ArrayList<Integer>();
+        victimList = new ArrayList<Victim>();
+        distBetweenVictims = new HashMap<Victim, List<VicDist>>();
         int num = 0;
         boolean startVictims = false;
         boolean startHospitals = false;
@@ -73,8 +88,23 @@ public class ClusterMaximization {
                     minY = locY;
                 else if (locY > maxY)
                     maxY = locY;
-                victims.put(new Victim(locX, locY, num), time);
+                Victim victimWithNum = new Victim(locX, locY, num);
+                Victim victimWithTime = new Victim(locX, locY, time);
+                victims.put(victimWithNum, time);
+                victimList.add(victimWithTime);
+                distBetweenVictims.put(victimWithNum, new ArrayList<VicDist>());
                 num++;
+            }
+        }
+        br.close();
+        List<Victim> victimList = new ArrayList<Victim>(victims.keySet());
+        for (int i = 0; i < victimList.size(); i++) {
+            Victim key1 = victimList.get(i);
+            for (int j = 0; j < i; j++) {
+                Victim key2 = victimList.get(j);
+                int dist = getDist(key1.locX, key1.locY, key2.locX, key2.locY);
+                distBetweenVictims.get(key1).add(new VicDist(dist, key2));
+                distBetweenVictims.get(key2).add(new VicDist(dist, key1));
             }
         }
     }
@@ -88,42 +118,50 @@ public class ClusterMaximization {
         }
     }
 
-    public static void main(String[] args) throws IOException, InterruptedException {
+    public static void main(String[] args) throws IOException, InterruptedException, ExecutionException {
         ClusterMaximization cm = new ClusterMaximization();
         cm.parseFile("input");
         List<Callable<Paths>> lst = new ArrayList<Callable<Paths>>();
-        for (int i = 0; i < 1; i++) {
+        for (int i = 0; i < NUM_THREADS; i++) {
             lst.add(new MultiRun(cm));
         }
         ExecutorService executorService = Executors.newFixedThreadPool(lst.size());
         List<Future<Paths>> tasks = executorService.invokeAll(lst);
         executorService.shutdown();
-        
-//         int maxCount = 0;
-//         Paths maxPath = new Paths();
-//         for (Future<Paths> task : tasks) {
-//             Paths paths = task.get();
-//             if (paths.savedCount > maxCount) {
-//                 maxCount = paths.savedCount;
-//                 maxPath = paths;
-//             }
-//         }
-//         for (Entry<Integer, List<Paths.Path>> pathEntry : maxPath.getPaths().entrySet()) {
-//             System.out.print("ambulance " + pathEntry.getKey());
-//             for (Paths.Path path : pathEntry.getValue()) {
-//                 for (int i = 0; i < path.victim.length; i++) {
-//                     Victim victim = victimList.get(i);
-//                     System.out.print(" " + path.victim[i] + " (" + victim.locX + ", " + victim.locY + ", "
-//                             + victim.num + ");");
-//                 }
-//                 System.out.print(" (" + path.hospital[0] + ", " + path.hospital[1] + ") ");
-//             }
-//             System.out.println();
-//         }
+
+        int maxCount = 0;
+        Paths maxPath = null;
+        for (Future<Paths> task : tasks) {
+            Paths paths = task.get();
+            if (paths.savedCount > maxCount) {
+                maxCount = paths.savedCount;
+                maxPath = paths;
+            }
+        }
+        Location[] locations = maxPath.getHospitals();
+        System.out.print("hospitals ");
+        for (int i = 0; i < locations.length; i++) {
+            System.out.print(i + " (" + locations[i].locX + ", " + locations[i].locY + "); ");
+        }
+        System.out.println();
+        for (Entry<Integer, List<Paths.Path>> pathEntry : maxPath.getPaths().entrySet()) {
+            System.out.print("ambulance " + pathEntry.getKey());
+            for (Paths.Path path : pathEntry.getValue()) {
+                for (int i = 0; i < path.victim.length; i++) {
+                    Victim victim = victimList.get(i);
+                    System.out.print(" " + path.victim[i] + " (" + victim.locX + ", " + victim.locY + ", "
+                            + victim.num + ");");
+                }
+                System.out.print(" (" + path.hospital[0] + ", " + path.hospital[1] + "); ");
+            }
+            System.out.println();
+        }
     }
 }
 
 class MultiRun implements Callable<Paths> {
+    static final int NUM_TRIALS = 20;
+
     private Location[] locations;// used for clustering
     private List<Integer> ambulanceNumbers;// used for clustering
     private Ambulance[] ambulances;// used for locating
@@ -133,6 +171,8 @@ class MultiRun implements Callable<Paths> {
     private int minY;
     private int maxY;
     private List<Victim>[] victimsInLocations;// used for clustering
+    private Map<Victim, List<VicDist>> distBetweenVictims;
+    private List<Victim> victimList;
 
     private int getAbsSum(int x1, int y1, int x2, int y2) {
         return Math.abs(x1 - x2) + Math.abs(y1 - y2);
@@ -160,10 +200,6 @@ class MultiRun implements Callable<Paths> {
                     }
                 }
             }
-        }
-        for (int i = 0; i < locations.length; i++) {
-            System.out.println("hospitals: " + locations[i].locX + ", " + locations[i].locY + " " +
-                    ambulanceNumbersArray[i]);
         }
         int num = 0;
         for (int i = 0; i < ambulanceNumbersArray.length; i++) {
@@ -292,16 +328,17 @@ class MultiRun implements Callable<Paths> {
                 locations[i] = new Location(sumXY[i][0], sumXY[i][1], sumXY[i][2]);
             }
         }
-        adjust();
+        if (Math.random() < 0.5)
+            adjust();
         pairUp();
 
     }
 
     public MultiRun(ClusterMaximization cm) {
-        ambulanceNumbers = new ArrayList<Integer>();
-        ambulanceNumbers.addAll(cm.getHospitals());
-        victims = new HashMap<Victim, Integer>();
-        victims.putAll(cm.getVictims());
+        ambulanceNumbers = new ArrayList<Integer>(cm.getHospitals());
+        victims = new HashMap<Victim, Integer>(cm.getVictims());
+        distBetweenVictims = new HashMap<Victim, List<VicDist>>(cm.getDistBetweenVictims());
+        victimList = new ArrayList<Victim>(victims.keySet());
 
         int[] range = cm.getRange();
         minX = range[0];
@@ -313,7 +350,8 @@ class MultiRun implements Callable<Paths> {
     @Override
     public Paths call() throws Exception {
         cluster();
-        Paths paths = pathSearch();
+//         Paths paths = simulatedAnnealing(locations);
+        Paths paths = pathSearch(locations, NUM_TRIALS);
         return paths;
     }
 
@@ -321,144 +359,109 @@ class MultiRun implements Callable<Paths> {
         return Math.abs(x1 - x2) + Math.abs(y1 - y2);
     }
 
-    private boolean isValid(Ambulance ambulance, Map<Victim, Boolean> visitedVictims, Map<Victim, VicData> vicData, List<TimeListItem> timeList) {
-        for(TimeListItem timeListItem : timeList) {
+    private boolean isValid(Ambulance ambulance, Map<Victim, Boolean> visitedVictims, Map<Victim, VicData> vicData,
+            List<TimeListItem> timeList) {
+        for (TimeListItem timeListItem : timeList) {
             int time = timeListItem.time;
             Victim victim = timeListItem.victim;
-            
-            if(time <= ambulance.time)
+
+            if (time <= ambulance.time)
                 return false;
-            if(!visitedVictims.get(victim)) {
-                int timeTillLoadVictim = getDist(ambulance.locX, ambulance.locY, victim.locX, victim.locY) + 1 + ambulance.time;
+            if (!visitedVictims.get(victim)) {
+                int timeTillLoadVictim =
+                        getDist(ambulance.locX, ambulance.locY, victim.locX, victim.locY) + 1 + ambulance.time;
                 int timeBackToHospital = vicData.get(victim).timeToNearestHospital + 1;
-                
-                if(timeTillLoadVictim + timeBackToHospital < time)
+
+                if (timeTillLoadVictim + timeBackToHospital < time)
                     return true;
             }
         }
-        
+
         return false;
     }
-    
-    private Paths pathSearch() {
-        // TODO Auto-generated method stub
-        
-        Map<Victim, List<VicDist>> distBetweenVictims = new HashMap<Victim, List<VicDist>>();
-        Map<Victim, Boolean> visitedVictims = new HashMap<Victim, Boolean>();
-        Map<Victim, VicData> vicData = new HashMap<Victim, VicData>();
-        List<TimeListItem> timeList = new ArrayList<TimeListItem>();
-        
-        for(Victim victim : victims.keySet()) {
-            timeList.add(new TimeListItem(victims.get(victim), victim));
-            
-            int timeToNearestHospital = 99999999;
-            int nearestHospital = -1;
-            
-            for(int i=0; i<locations.length; ++i) {
-                int time = getDist(victim.locX, victim.locY, locations[i].locX, locations[i].locY);
-                if(time < timeToNearestHospital) {
-                    timeToNearestHospital = time;
-                    nearestHospital = i;
-                }
-            }
-            
-            vicData.put(victim, new VicData(victims.get(victim), nearestHospital, timeToNearestHospital));
-            distBetweenVictims.put(victim, new ArrayList<VicDist>());
-            visitedVictims.put(victim, false);
-        }
-        
-        Collections.sort(timeList, new Comparator<TimeListItem>() {
-            public int compare(TimeListItem i1, TimeListItem i2) {
-                // Comparing in reverse order
-                return i2.time-i1.time;
-            }
-        });
-        
-        // TODO: This is slightly inefficient
-        List<Victim> victimList = new ArrayList<Victim>(victims.keySet());
-        for(Victim key1 : victimList) {
-            for(Victim key2 : victimList) {
-                distBetweenVictims.get(key1).add(new VicDist(getDist(key1.locX, key1.locY, key2.locX, key2.locY), key2));
-            }
-        }
-        
-        // TODO: Refactor to do multiple trials and find the best
+
+    private Paths getSavedCount(int seed, Location[] locations, Ambulance[] ambulances, Map<Victim, Boolean> originalVisitedVictims, Map<Victim, VicData> originalVicData, List<TimeListItem> timeList) {
         Random random = new Random();
-        random.setSeed(System.currentTimeMillis());
+        random.setSeed(seed);
         List<Ambulance> ambulanceList = new ArrayList<Ambulance>(Arrays.asList(ambulances));
+        Map<Victim, Boolean> visitedVictims = new HashMap<Victim, Boolean>(originalVisitedVictims);
+        Map<Victim, VicData> vicData = new HashMap<Victim, VicData>(originalVicData);
         Collections.shuffle(ambulanceList);
-        
-        for(Ambulance originalAmbulance : ambulanceList) {
+        Paths finalPaths = new Paths(locations);
+
+        for (Ambulance originalAmbulance : ambulanceList) {
             int maxCount = 0;
             List<Victim> mostSavedVictims = null;
-            Paths finalPath = null;
-            
-            for(int i=0; i<100; ++i) {
+            List<Paths.Path> maxPath = null;
+
+            for (int i = 0; i < 100; ++i) {
                 Ambulance ambulance = new Ambulance(originalAmbulance);
                 List<Paths.Path> path = new ArrayList<Paths.Path>();
                 Map<Victim, Boolean> newVisitedVictims = new HashMap<Victim, Boolean>(visitedVictims);
-                
+
                 List<Victim> savedVictims = new ArrayList<Victim>();
                 int savedVictimsCount = 0;
-                
-                while(true) {
-                     if(!isValid(ambulance, newVisitedVictims, vicData, timeList)) {
-                         break;
-                     }
-                    
+
+                while (true) {
+                    if (!isValid(ambulance, newVisitedVictims, vicData, timeList)) {
+                        break;
+                    }
+
                     Victim victim = victimList.get(random.nextInt(victimList.size()));
-                    
-                    while(newVisitedVictims.get(victim))
+
+                    while (newVisitedVictims.get(victim))
                         victim = victimList.get(random.nextInt(victimList.size()));
-                    
+
                     // Get finish time
-                    int timeTillLoadVictim = getDist(ambulance.locX, ambulance.locY, victim.locX, victim.locY) + 1 + ambulance.time;
+                    int timeTillLoadVictim =
+                            getDist(ambulance.locX, ambulance.locY, victim.locX, victim.locY) + 1 + ambulance.time;
                     int timeBackToHospital = vicData.get(victim).timeToNearestHospital + 1;
-                    
-                    if(timeTillLoadVictim + timeBackToHospital < vicData.get(victim).time) {
+
+                    if (timeTillLoadVictim + timeBackToHospital < vicData.get(victim).time) {
                         int lastTimeTillLoadVictim = timeTillLoadVictim;
                         int lastTimeBackToHospital = timeBackToHospital;
-                        
+
                         List<Victim> victimsInAmbulance = new ArrayList<Victim>();
                         Victim currVictim = victim;
-                        
+
                         victimsInAmbulance.add(victim);
                         newVisitedVictims.put(victim, true);
                         ++savedVictimsCount;
-                        
-                        while(victimsInAmbulance.size() < 4) {
+
+                        while (victimsInAmbulance.size() < 4) {
                             boolean hasNextVictim = false;
                             List<VicDist> otherVictims = distBetweenVictims.get(currVictim);
-                            
+
                             Collections.sort(otherVictims, new Comparator<VicDist>() {
                                 public int compare(VicDist i1, VicDist i2) {
                                     return i1.dist - i2.dist;
                                 }
                             });
-                            
-                            for(VicDist otherVictim : otherVictims) {
+
+                            for (VicDist otherVictim : otherVictims) {
                                 Victim key = otherVictim.key;
-                                if(newVisitedVictims.get(key))
+                                if (newVisitedVictims.get(key))
                                     continue;
-                                
+
                                 timeTillLoadVictim = lastTimeTillLoadVictim + otherVictim.dist + 1;
                                 timeBackToHospital = vicData.get(key).timeToNearestHospital + 1;
-                                
+
                                 boolean skip = false;
-                                
-                                if(timeTillLoadVictim + timeBackToHospital > vicData.get(key).time) {
+
+                                if (timeTillLoadVictim + timeBackToHospital > vicData.get(key).time) {
                                     skip = true;
                                 } else {
-                                    for(Victim victimInAmbulance : victimsInAmbulance) {
-                                        if(timeTillLoadVictim + timeBackToHospital > vicData.get(victimInAmbulance).time) {
+                                    for (Victim victimInAmbulance : victimsInAmbulance) {
+                                        if (timeTillLoadVictim + timeBackToHospital > vicData.get(victimInAmbulance).time) {
                                             skip = true;
                                             break;
                                         }
                                     }
                                 }
-                                
-                                if(skip) continue;
-                                
+
+                                if (skip)
+                                    continue;
+
                                 newVisitedVictims.put(key, true);
                                 lastTimeTillLoadVictim = timeTillLoadVictim;
                                 lastTimeBackToHospital = timeBackToHospital;
@@ -468,55 +471,166 @@ class MultiRun implements Callable<Paths> {
                                 currVictim = key;
                                 break;
                             }
-                            
-                            if(!hasNextVictim)
+
+                            if (!hasNextVictim)
                                 break;
                         }
-                        
+
                         // Is this needed?
-                        if(victimsInAmbulance.isEmpty())
+                        if (victimsInAmbulance.isEmpty())
                             break;
-                        
-                        Location returnHospital = locations[vicData.get(victimsInAmbulance.get(victimsInAmbulance.size()-1)).nearestHospital];
+
+                        Location returnHospital =
+                                locations[vicData.get(victimsInAmbulance.get(victimsInAmbulance.size() - 1)).nearestHospital];
                         int finishTime = lastTimeTillLoadVictim + lastTimeBackToHospital;
-                        
-                        for(Victim savedVictim : victimsInAmbulance) {
-//                            path.add(savedVictim);
-                        }
-                        
+
+                        path.add(new Paths.Path(victimsInAmbulance, returnHospital));
+
                         savedVictims.addAll(victimsInAmbulance);
                         ambulance.locX = returnHospital.locX;
                         ambulance.locY = returnHospital.locY;
                         ambulance.time = finishTime;
-//                        path.append(returnHospital);
                     }
                 }
-                
-                if(savedVictimsCount > maxCount) {
+
+                if (savedVictimsCount > maxCount) {
                     maxCount = savedVictimsCount;
                     mostSavedVictims = savedVictims;
-//                    finalPath = path;
+                    maxPath = path;
                 }
             }
-            
-//            write finalPath
-            
-            for(Victim victim : mostSavedVictims) {
+
+            finalPaths.paths.put(originalAmbulance.num, maxPath);
+            for (Victim victim : mostSavedVictims) {
                 visitedVictims.put(victim, true);
             }
         }
-        
+
         int count = 0;
-        for(Victim victim : visitedVictims.keySet())
-            if(visitedVictims.get(victim))
+        for (Victim victim : visitedVictims.keySet())
+            if (visitedVictims.get(victim))
                 ++count;
-        
-        System.out.println(count);
-        
-        // TODO: Return final path
-        return null;
+
+        finalPaths.savedCount = count;
+
+        return finalPaths;
     }
 
+    private Paths pathSearch(Location[] locations, int numTrials) {
+
+        Map<Victim, Boolean> visitedVictims = new HashMap<Victim, Boolean>();
+        Map<Victim, VicData> vicData = new HashMap<Victim, VicData>();
+        List<TimeListItem> timeList = new ArrayList<TimeListItem>();
+
+//         Integer[] ambulanceNumbersArray = new Integer[ambulanceNumbers.size()];
+//         ambulanceNumbers.toArray(ambulanceNumbersArray);
+//         ambulances = new Ambulance[ambulances.length];
+//         int num = 0;
+//         for (int i = 0; i < ambulanceNumbersArray.length; i++) {
+//             for (int j = 0; j < ambulanceNumbersArray[i]; j++) {
+//                 ambulances[num] = new Ambulance(locations[i].locX, locations[i].locY, 0, num);
+//                 num++;
+//             }
+//         }
+
+        for (Victim victim : victims.keySet()) {
+            timeList.add(new TimeListItem(victims.get(victim), victim));
+
+            int timeToNearestHospital = 99999999;
+            int nearestHospital = -1;
+
+            for (int i = 0; i < locations.length; ++i) {
+                int time = getDist(victim.locX, victim.locY, locations[i].locX, locations[i].locY);
+                if (time < timeToNearestHospital) {
+                    timeToNearestHospital = time;
+                    nearestHospital = i;
+                }
+            }
+
+            vicData.put(victim, new VicData(victims.get(victim), nearestHospital, timeToNearestHospital));
+            visitedVictims.put(victim, false);
+        }
+
+        Collections.sort(timeList, new Comparator<TimeListItem>() {
+            public int compare(TimeListItem i1, TimeListItem i2) {
+                // Comparing in reverse order
+                return i2.time - i1.time;
+            }
+        });
+
+        int maxSavedCount = 0;
+        Paths bestPaths = null;
+
+        for (int i = 0; i < numTrials; ++i) {
+            Paths paths = getSavedCount(i, locations, ambulances, visitedVictims, vicData, timeList);
+            if (paths.savedCount > maxSavedCount) {
+                maxSavedCount = paths.savedCount;
+                bestPaths = paths;
+            }
+        }
+
+        return bestPaths;
+    }
+
+//     private Location[] copyOfLocations(Location[] srcLocations) {
+//         Location[] destLocations = new Location[5];
+//         for (int i = 0; i < 5; ++i)
+//             destLocations[i] = new Location(srcLocations[i]);
+// 
+//         return destLocations;
+//     }
+// 
+//     private Paths simulatedAnnealing(Location[] locations) {
+// 
+//         Random random = new Random();
+//         random.setSeed(0);
+// //        random.setSeed(System.currentTimeMillis());
+//         Location[] currLocations = copyOfLocations(locations);
+//         Paths currPaths = pathSearch(currLocations, 3);
+//         int maxSavedCount = currPaths.savedCount;
+//         Location[] bestLocations = copyOfLocations(currLocations);
+//         Paths bestPaths = currPaths;
+//         double t = 0.01;
+// 
+//         while (t > 0.0001) {
+//             for (int i = 0; i < 10; ++i) {
+//                 int ind = random.nextInt(5);
+//                 Location[] newLocations = copyOfLocations(currLocations);
+//                 newLocations[ind].locX += random.nextInt(3) - 1;
+//                 newLocations[ind].locY += random.nextInt(3) - 1;
+// 
+//                 if (newLocations[ind].locX < 1) newLocations[ind].locX = 1;
+//                 if (newLocations[ind].locX > 100) newLocations[ind].locX = 100;
+//                 if (newLocations[ind].locY < 1) newLocations[ind].locY = 1;
+//                 if (newLocations[ind].locY > 100) newLocations[ind].locY = 100;
+// 
+//                 if (newLocations[ind].locX == currLocations[ind].locX && newLocations[ind].locY == currLocations[ind].locY)
+//                     continue;
+// 
+//                 Paths newPaths = pathSearch(newLocations, 3);
+//                 double diff = (double)(newPaths.savedCount - currPaths.savedCount);
+// 
+//                 if (Math.exp((diff-1.0)/currPaths.savedCount/t) > random.nextDouble()) {
+//                     System.out.println(String.format("%3.1f: max: %3d, cur: %3d, diff: %f: updated", -Math.log10(t), maxSavedCount, currPaths.savedCount, diff));
+//                     currPaths = newPaths;
+//                     currLocations = copyOfLocations(newLocations);
+// 
+//                     if (currPaths.savedCount > maxSavedCount) {
+//                         maxSavedCount = currPaths.savedCount;
+//                         bestLocations = copyOfLocations(currLocations);
+//                         bestPaths = currPaths;
+//                     }
+//                 } else {
+//                     System.out.println(String.format("%3.1f: max: %3d, cur: %3d, diff: %f: rejected", -Math.log10(t), maxSavedCount, currPaths.savedCount, diff));
+//                 }
+//             }
+// 
+//             t *= 0.5;
+//         }
+// 
+//         Paths morePaths = pathSearch(bestLocations, 50);
+//         return (bestPaths.savedCount > morePaths.savedCount) ? bestPaths : morePaths;
+//     }
 }
 
 class Ambulance {
@@ -531,7 +645,7 @@ class Ambulance {
         this.time = time;
         this.num = num;
     }
-    
+
     public Ambulance(Ambulance ambulance) {
         this.locX = ambulance.locX;
         this.locY = ambulance.locY;
@@ -541,13 +655,37 @@ class Ambulance {
 }
 
 class Paths {
+    public Location[] hospitals;
     public Map<Integer, List<Path>> paths;// numOfAmbulance->List<Path>
     public int savedCount;
 
-    class Path {
+    public Location[] getHospitals() {
+        return hospitals;
+    }
+
+    public Map<Integer, List<Path>> getPaths() {
+        return paths;
+    }
+
+    public Paths(Location[] locations) {
+        paths = new HashMap<Integer, List<Path>>();
+        hospitals = locations;
+    }
+
+    static class Path {
         public int[] victim;// (numOfvictim)
         public int[] hospital;// (locX, locY)
 
+        public Path(List<Victim> victimsInAmbulance, Location hospital) {
+            victim = new int[victimsInAmbulance.size()];
+            int count = 0;
+            for (Victim savedVictim : victimsInAmbulance) {
+                victim[count++] = savedVictim.num;
+            }
+            this.hospital = new int[2];
+            this.hospital[0] = hospital.locX;
+            this.hospital[1] = hospital.locY;
+        }
     }
 }
 
@@ -578,12 +716,18 @@ class Location {
         this.locY = locY;
         this.numOfPeople = numOfPeople;
     }
+
+    public Location(Location location) {
+        this.locX = location.locX;
+        this.locY = location.locY;
+        this.numOfPeople = location.numOfPeople;
+    }
 }
 
 class VicDist {
     public int dist;
     public Victim key;
-    
+
     public VicDist(int dist, Victim key) {
         this.dist = dist;
         this.key = key;
@@ -594,7 +738,7 @@ class VicData {
     public int time;
     public int nearestHospital;
     public int timeToNearestHospital;
-    
+
     public VicData(int time, int nearestHospital, int timeToNearestHospital) {
         this.time = time;
         this.nearestHospital = nearestHospital;
@@ -605,7 +749,7 @@ class VicData {
 class TimeListItem {
     public int time;
     public Victim victim;
-    
+
     public TimeListItem(int time, Victim victim) {
         this.time = time;
         this.victim = victim;
