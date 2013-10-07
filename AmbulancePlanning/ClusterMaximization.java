@@ -148,7 +148,7 @@ public class ClusterMaximization {
             System.out.print("ambulance " + pathEntry.getKey());
             for (Paths.Path path : pathEntry.getValue()) {
                 for (int i = 0; i < path.victim.length; i++) {
-                    Victim victim = victimList.get(i);
+                    Victim victim = victimList.get(path.victim[i]);
                     System.out.print(" " + path.victim[i] + " (" + victim.locX + ", " + victim.locY + ", "
                             + victim.num + ");");
                 }
@@ -160,7 +160,7 @@ public class ClusterMaximization {
 }
 
 class MultiRun implements Callable<Paths> {
-    static final int NUM_TRIALS = 20;
+    static final int NUM_TRIALS = 25;
 
     private Location[] locations;// used for clustering
     private List<Integer> ambulanceNumbers;// used for clustering
