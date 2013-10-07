@@ -20,10 +20,15 @@ public class ClusterMaximization {
     private Map<Victim, Integer> victims;
     private List<Integer> hospitals;
     private static List<Victim> victimList;
+    private Map<Victim, List<VicDist>> distBetweenVictims;
     private int minX = 100;
     private int maxX = -100;
     private int minY = 100;
     private int maxY = -100;
+
+    public Map<Victim, List<VicDist>> getDistBetweenVictims() {
+        return this.distBetweenVictims;
+    }
 
     public Map<Victim, Integer> getVictims() {
         return victims;
@@ -42,11 +47,16 @@ public class ClusterMaximization {
         return range;
     }
 
+    private int getDist(int x1, int y1, int x2, int y2) {
+        return Math.abs(x1 - x2) + Math.abs(y1 - y2);
+    }
+
     public void parseFile(String input) throws IOException {
 
         victims = new HashMap<Victim, Integer>();
         hospitals = new ArrayList<Integer>();
         victimList = new ArrayList<Victim>();
+        distBetweenVictims = new HashMap<Victim, List<VicDist>>();
         int num = 0;
         boolean startVictims = false;
         boolean startHospitals = false;
@@ -76,12 +86,25 @@ public class ClusterMaximization {
                     minY = locY;
                 else if (locY > maxY)
                     maxY = locY;
-                victims.put(new Victim(locX, locY, num), time);
-                victimList.add(new Victim(locX, locY, time));
+                Victim victimWithNum = new Victim(locX, locY, num);
+                Victim victimWithTime = new Victim(locX, locY, time);
+                victims.put(victimWithNum, time);
+                victimList.add(victimWithTime);
+                distBetweenVictims.put(victimWithNum, new ArrayList<VicDist>());
                 num++;
             }
         }
         br.close();
+        List<Victim> victimList = new ArrayList<Victim>(victims.keySet());
+        for (int i = 0; i < victimList.size(); i++) {
+            Victim key1 = victimList.get(i);
+            for (int j = 0; j < i; j++) {
+                Victim key2 = victimList.get(j);
+                int dist = getDist(key1.locX, key1.locY, key2.locX, key2.locY);
+                distBetweenVictims.get(key1).add(new VicDist(dist, key2));
+                distBetweenVictims.get(key2).add(new VicDist(dist, key1));
+            }
+        }
     }
 
     public void print() {
@@ -144,6 +167,8 @@ class MultiRun implements Callable<Paths> {
     private int minY;
     private int maxY;
     private List<Victim>[] victimsInLocations;// used for clustering
+    private Map<Victim, List<VicDist>> distBetweenVictims;
+    private List<Victim> victimList;
 
     private int getAbsSum(int x1, int y1, int x2, int y2) {
         return Math.abs(x1 - x2) + Math.abs(y1 - y2);
@@ -305,10 +330,10 @@ class MultiRun implements Callable<Paths> {
     }
 
     public MultiRun(ClusterMaximization cm) {
-        ambulanceNumbers = new ArrayList<Integer>();
-        ambulanceNumbers.addAll(cm.getHospitals());
-        victims = new HashMap<Victim, Integer>();
-        victims.putAll(cm.getVictims());
+        ambulanceNumbers = new ArrayList<Integer>(cm.getHospitals());
+        victims = new HashMap<Victim, Integer>(cm.getVictims());
+        distBetweenVictims = new HashMap<Victim, List<VicDist>>(cm.getDistBetweenVictims());
+        victimList = new ArrayList<Victim>(victims.keySet());
 
         int[] range = cm.getRange();
         minX = range[0];
@@ -351,7 +376,6 @@ class MultiRun implements Callable<Paths> {
 
     private Paths pathSearch() {
 
-        Map<Victim, List<VicDist>> distBetweenVictims = new HashMap<Victim, List<VicDist>>();
         Map<Victim, Boolean> visitedVictims = new HashMap<Victim, Boolean>();
         Map<Victim, VicData> vicData = new HashMap<Victim, VicData>();
         List<TimeListItem> timeList = new ArrayList<TimeListItem>();
@@ -371,7 +395,6 @@ class MultiRun implements Callable<Paths> {
             }
 
             vicData.put(victim, new VicData(victims.get(victim), nearestHospital, timeToNearestHospital));
-            distBetweenVictims.put(victim, new ArrayList<VicDist>());
             visitedVictims.put(victim, false);
         }
 
@@ -381,15 +404,6 @@ class MultiRun implements Callable<Paths> {
                 return i2.time - i1.time;
             }
         });
-
-        // TODO: This is slightly inefficient
-        List<Victim> victimList = new ArrayList<Victim>(victims.keySet());
-        for (Victim key1 : victimList) {
-            for (Victim key2 : victimList) {
-                distBetweenVictims.get(key1)
-                        .add(new VicDist(getDist(key1.locX, key1.locY, key2.locX, key2.locY), key2));
-            }
-        }
 
         // TODO: Refactor to do multiple trials and find the best
         Random random = new Random();
