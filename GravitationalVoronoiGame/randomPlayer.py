@@ -1,29 +1,29 @@
 #10x10 board, two players, 5 stones for each player
 def closest(board, color1, color2):
     if len(color2) == 0:
-        move(board, color1)
+        color1.append((length / 2, length / 2))
     else:
         maxScore = 0
         maxPosition = (0, 0)
         for position in color2:
             for i in [-1, 0, 1]:
                 x = position[0] + i
-                if x < 0 or x > 9:
+                if x < 0 or x > length - 1:
                     continue
                 for j in [-1, 0, 1]:
                     y = position[1] + j
-                    if y < 0 or y > 9:
+                    if y < 0 or y > length - 1:
                         continue
                     if board[x][y] == 0:
                         newColor1 = color1[:]
                         newColor1.append((x, y))
                         score = getScore(newColor1, color2)
                         if score[0] > maxScore:
-                            print x, y, score
-                            print newColor1, color2
+                            #print x, y, score
+                            #print newColor1, color2
                             maxScore = score[0]
                             maxPosition = (x, y)
-        print "choose", maxPosition
+        #print "choose", maxPosition
         color1.append(maxPosition)
 
 def move(board, color):
@@ -38,11 +38,12 @@ def move(board, color):
             color.append((x, y))
 
 def redMove(board, red):
+    #print "red first"
     move(board, red)
     #closest(board, red, blue)
 
 def blueMove(board, blue):
-    print "blue first"
+    #print "blue first"
     #move(board, blue)
     closest(board, blue, red)
 
@@ -71,8 +72,9 @@ def getScore(color1, color2):
 redCount = 0
 blueCount = 0
 tieCount = 0
-for i in range(1):
-    board = [[0 for i in range(10)] for j in range(10)]
+length = 100
+for i in range(100):
+    board = [[0 for i in range(length)] for j in range(length)]
     red = []
     blue = []
     for n in range(5):
