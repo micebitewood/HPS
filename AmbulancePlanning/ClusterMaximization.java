@@ -21,10 +21,10 @@ public class ClusterMaximization {
     private List<Integer> hospitals;
     private static List<Victim> victimList;
     private Map<Victim, List<VicDist>> distBetweenVictims;
-    private int minX = 100;
-    private int maxX = -100;
-    private int minY = 100;
-    private int maxY = -100;
+    private int minX = 200;
+    private int maxX = -200;
+    private int minY = 200;
+    private int maxY = -200;
 
     public Map<Victim, List<VicDist>> getDistBetweenVictims() {
         return this.distBetweenVictims;
@@ -415,8 +415,8 @@ class MultiRun implements Callable<Paths> {
 
         for (Ambulance originalAmbulance : ambulanceList) {
             int maxCount = 0;
-            List<Victim> mostSavedVictims = null;
-            List<Paths.Path> maxPath = null;
+            List<Victim> mostSavedVictims = new ArrayList<Victim>();
+            List<Paths.Path> maxPath = new ArrayList<Paths.Path>();
 
             for (int i = 0; i < 100; ++i) {
                 Ambulance ambulance = new Ambulance(originalAmbulance);
