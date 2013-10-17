@@ -10,7 +10,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-public class Red {
+public class Game {
     private static final int LENGTH = 1000;
     private static final int STONES = 15;
     private static final int COUNT = 1;
