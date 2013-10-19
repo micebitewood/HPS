@@ -15,7 +15,7 @@ public class Game {
     private static final int STONES = 15;
     private static final int COUNT = 1;
     private static final int THREAD_COUNT = 1;
-    
+
     public static void main(String[] args) {
         for (int i = 0; i < THREAD_COUNT; i++) {
             MultiRun multiRun = new MultiRun(LENGTH, STONES, COUNT);
@@ -28,7 +28,7 @@ class BestPosition {
     public int x;
     public int y;
     public int[] score;
-    
+
     public BestPosition(int x, int y, int[] score) {
         this.x = x;
         this.y = y;
@@ -43,14 +43,51 @@ class ClosestMultiRun implements Callable<BestPosition> {
     int y;
     int length;
     boolean red;
-    
+
+    private int[] getScore() {
+        int[] score = new int[2];
+        for (int i = 0; i < length; i++)
+            for (int j = 0; j < length; j++) {
+                double pull = scores[i][j];
+                if (pull > 0)
+                    score[0] += 1;
+                else if (pull < 0)
+                    score[1] += 1;
+            }
+        return score;
+    }
+
     private BestPosition compare(List<BestPosition> same) {
         BestPosition bestPosition = same.get(0);
         Random random = new Random(System.currentTimeMillis());
-        int lastScore = 0;
+        int lastScore = Integer.MAX_VALUE;
         for (BestPosition bestPos : same) {
             addStone(bestPos.x, bestPos.y);
-            int minScore = Integer.MAX_VALUE;
+            int[] score1 = getScore();
+            red = !red;
+            // TODO
+            int maxScore = 0;
+            for (int i = -1; i < 2; i++) {
+                if (bestPos.x + i >= 0 && bestPos.x + i < length) {
+                    for (int j = -1; j < 2; j++) {
+                        if (i == 0 && j == 0)
+                            continue;
+                        if (bestPos.y + j >= 0 && bestPos.y + j < length && board[bestPos.x + i][bestPos.y + j] == 0) {
+                            int[] score = getScore(bestPos.x + i, bestPos.y + j);
+                            if (red) {
+                                if (score[0] >= maxScore) {
+                                    maxScore = score[0];
+                                }
+                            } else {
+                                if (score[1] >= maxScore) {
+                                    maxScore = score[1];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // TODO
             for (int i = 0; i < 100; i++) {
                 boolean isValid = false;
                 while (!isValid) {
@@ -59,27 +96,24 @@ class ClosestMultiRun implements Callable<BestPosition> {
                     if (board[x][y] == 0) {
                         isValid = true;
                         int[] score = getScore(x, y);
-                        if (red && score[0] < minScore) {
-                            minScore = score[0];
-                        } else if (red && score[1] < minScore) {
-                            minScore = score[1];
+                        if (red && score[0] > maxScore) {
+                            maxScore = score[0];
+                        } else if (!red && score[1] > maxScore) {
+                            maxScore = score[1];
                         }
                     }
                 }
             }
-            if (red && minScore > lastScore) {
+            if (maxScore < lastScore) {
                 bestPosition = bestPos;
-                lastScore = minScore;
+                lastScore = maxScore;
             }
-            else if (red && minScore > lastScore) {
-                bestPosition = bestPos;
-                lastScore = minScore;
-            }
+            red = !red;
             removeStone(bestPos.x, bestPos.y);
         }
         return bestPosition;
     }
-    
+
     public ClosestMultiRun(int[][] board, double[][] scores, int x, int y, boolean red) {
         length = scores.length;
         this.scores = new double[length][];
@@ -91,7 +125,7 @@ class ClosestMultiRun implements Callable<BestPosition> {
         this.red = red;
         this.board = board;
     }
-    
+
     private void addStone(int x, int y) {
         double flag;
         if (red)
@@ -107,7 +141,7 @@ class ClosestMultiRun implements Callable<BestPosition> {
             }
         }
     }
-    
+
     private void removeStone(int x, int y) {
         double flag;
         if (red)
@@ -123,7 +157,7 @@ class ClosestMultiRun implements Callable<BestPosition> {
             }
         }
     }
-    
+
     private int[] getScore(int x, int y) {
         int[] score = new int[2];
         double flag;
@@ -135,7 +169,7 @@ class ClosestMultiRun implements Callable<BestPosition> {
             for (int j = 0; j < length; j++) {
                 double pull;
                 if (x == i && y == j)
-                    pull = 1000000;
+                    pull = 1000000 * flag;
                 else
                     pull = flag / ((x - i) * (x - i) + (y - j) * (y - j));
                 if (scores[i][j] + pull > 0) {
@@ -147,7 +181,7 @@ class ClosestMultiRun implements Callable<BestPosition> {
         }
         return score;
     }
-    
+
     @Override
     public BestPosition call() throws Exception {
         int[] maxScore = new int[2];
@@ -209,7 +243,7 @@ class MultiRun extends Thread {
     private int count;
     private static final Object lock = new Object();
     private double[][] scores;
-    
+
     public MultiRun(int length, int stones, int count) {
         this.length = length;
         this.stones = stones;
@@ -217,7 +251,7 @@ class MultiRun extends Thread {
         this.count = count;
         scores = new double[length][length];
     }
-    
+
     private void randomMove(int[][] board, Set<Integer> red, Set<Integer> blue, boolean isRed) {
         boolean isValid = false;
         while (!isValid) {
@@ -234,7 +268,7 @@ class MultiRun extends Thread {
             }
         }
     }
-    
+
     private void balance(int[][] board, Set<Integer> red, Set<Integer> blue, boolean isRed) {
         int minDist = 0;
         int[] bestPos = {0, 0 };
@@ -260,10 +294,10 @@ class MultiRun extends Thread {
                     }
                     int[] dist =
                     {
-                        x * x,
-                        y * y,
-                        (length - x - 1) * (length - x - 1),
-                        (length - y - 1) * (length - y - 1)
+                            x * x,
+                            y * y,
+                            (length - x - 1) * (length - x - 1),
+                            (length - y - 1) * (length - y - 1)
                     };
                     for (int d : dist) {
                         if (d < minMinDist)
@@ -284,7 +318,7 @@ class MultiRun extends Thread {
         else
             blue.add(bestPos[0] * length + bestPos[1]);
     }
-    
+
     private void closest(int[][] board, Set<Integer> red, Set<Integer> blue, boolean isRed) {
         Set<Integer> color1;
         Set<Integer> color2;
@@ -301,7 +335,7 @@ class MultiRun extends Thread {
             color1 = blue;
             color2 = red;
         }
-        
+
         try {
             List<Callable<BestPosition>> lst = new ArrayList<Callable<BestPosition>>();
             for (int stone : color2) {
@@ -312,7 +346,7 @@ class MultiRun extends Thread {
             ExecutorService executorService = Executors.newFixedThreadPool(lst.size());
             List<Future<BestPosition>> tasks = executorService.invokeAll(lst);
             executorService.shutdown();
-            
+
             int[] maxScore = new int[2];
             if (isRed) {
                 maxScore[0] = 0;
@@ -322,7 +356,7 @@ class MultiRun extends Thread {
                 maxScore[1] = 0;
             }
             BestPosition bestPosition = new BestPosition(0, 0, maxScore);
-            
+
             List<BestPosition> same = new ArrayList<BestPosition>();
             for (Future<BestPosition> task : tasks) {
                 BestPosition position = task.get();
@@ -356,15 +390,15 @@ class MultiRun extends Thread {
             color1.add(bestPosition.x * length + bestPosition.y);
             addStone(bestPosition.x, bestPosition.y, isRed);
             board[bestPosition.x][bestPosition.y] = 1;
-            
+
         } catch (InterruptedException e) {
             e.printStackTrace();
         } catch (ExecutionException e) {
             e.printStackTrace();
         }
-        
+
     }
-    
+
     private BestPosition compare(int[][] board, List<BestPosition> same, boolean isRed) {
         BestPosition bestPosition = same.get(0);
         int lastScore = 0;
@@ -401,7 +435,7 @@ class MultiRun extends Thread {
         }
         return bestPosition;
     }
-    
+
     private void addStone(int i, int j, boolean red) {
         double flag;
         if (red)
@@ -415,7 +449,7 @@ class MultiRun extends Thread {
                 else
                     scores[x][y] += flag / ((x - i) * (x - i) + (y - j) * (y - j));
     }
-    
+
     private int[] getScore(int x, int y, boolean isRed) {
         int[] score = new int[2];
         double flag;
@@ -439,7 +473,7 @@ class MultiRun extends Thread {
         }
         return score;
     }
-    
+
     private int[] getScore() {
         int[] score = new int[2];
         for (int i = 0; i < length; i++)
@@ -452,7 +486,7 @@ class MultiRun extends Thread {
             }
         return score;
     }
-    
+
     @Override
     public void run() {
         int redCount = 0;
