@@ -11,8 +11,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 public class Game {
-    private static final int LENGTH = 1000;
-    private static final int STONES = 15;
+    private static final int LENGTH = 50;
+    private static final int STONES = 8;
     private static final int COUNT = 1;
     private static final int THREAD_COUNT = 1;
     
@@ -146,7 +146,46 @@ class MultiRun extends Thread {
         }
     }
     
-    private void closest(int[][] board, Set<Integer> red, Set<Integer> blue, boolean validation, boolean isRed) {
+    private void balance(int[][] board, Set<Integer> red, Set<Integer> blue, boolean isRed) {
+        int minDist = Integer.MAX_VALUE;
+        int[] bestPos = {0, 0 };
+        for (int i = 0; i < length / 50; i++) {
+            boolean isValid = false;
+            while (!isValid) {
+                int x = random.nextInt(length);
+                int y = random.nextInt(length);
+                if (board[x][y] == 0) {
+                    isValid = true;
+                    int minMinDist = Integer.MAX_VALUE;
+                    Set<Integer> color;
+                    if (isRed)
+                        color = red;
+                    else
+                        color = blue;
+                    for (int pos : color) {
+                        int xx = pos / length;
+                        int yy = pos % length;
+                        int dist = (xx - x) * (xx - x) + (yy - y) * (yy - y);
+                        if (dist < minMinDist)
+                            minMinDist = dist;
+                    }
+                    if (minMinDist < minDist) {
+                        minDist = minMinDist;
+                        bestPos[0] = x;
+                        bestPos[1] = y;
+                    }
+                }
+            }
+        }
+        board[bestPos[0]][bestPos[1]] = 1;
+        addStone(bestPos[0], bestPos[1], isRed);
+        if (isRed)
+            red.add(bestPos[0] * length + bestPos[1]);
+        else
+            blue.add(bestPos[0] * length + bestPos[1]);
+    }
+    
+    private void closest(int[][] board, Set<Integer> red, Set<Integer> blue, boolean isRed) {
         Set<Integer> color1;
         Set<Integer> color2;
         if (isRed) {
@@ -185,25 +224,39 @@ class MultiRun extends Thread {
             }
             BestPosition bestPosition = new BestPosition(0, 0, maxScore);
             
+            List<BestPosition> same = new ArrayList<BestPosition>();
             for (Future<BestPosition> task : tasks) {
                 BestPosition position = task.get();
                 int[] score = position.score;
                 if (isRed) {
                     if (score[0] >= maxScore[0] && score[1] <= maxScore[1]) {
-                        maxScore = score;
-                        bestPosition = position;
+                        if (score[0] == maxScore[0] && score[1] == maxScore[1])
+                            same.add(position);
+                        else {
+                            maxScore = score;
+                            bestPosition = position;
+                            same.clear();
+                            same.add(bestPosition);
+                        }
                     }
                 } else {
                     if (score[0] <= maxScore[0] && score[1] >= maxScore[1]) {
-                        maxScore = score;
-                        bestPosition = position;
+                        if (score[0] == maxScore[0] && score[1] == maxScore[1])
+                            same.add(position);
+                        else {
+                            maxScore = score;
+                            bestPosition = position;
+                            same.clear();
+                            same.add(bestPosition);
+                        }
                     }
                 }
             }
+            if (same.size() > 1)
+                bestPosition = compare(board, same, isRed);
             color1.add(bestPosition.x * length + bestPosition.y);
             addStone(bestPosition.x, bestPosition.y, isRed);
-            if (!validation)
-                board[bestPosition.x][bestPosition.y] = 1;
+            board[bestPosition.x][bestPosition.y] = 1;
             
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -211,6 +264,45 @@ class MultiRun extends Thread {
             e.printStackTrace();
         }
         
+    }
+    
+    private BestPosition compare(int[][] board, List<BestPosition> same, boolean isRed) {
+        BestPosition bestPosition = same.get(0);
+        int lastScore = 0;
+        for (BestPosition bestPos : same) {
+            board[bestPos.x][bestPos.y] = 1;
+            addStone(bestPos.x, bestPos.y, isRed);
+            int minScore = Integer.MAX_VALUE;
+            for (int i = 0; i < length / 50; i++) {
+                boolean isValid = false;
+                while (!isValid) {
+                    int x = random.nextInt(length);
+                    int y = random.nextInt(length);
+                    if (board[x][y] == 0) {
+                        isValid = true;
+                        addStone(x, y, !isRed);
+                        int[] score = getScore();
+                        if (isRed && score[0] < minScore) {
+                            minScore = score[0];
+                        } else if (!isRed && score[1] < minScore) {
+                            minScore = score[1];
+                        }
+                        removeStone(x, y, !isRed);
+                    }
+                }
+            }
+            if (isRed && minScore > lastScore) {
+                bestPosition = bestPos;
+                lastScore = minScore;
+            }
+            else if (!isRed && minScore > lastScore) {
+                bestPosition = bestPos;
+                lastScore = minScore;
+            }
+            removeStone(bestPos.x, bestPos.y, isRed);
+            board[bestPos.x][bestPos.y] = 0;
+        }
+        return bestPosition;
     }
     
     private void addStone(int i, int j, boolean red) {
@@ -222,6 +314,17 @@ class MultiRun extends Thread {
         for (int x = 0; x < length; x++)
             for (int y = 0; y < length; y++)
                 scores[x][y] += flag / ((x - i) * (x - i) + (y - j) * (y - j));
+    }
+    
+    private void removeStone(int i, int j, boolean red) {
+        double sf;
+        if (red)
+            sf = 1;
+        else
+            sf = -1;
+        for (int x = 0; x < length; x++)
+            for (int y = 0; y < length; y++)
+                scores[x][y] -= sf / ((x - i) * (x - i) + (y - j) * (y - j));
     }
     
     private int[] getScore() {
@@ -248,13 +351,15 @@ class MultiRun extends Thread {
             int[][] board = new int[length][length];
             red.clear();
             blue.clear();
-            for (int n = 0; n < stones; n++) {
+            for (int n = 0; n < stones - 1; n++) {
                 // randomMove(board, red, blue, true);
-                // farthest(board, red, blue, true);
-                closest(board, red, blue, false, true);
-                //randomMove(board, red, blue, false);
-                 closest(board, red, blue, false, false);
+                // balance(board, red, blue, true);
+                closest(board, red, blue, true);
+                // randomMove(board, red, blue, false);
+                closest(board, red, blue, false);
             }
+            balance(board, red, blue, true);
+            closest(board, red, blue, false);
             int[] score = getScore();
             if (score[0] > score[1])
                 redCount += 1;
