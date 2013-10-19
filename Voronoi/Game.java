@@ -169,6 +169,17 @@ class MultiRun extends Thread {
                         if (dist < minMinDist)
                             minMinDist = dist;
                     }
+                    int[] dist =
+                    {
+                        x * x + y * y,
+                        (length - x - 1) * (length - x - 1) + y * y,
+                        (length - x - 1) * (length - x - 1) + (length - y - 1) * (length - y - 1),
+                        x * x + (length - y - 1) * (length - y - 1)
+                    };
+                    for (int d : dist) {
+                        if (d < minMinDist)
+                            minMinDist = d;
+                    }
                     if (minMinDist < minDist) {
                         minDist = minMinDist;
                         bestPos[0] = x;
