@@ -135,7 +135,7 @@ class ClosestMultiRun implements Callable<BestPosition> {
         for (int i = 0; i < length; i++) {
             for (int j = 0; j < length; j++) {
                 if (x == i && y == j)
-                    scores[i][j] += 1000000;
+                    scores[i][j] += flag * 1000000;
                 else
                     scores[i][j] += flag / ((x - i) * (x - i) + (y - j) * (y - j));
             }
@@ -151,7 +151,7 @@ class ClosestMultiRun implements Callable<BestPosition> {
         for (int i = 0; i < length; i++) {
             for (int j = 0; j < length; j++) {
                 if (x == i && y == j)
-                    scores[i][j] -= 1000000;
+                    scores[i][j] -= flag * 1000000;
                 else
                     scores[i][j] -= flag / ((x - i) * (x - i) + (y - j) * (y - j));
             }
@@ -461,7 +461,7 @@ class MultiRun extends Thread {
             for (int j = 0; j < length; j++) {
                 double pull;
                 if (x == i && y == j)
-                    pull = 1000000;
+                    pull = flag * 1000000;
                 else
                     pull = flag / ((x - i) * (x - i) + (y - j) * (y - j));
                 if (scores[i][j] + pull > 0) {
