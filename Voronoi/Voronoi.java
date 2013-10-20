@@ -27,13 +27,19 @@ public class Voronoi {
     private BufferedReader in;
     public int numOfPlayers;
     public int stones;
-    public int N;
+    public static int N;
     public int pid;
     
     public Voronoi(int port) throws UnknownHostException, IOException {
         socket = new Socket("127.0.0.1", port);
         out = new PrintWriter(socket.getOutputStream(), true);
         in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+    }
+    
+    public void close() throws IOException {
+        in.close();
+        out.close();
+        socket.close();
     }
     
     private void sendToServer(String output) {
@@ -64,17 +70,17 @@ public class Voronoi {
         // if (!steps[1].equals("")) {
         String[] moves = steps[1].split("[)(]");
         for (String move : moves) {
-            if (move.equals("") && move.equals(",")) {
+            if (!move.equals("") && !move.equals(",")) {
                 System.out.println("Move" + move);
                 String[] moveDetail = move.split(",");
-                step.addMove(new Step.Move(Integer.parseInt(moveDetail[0]), Integer.parseInt(moveDetail[1]),
-                                           Integer.parseInt(moveDetail[2])));
+                step.addMove(new Move(Integer.parseInt(moveDetail[0]), Integer.parseInt(moveDetail[1]),
+                                      Integer.parseInt(moveDetail[2])));
             }
         }
         // }
         String[] areas = steps[2].split("[)(]");
         for (String area : areas) {
-            if (area.equals("") && area.equals(",")) {
+            if (!area.equals("") && !area.equals(",")) {
                 String[] areaDetail =
                 area.split(",");
                 step.addArea(new Step.Area(Integer.parseInt(areaDetail[0]),
@@ -86,8 +92,6 @@ public class Voronoi {
     }
     
     public static void main(String[] args) throws IOException {
-        // NB: Making 2 games just for test. We will need only one game
-        
         int port;
         if (args.length > 0)
             port = Integer.parseInt(args[0]);
@@ -105,16 +109,16 @@ public class Voronoi {
         voronoi.N = Integer.parseInt(params[2].trim());
         voronoi.pid = Integer.parseInt(params[3].trim());
         
-        Game game1 = new Game(voronoi.N, voronoi.stones);
-        List<Move> moves = new ArrayList<Move>();
+        Game game = new Game(voronoi.N, voronoi.stones);
         
         for (int i = 0; i < voronoi.stones; i++) {
             Step next;
             while ((next = voronoi.parseStep(voronoi.readFromServer())).pid != voronoi.pid) {
             }
-            Move move1 = game1.play(next.pid, moves, next.time);
-            voronoi.sendToServer(move1.toString());
+            Move move = game.play(next.pid, next.moves, next.time);
+            voronoi.sendToServer(move.toString());
         }
+        voronoi.close();
     }
 }
 
@@ -123,18 +127,6 @@ class Step {
     public double time;
     public List<Move> moves;
     public List<Area> areas;
-    
-    static class Move {
-        int pid;
-        int x;
-        int y;
-        
-        public Move(int pid, int x, int y) {
-            this.pid = pid;
-            this.x = x;
-            this.y = y;
-        }
-    }
     
     static class Area {
         public int pid;
@@ -178,11 +170,13 @@ class Move {
     public int player;
     public int x;
     public int y;
+    public int position;
     
     public Move(int player, int x, int y) {
         this.player = player;
         this.x = x;
         this.y = y;
+        position = x * Voronoi.N + y;
     }
     
     @Override
@@ -347,6 +341,8 @@ class ClosestMultiRun implements Callable<BestPosition> {
                         continue;
                     if (y + j >= 0 && y + j < length && board[x + i][y + j] == 0) {
                         int[] score = getScore(x + i, y + j);
+                        System.out.println("--------" + (x + i) + ", " + (y + j) + " " + score[0] + ", " + score[1]
+                                           + "--------");
                         if (red) {
                             if (score[0] >= maxScore[0] && score[1] <= maxScore[1]) {
                                 BestPosition position = new BestPosition(x + i, y + j, score);
@@ -391,8 +387,7 @@ class Game {
     int[][] board;
     Set<Integer> red;
     Set<Integer> blue;
-    List<Move> moves;
-    int numMoves;
+    Set<Integer> moveSet;
     
     public Game(int length, int stones) {
         this.length = length;
@@ -403,8 +398,7 @@ class Game {
         board = new int[length][length];
         red = new HashSet<Integer>();
         blue = new HashSet<Integer>();
-        moves = new ArrayList<Move>();
-        numMoves = 0;
+        moveSet = new HashSet<Integer>();
     }
     
     private Move randomMove(boolean isRed) {
@@ -521,6 +515,8 @@ class Game {
             List<BestPosition> same = new ArrayList<BestPosition>();
             for (Future<BestPosition> task : tasks) {
                 BestPosition position = task.get();
+                System.out.println("----" + position.x + ", " + position.y + " " + position.score[0] + ", "
+                                   + position.score[1] + "----");
                 int[] score = position.score;
                 if (isRed) {
                     if (score[0] >= maxScore[0] && score[1] <= maxScore[1]) {
@@ -793,31 +789,32 @@ class Game {
     }
     
     public Move play(int player, List<Move> moves, double timeRemaining) {
-        if (numMoves < moves.size()) {
-            for (int i = numMoves; i < moves.size(); ++i) {
-                Move move = moves.get(i);
+        for (Move move : moves) {
+            if (!moveSet.contains(move.position)) {
                 if (move.player == 1)
                     red.add(move.x * length + move.y);
                 else
                     blue.add(move.x * length + move.y);
                 board[move.x][move.y] = 1;
                 addStone(move.x, move.y, move.player == 1);
+                moveSet.add(move.position);
             }
-            numMoves = moves.size() + 1;
         }
-        
+        Move res;
         if (player == 1) {
             if (count++ < stones - 1) {
-                return closest(true);
+                res = closest(true);
             } else {
-                return lastMove(true);
+                res = lastMove(true);
             }
         } else {
             if (count++ < stones - 1) {
-                return closest(false);
+                res = closest(false);
             } else {
-                return lastMove(false);
+                res = lastMove(false);
             }
         }
+        moveSet.add(res.position);
+        return res;
     }
 }
