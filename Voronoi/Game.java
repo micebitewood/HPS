@@ -557,7 +557,7 @@ class MultiRun extends Thread {
                     pos = worstPos;
                 }
                 board[x][y] = 0;
-                removeStone(x, y, isRed);
+                addStone(x, y, !isRed);
             }
 //            System.out.println("guess: " + maxScore[0] + " " + maxScore[1]);
         } else {
@@ -579,20 +579,6 @@ class MultiRun extends Thread {
                     scores[x][y] += 1000000 * flag;
                 else
                     scores[x][y] += flag / ((x - i) * (x - i) + (y - j) * (y - j));
-    }
-
-    private void removeStone(int i, int j, boolean red) {
-        double flag;
-        if (red)
-            flag = 1;
-        else
-            flag = -1;
-        for (int x = 0; x < length; x++)
-            for (int y = 0; y < length; y++)
-                if (x == i && y == j)
-                    scores[x][y] -= 1000000 * flag;
-                else
-                    scores[x][y] -= flag / ((x - i) * (x - i) + (y - j) * (y - j));
     }
 
     private int[] getScore(int x, int y, boolean isRed) {
