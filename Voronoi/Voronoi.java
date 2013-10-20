@@ -86,8 +86,6 @@ public class Voronoi {
     }
     
     public static void main(String[] args) throws IOException {
-        // NB: Making 2 games just for test. We will need only one game
-        
         int port;
         if (args.length > 0)
             port = Integer.parseInt(args[0]);
@@ -105,14 +103,14 @@ public class Voronoi {
         voronoi.N = Integer.parseInt(params[2].trim());
         voronoi.pid = Integer.parseInt(params[3].trim());
         
-        Game game1 = new Game(voronoi.N, voronoi.stones);
+        Game game = new Game(voronoi.N, voronoi.stones);
         
         for (int i = 0; i < voronoi.stones; i++) {
             Step next;
             while ((next = voronoi.parseStep(voronoi.readFromServer())).pid != voronoi.pid) {
             }
-            Move move1 = game1.play(next.pid, next.moves, next.time);
-            voronoi.sendToServer(move1.toString());
+            Move move = game.play(next.pid, next.moves, next.time);
+            voronoi.sendToServer(move.toString());
         }
     }
 }
@@ -378,8 +376,7 @@ class Game {
     int[][] board;
     Set<Integer> red;
     Set<Integer> blue;
-    List<Move> moves;
-    int numMoves;
+    Set<Move> moveSet;
     
     public Game(int length, int stones) {
         this.length = length;
@@ -390,8 +387,7 @@ class Game {
         board = new int[length][length];
         red = new HashSet<Integer>();
         blue = new HashSet<Integer>();
-        moves = new ArrayList<Move>();
-        numMoves = 0;
+        moveSet = new HashSet<Move>();
     }
     
     private Move randomMove(boolean isRed) {
@@ -780,17 +776,16 @@ class Game {
     }
     
     public Move play(int player, List<Move> moves, double timeRemaining) {
-        if (numMoves < moves.size()) {
-            for (int i = numMoves; i < moves.size(); ++i) {
-                Move move = moves.get(i);
+        for (Move move : moves) {
+            if (!moveSet.contains(move)) {
                 if (move.player == 1)
                     red.add(move.x * length + move.y);
                 else
                     blue.add(move.x * length + move.y);
                 board[move.x][move.y] = 1;
                 addStone(move.x, move.y, move.player == 1);
+                moveSet.add(move);
             }
-            numMoves = moves.size() + 1;
         }
         
         if (player == 1) {
