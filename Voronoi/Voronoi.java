@@ -29,6 +29,7 @@ public class Voronoi {
     public int stones;
     public static int N;
     public int pid;
+    public static Object lock = new Object();
     
     public Voronoi(int port) throws UnknownHostException, IOException {
         socket = new Socket("127.0.0.1", port);
@@ -44,7 +45,9 @@ public class Voronoi {
     
     private void sendToServer(String output) {
         out.println(output + EOM);
-        System.out.println(output + EOM);
+        synchronized (lock) {
+            System.out.println(output + EOM);
+        }
     }
     
     private String readFromServer() throws IOException {
@@ -59,7 +62,9 @@ public class Voronoi {
                 break;
             }
         }
-        System.out.println("From Server: " + sb.toString());
+        synchronized (lock) {
+            System.out.println("From Server: " + sb.toString());
+        }
         return sb.toString();
     }
     
@@ -71,7 +76,6 @@ public class Voronoi {
         String[] moves = steps[1].split("[)(]");
         for (String move : moves) {
             if (!move.equals("") && !move.equals(",")) {
-                System.out.println("Move" + move);
                 String[] moveDetail = move.split(",");
                 step.addMove(new Move(Integer.parseInt(moveDetail[0]), Integer.parseInt(moveDetail[1]),
                                       Integer.parseInt(moveDetail[2])));
@@ -211,6 +215,9 @@ class ClosestMultiRun implements Callable<BestPosition> {
         Random random = new Random(System.currentTimeMillis());
         int lastScore = Integer.MAX_VALUE;
         for (BestPosition bestPos : same) {
+            synchronized (Voronoi.lock) {
+                System.out.println("****compare****" + bestPos.x + ", " + bestPos.y + "****");
+            }
             addStone(bestPos.x, bestPos.y);
             int[] score1 = getScore();
             red = !red;
@@ -222,6 +229,10 @@ class ClosestMultiRun implements Callable<BestPosition> {
                             continue;
                         if (bestPos.y + j >= 0 && bestPos.y + j < length && board[bestPos.x + i][bestPos.y + j] == 0) {
                             int[] score = getScore(bestPos.x + i, bestPos.y + j);
+                            synchronized (Voronoi.lock) {
+                                System.out.println("****compare****" + (bestPos.x + i) + ", " + (bestPos.y + j) + " "
+                                                   + score[0] + ", " + score[1] + "****");
+                            }
                             if (red)
                                 if (score[0] >= maxScore)
                                     maxScore = score[0];
@@ -250,6 +261,10 @@ class ClosestMultiRun implements Callable<BestPosition> {
             }
             red = !red;
             removeStone(bestPos.x, bestPos.y);
+        }
+        synchronized (Voronoi.lock) {
+            System.out.println("****res****" + bestPosition.x + ", " + bestPosition.y + " " + bestPosition.score[0]
+                               + ", " + bestPosition.score[1] + "****");
         }
         return bestPosition;
     }
@@ -341,8 +356,11 @@ class ClosestMultiRun implements Callable<BestPosition> {
                         continue;
                     if (y + j >= 0 && y + j < length && board[x + i][y + j] == 0) {
                         int[] score = getScore(x + i, y + j);
-                        System.out.println("--------" + (x + i) + ", " + (y + j) + " " + score[0] + ", " + score[1]
-                                           + "--------");
+                        synchronized (Voronoi.lock) {
+                            System.out.println("--------" + this.toString() + "--------" + (x + i) + ", " + (y + j)
+                                               + " " + score[0] + ", " + score[1]
+                                               + "--------");
+                        }
                         if (red) {
                             if (score[0] >= maxScore[0] && score[1] <= maxScore[1]) {
                                 BestPosition position = new BestPosition(x + i, y + j, score);
@@ -515,8 +533,10 @@ class Game {
             List<BestPosition> same = new ArrayList<BestPosition>();
             for (Future<BestPosition> task : tasks) {
                 BestPosition position = task.get();
-                System.out.println("----" + position.x + ", " + position.y + " " + position.score[0] + ", "
-                                   + position.score[1] + "----");
+                synchronized (Voronoi.lock) {
+                    System.out.println("----" + "pick" + "----" + position.x + ", " + position.y + " "
+                                       + position.score[0] + ", " + position.score[1] + "----");
+                }
                 int[] score = position.score;
                 if (isRed) {
                     if (score[0] >= maxScore[0] && score[1] <= maxScore[1]) {
