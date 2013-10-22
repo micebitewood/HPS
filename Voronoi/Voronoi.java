@@ -632,7 +632,7 @@ class Game {
         return bestPosition;
     }
     
-    private BestPosition sampleSearch(boolean isRed) {
+    private BestPosition sampleSearch(boolean isRed, boolean hard, int cut) {
         int[] maxScore = new int[2];
         if (isRed) {
             maxScore[0] = 0;
@@ -644,7 +644,7 @@ class Game {
         int bestX = -1;
         int bestY = -1;
         
-        for (int i = 0; i < 100; ++i) {
+        for (int i = 0; i < (hard?500:100); ++i) {
             int x = random.nextInt(length);
             int y = random.nextInt(length);
             if (board[x][y] != 0)
@@ -667,45 +667,21 @@ class Game {
         }
         
         System.out.println("Random sampling: (" + bestX + ", " + bestY + "), " + maxScore[0] + " " + maxScore[1]);
-        
-        // int[] maxScore1 = maxScore;
-        //
-        // for (int i = -9; i < 10; ++i) {
-        // int x = bestX + i;
-        // if (x < 0 || x >= length) continue;
-        // for (int j = -9; j < 10; ++j) {
-        // int y = bestY + j;
-        // if (y < 0 || y >= length) continue;
-        // if (board[x][y] != 0) continue;
-        //
-        // int[] score = getScore(x, y, isRed);
-        // if (isRed) {
-        // if (score[0]-score[1] > maxScore1[0]-maxScore1[1]) {
-        // maxScore1 = score;
-        // }
-        // } else {
-        // if (score[1]-score[0] > maxScore1[1]-maxScore1[0]) {
-        // maxScore1 = score;
-        // }
-        // }
-        // }
-        // }
-        //
-        // System.out.println("Region search: " + maxScore1[0] + " " + maxScore1[1]);
+        if (!hard && maxScore[isRed?0:1]-maxScore[isRed?1:0] >= cut) return new BestPosition(-1, -1, maxScore);
         
         int[] curScore = maxScore;
         int curX = bestX;
         int curY = bestY;
-        for (double t = 0.01; t > 0.003; t *= 0.99) {
-            int x = curX + random.nextInt(39) - 19;
-            int y = curY + random.nextInt(39) - 19;
-            x = (x < 0) ? 0 : (x >= length) ? length - 1 : x;
-            y = (y < 0) ? 0 : (y >= length) ? length - 1 : y;
-            if (board[x][y] != 0)
-                continue;
-            
-            int[] score = getScore(x, y, isRed);
-            if (isRed) {
+        if (isRed) {
+            for (double t = 0.01; t > 0.001; t *= hard?0.999:0.992) {
+                int x = curX + random.nextInt(39) - 19;
+                int y = curY + random.nextInt(39) - 19;
+                x = (x < 0) ? 0 : (x >= length) ? length - 1 : x;
+                y = (y < 0) ? 0 : (y >= length) ? length - 1 : y;
+                if (board[x][y] != 0)
+                    continue;
+                
+                int[] score = getScore(x, y, isRed);
                 if (Math.exp((double) (score[0] - score[1] - curScore[0] + curScore[1]) / length / length / t) > random
                     .nextDouble()) {
                     curScore = score;
@@ -718,7 +694,17 @@ class Game {
                         bestY = y;
                     }
                 }
-            } else {
+            }
+        } else {
+            for (double t = 0.01; t > 0.001; t *= hard?0.998:0.992) {
+                int x = curX + random.nextInt(39) - 19;
+                int y = curY + random.nextInt(39) - 19;
+                x = (x < 0) ? 0 : (x >= length) ? length - 1 : x;
+                y = (y < 0) ? 0 : (y >= length) ? length - 1 : y;
+                if (board[x][y] != 0)
+                    continue;
+                
+                int[] score = getScore(x, y, isRed);
                 if (Math.exp((double) (score[1] - score[0] - curScore[1] + curScore[0]) / length / length / t) > random
                     .nextDouble()) {
                     curScore = score;
@@ -743,9 +729,9 @@ class Game {
         System.out.println("Entering lastMove");
         BestPosition pos = null;
         if (isRed) {
-            int[] maxScore = {0, Integer.MAX_VALUE };
+            int[] maxScore = {0, Integer.MAX_VALUE};
             
-            for (int i = 0; i < 10; ++i) {
+            for (int i = 0; i < 30; ++i) {
                 int x = random.nextInt(length);
                 int y = random.nextInt(length);
                 if (i < 5) {
@@ -757,7 +743,7 @@ class Game {
                 board[x][y] = 1;
                 addStone(x, y, isRed);
                 
-                BestPosition worstPos = sampleSearch(!isRed);
+                BestPosition worstPos = sampleSearch(!isRed, false, maxScore[1]-maxScore[0]);
                 if (worstPos.score[0] - worstPos.score[1] > maxScore[0] - maxScore[1]) {
                     maxScore = worstPos.score;
                     pos = worstPos;
@@ -765,9 +751,18 @@ class Game {
                 board[x][y] = 0;
                 addStone(x, y, !isRed);
             }
-            // System.out.println("guess: " + maxScore[0] + " " + maxScore[1]);
+            System.out.println("Worst score guess: " + maxScore[0] + " " + maxScore[1]);
         } else {
-            pos = sampleSearch(isRed);
+            int[] maxScore = {Integer.MAX_VALUE, 0};
+            
+            for (int i = 0; i < 3; ++i) {
+                BestPosition tmpPos = sampleSearch(isRed, true, 0);
+                if (tmpPos.score[1] - tmpPos.score[0] > maxScore[1] - maxScore[0]) {
+                    maxScore = tmpPos.score;
+                    pos = tmpPos;
+                }
+            }
+            System.out.println("Best score: " + maxScore[0] + " " + maxScore[1]);
         }
         if (isRed)
             red.add(pos.x * length + pos.y);
@@ -776,6 +771,51 @@ class Game {
         addStone(pos.x, pos.y, isRed);
         board[pos.x][pos.y] = 1;
         return new Move(isRed ? 1 : 2, pos.x, pos.y);
+    }
+    
+    private Move disturb(boolean isRed) {
+        System.out.println("Entering disturb");
+        
+        int[] maxScore = new int[2];
+        if (isRed) {
+            maxScore[0] = 0;
+            maxScore[1] = Integer.MAX_VALUE;
+        } else {
+            maxScore[0] = Integer.MAX_VALUE;
+            maxScore[1] = 0;
+        }
+        int bestX = 0;
+        int bestY = 0;
+        
+        for (int i = 0; i < 50; ++i) {
+            double theta = random.nextDouble() * 2 * Math.PI;
+            int x = length/2-1 + (int)(Math.cos(theta) * 20.0);
+            int y = length/2-1 + (int)(Math.sin(theta) * 20.0);
+            if(board[x][y] == 1) continue;
+            
+            int[] score = getScore(x, y, isRed);
+            if (isRed) {
+                if (score[0] - score[1] > maxScore[0] - maxScore[1]) {
+                    maxScore = score;
+                    bestX = x;
+                    bestY = y;
+                }
+            } else {
+                if (score[1] - score[0] > maxScore[1] - maxScore[0]) {
+                    maxScore = score;
+                    bestX = x;
+                    bestY = y;
+                }
+            }
+        }
+        
+        if (isRed)
+            red.add(bestX * length + bestY);
+        else
+            blue.add(bestX * length + bestY);
+        addStone(bestX, bestY, isRed);
+        board[bestX][bestY] = 1;
+        return new Move(isRed ? 1 : 2, bestX, bestY);
     }
     
     private void addStone(int i, int j, boolean red) {
@@ -841,8 +881,8 @@ class Game {
                 moveSet.add(move.position);
             }
         }
-//         int[] scores = getScore();
-//         System.out.println("Before move, scores are : " + scores[0] + ", " + scores[1]);
+        int[] scores = getScore();
+        System.out.println("Current scores are : " + scores[0] + ", " + scores[1]);
         Move res;
         if (player == 1) {
             if (count < stones - 1) {
@@ -851,9 +891,17 @@ class Game {
                 res = lastMove(true);
             }
         } else {
-            if (count < stones - 1) {
-//                res = balance(false);
+            if (count < stones - 2) {
                 res = closest(false);
+            } else if (count < stones - 1) {
+                boolean flag = false;
+                for (int pos : moveSet)
+                    if (pos%length < length/2-11 || pos%length > length/2+10 || pos/length < length/2-11 || pos/length > length/2+10)
+                        flag = true;
+                if (flag)
+                    res = closest(false);
+                else
+                    res = disturb(false);
             } else {
                 res = lastMove(false);
             }
