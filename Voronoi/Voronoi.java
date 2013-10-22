@@ -218,6 +218,7 @@ class ClosestMultiRun implements Callable<BestPosition> {
             synchronized (Voronoi.lock) {
                 System.out.println("****compare****" + bestPos.x + ", " + bestPos.y + "****");
             }
+            board[bestPos.x][bestPos.y] = 1;
             addStone(bestPos.x, bestPos.y);
             int[] score1 = getScore();
             red = !red;
@@ -230,14 +231,13 @@ class ClosestMultiRun implements Callable<BestPosition> {
                         if (bestPos.y + j >= 0 && bestPos.y + j < length && board[bestPos.x + i][bestPos.y + j] == 0) {
                             int[] score = getScore(bestPos.x + i, bestPos.y + j);
                             synchronized (Voronoi.lock) {
-                                System.out.println("****compare****" + (bestPos.x + i) + ", " + (bestPos.y + j) + " "
+                                System.out.println("****compare****"  + bestPos.x + ", " + bestPos.y + "****"+ (bestPos.x + i) + ", " + (bestPos.y + j) + " "
                                                    + score[0] + ", " + score[1] + "****");
                             }
-                            if (red)
-                                if (score[0] >= maxScore)
-                                    maxScore = score[0];
-                                else if (score[1] >= maxScore)
-                                    maxScore = score[1];
+                            if (red && score[0] >= maxScore)
+                                maxScore = score[0];
+                            else if (!red && score[1] >= maxScore)
+                                maxScore = score[1];
                         }
                     }
             for (int i = 0; i < 10; i++) {
@@ -248,6 +248,10 @@ class ClosestMultiRun implements Callable<BestPosition> {
                     if (board[x][y] == 0) {
                         isValid = true;
                         int[] score = getScore(x, y);
+                        synchronized (Voronoi.lock) {
+                            System.out.println("****compare****"  + bestPos.x + ", " + bestPos.y + "****"+ x + ", " + y + " "
+                                               + score[0] + ", " + score[1] + "****");
+                        }
                         if (red && score[0] > maxScore)
                             maxScore = score[0];
                         else if (!red && score[1] > maxScore)
@@ -261,10 +265,11 @@ class ClosestMultiRun implements Callable<BestPosition> {
             }
             red = !red;
             removeStone(bestPos.x, bestPos.y);
+            board[bestPos.x][bestPos.y] = 0;
         }
         synchronized (Voronoi.lock) {
             System.out.println("****res****" + bestPosition.x + ", " + bestPosition.y + " " + bestPosition.score[0]
-                               + ", " + bestPosition.score[1] + "****");
+                               + ", " + bestPosition.score[1] + " " + lastScore + "****");
         }
         return bestPosition;
     }
@@ -357,7 +362,7 @@ class ClosestMultiRun implements Callable<BestPosition> {
                     if (y + j >= 0 && y + j < length && board[x + i][y + j] == 0) {
                         int[] score = getScore(x + i, y + j);
                         synchronized (Voronoi.lock) {
-                            System.out.println("--------" + this.toString() + "--------" + (x + i) + ", " + (y + j)
+                            System.out.println("--------" + this.toString().substring(16) + "----" + x + ", " + y + "----" + (x + i) + ", " + (y + j)
                                                + " " + score[0] + ", " + score[1]
                                                + "--------");
                         }
@@ -547,7 +552,7 @@ class Game {
             for (Future<BestPosition> task : tasks) {
                 BestPosition position = task.get();
                 synchronized (Voronoi.lock) {
-                    System.out.println("----" + "pick" + "----" + position.x + ", " + position.y + " "
+                    System.out.println("----" + "pick?" + "----" + position.x + ", " + position.y + " "
                                        + position.score[0] + ", " + position.score[1] + "----");
                 }
                 int[] score = position.score;
@@ -601,7 +606,7 @@ class Game {
         for (BestPosition bestPos : same) {
             board[bestPos.x][bestPos.y] = 1;
             addStone(bestPos.x, bestPos.y, isRed);
-            int minScore = Integer.MAX_VALUE;
+            int maxScore = 0;
             for (int i = 0; i < 100; i++) {
                 boolean isValid = false;
                 while (!isValid) {
@@ -610,21 +615,17 @@ class Game {
                     if (board[x][y] == 0) {
                         isValid = true;
                         int[] score = getScore(x, y, !isRed);
-                        if (isRed && score[0] < minScore) {
-                            minScore = score[0];
-                        } else if (!isRed && score[1] < minScore) {
-                            minScore = score[1];
+                        if (!isRed && score[0] > maxScore) {
+                            maxScore = score[0];
+                        } else if (isRed && score[1] > maxScore) {
+                            maxScore = score[1];
                         }
                     }
                 }
             }
-            if (isRed && minScore > lastScore) {
+            if (maxScore < lastScore) {
                 bestPosition = bestPos;
-                lastScore = minScore;
-            }
-            else if (!isRed && minScore > lastScore) {
-                bestPosition = bestPos;
-                lastScore = minScore;
+                lastScore = maxScore;
             }
             addStone(bestPos.x, bestPos.y, !isRed);
             board[bestPos.x][bestPos.y] = 0;
@@ -644,7 +645,7 @@ class Game {
         int bestX = -1;
         int bestY = -1;
         
-        for (int i = 0; i < (hard?500:100); ++i) {
+        for (int i = 0; i < (hard?400:100); ++i) {
             int x = random.nextInt(length);
             int y = random.nextInt(length);
             if (board[x][y] != 0)
@@ -673,7 +674,7 @@ class Game {
         int curX = bestX;
         int curY = bestY;
         if (isRed) {
-            for (double t = 0.01; t > 0.001; t *= hard?0.999:0.992) {
+            for (double t = 0.01; t > 0.001; t *= hard?0.997:0.992) {
                 int x = curX + random.nextInt(39) - 19;
                 int y = curY + random.nextInt(39) - 19;
                 x = (x < 0) ? 0 : (x >= length) ? length - 1 : x;
@@ -696,7 +697,7 @@ class Game {
                 }
             }
         } else {
-            for (double t = 0.01; t > 0.001; t *= hard?0.998:0.992) {
+            for (double t = 0.01; t > 0.001; t *= hard?0.997:0.992) {
                 int x = curX + random.nextInt(39) - 19;
                 int y = curY + random.nextInt(39) - 19;
                 x = (x < 0) ? 0 : (x >= length) ? length - 1 : x;
@@ -725,13 +726,19 @@ class Game {
         return new BestPosition(bestX, bestY, maxScore);
     }
     
-    private Move lastMove(boolean isRed) {
+    private boolean gotTime(double timeRemaining, long startTime) {
+        return (System.currentTimeMillis()-startTime) < timeRemaining*1000;
+    }
+    
+    private Move lastMove(boolean isRed, double timeRemaining) {
+        long startTime = System.currentTimeMillis();
+
         System.out.println("Entering lastMove");
         BestPosition pos = null;
         if (isRed) {
             int[] maxScore = {0, Integer.MAX_VALUE};
             
-            for (int i = 0; i < 30; ++i) {
+            for (int i = 0; i < 50 && gotTime(timeRemaining-20, startTime); ++i) {
                 int x = random.nextInt(length);
                 int y = random.nextInt(length);
                 if (i < 5) {
@@ -755,7 +762,7 @@ class Game {
         } else {
             int[] maxScore = {Integer.MAX_VALUE, 0};
             
-            for (int i = 0; i < 3; ++i) {
+            for (int i = 0; i < 4 && gotTime(timeRemaining-40, startTime); ++i) {
                 BestPosition tmpPos = sampleSearch(isRed, true, 0);
                 if (tmpPos.score[1] - tmpPos.score[0] > maxScore[1] - maxScore[0]) {
                     maxScore = tmpPos.score;
@@ -763,6 +770,17 @@ class Game {
                 }
             }
             System.out.println("Best score: " + maxScore[0] + " " + maxScore[1]);
+        }
+        if (pos == null) {
+            while (true) {
+                int x = random.nextInt(length);
+                int y = random.nextInt(length);
+                if (board[x][y] == 0) {
+                    int[] score = {0, 0};
+                    pos = new BestPosition(x, y, score);
+                    break;
+                }
+            }
         }
         if (isRed)
             red.add(pos.x * length + pos.y);
@@ -888,7 +906,7 @@ class Game {
             if (count < stones - 1) {
                 res = closest(true);
             } else {
-                res = lastMove(true);
+                res = lastMove(true, timeRemaining);
             }
         } else {
             if (count < stones - 2) {
@@ -903,7 +921,7 @@ class Game {
                 else
                     res = disturb(false);
             } else {
-                res = lastMove(false);
+                res = lastMove(false, timeRemaining);
             }
         }
 //         scores = getScore();
