@@ -20,23 +20,29 @@ public class Evasion {
         this.prey = new Prey(this);
         board = new int[500][500];
         preyMovable = true;
+        wallNum = 1;
     }
     
     private double getDist() {
-        return Math.sqrt(Math.pow(hunter.position[0] - prey.position[0], 2)
-                         + Math.pow(hunter.position[1] - prey.position[1], 2));
+        double dist = Math.sqrt(Math.pow(hunter.position[0] - prey.position[0], 2)
+                                + Math.pow(hunter.position[1] - prey.position[1], 2));
+        return dist;
     }
     
     public void start() {
+        int count = 0;
         while (getDist() > MIN_DIST) {
+            if (hunter.position[0] == 10)
+                hunter.buildWall(false);
             hunter.move();
-            // hunter.buildWall(true);
             if (preyMovable) {
-                // prey.move(N);
+                prey.move(W);
             } else {
                 preyMovable = true;
             }
+            count++;
         }
+        System.out.println(count);
     }
     
     public static void main(String[] args) {
@@ -47,6 +53,7 @@ public class Evasion {
 
 class Hunter {
     // y
+    // ^
     // |
     // ---> x
     /* direction[0] is horizontal, ranging from -1 to 1; direction[1] is vertical, and also from -1 to 1. */
@@ -59,10 +66,10 @@ class Hunter {
         int x = position[0] + direction[0];
         int y = position[1] + direction[1];
         /* x is a wall */
-        if (x == -1 || x == 500 || board[x][position[1]] != 0) {
+        if (x == -1 || x == 500) {
             direction[0] = -direction[0];
             /* y is also a wall */
-            if (y == -1 || y == 500 || board[position[0]][y] != 0) {
+            if (y == -1 || y == 500) {
                 direction[1] = -direction[1];
                 return;
             }
@@ -70,20 +77,28 @@ class Hunter {
             return;
         }
         /* y is a wall */
-        if (y == -1 || y == 500 || board[position[0]][y] != 0) {
+        if (y == -1 || y == 500) {// || ) {
             direction[1] = -direction[1];
             position[0] = x;
             return;
         }
-        /* valid */
         if (board[x][y] == 0) {
-            board[x][y] = 1;
             position[0] = x;
             position[1] = y;
             return;
         }
-        /* x, y is the end of a wall */
-        if (board[x][position[1]] == 0 && board[position[0]][y] == 0) {
+        if (board[x][position[1]] != 0) {
+            if (board[position[0]][y] != 0) {
+                direction[0] = -direction[0];
+                direction[1] = -direction[1];
+            } else {
+                position[1] = y;
+                direction[0] = -direction[0];
+            }
+        } else if (board[position[0]][y] != 0) {
+            position[0] = x;
+            direction[1] = -direction[1];
+        } else {
             int xx = x + direction[0];
             int yy = y + direction[1];
             if (yy == -1 || yy == 500) {
@@ -97,6 +112,7 @@ class Hunter {
                 direction[1] = -direction[1];
             }
         }
+        
     }
     
     public boolean buildWall(boolean horizontal) {
@@ -143,6 +159,8 @@ class Hunter {
         direction[0] = 1;
         direction[1] = 1;
         position = new int[2];
+        position[0] = 0;
+        position[1] = 0;
         this.game = game;
     }
 }
@@ -155,6 +173,7 @@ class Prey {
         int x = position[0] + direction[0];
         int y = position[1] + direction[1];
         int[][] board = game.board;
+        game.preyMovable = false;
         if (x == -1 || x == 500) {
             if (y == -1 || y == 500)
                 return;
@@ -165,23 +184,17 @@ class Prey {
             position[0] = x;
             return;
         }
-        if (board[x][position[1]] != 0) {
-            if (board[position[0]][y] != 0)
-                return;
-            position[1] = y;
-            return;
-        }
-        if (board[position[0]][y] != 0) {
-            position[0] = x;
-            return;
-        }
         if (game.board[x][y] == 0) {
             position[0] = x;
             position[1] = y;
             return;
         }
-        /* x, y is the end of a wall */
-        if (board[x][position[1]] == 0 && board[position[0]][y] == 0) {
+        if (board[x][position[1]] != 0) {
+            if (board[position[0]][y] == 0)
+                position[1] = y;
+        } else if (board[position[0]][y] != 0) {
+            position[0] = x;
+        } else {
             int xx = x + direction[0];
             int yy = y + direction[1];
             if (yy == -1 || yy == 500) {
@@ -192,12 +205,12 @@ class Prey {
                 position[0] = x;
             }
         }
-        
-        game.preyMovable = false;
     }
     
     public Prey(Evasion game) {
         position = new int[2];
+        position[0] = 330;
+        position[1] = 200;
         this.game = game;
     }
 }
