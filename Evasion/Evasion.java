@@ -34,12 +34,15 @@ public class Evasion {
         while (getDist() > MIN_DIST) {
             if (hunter.position[0] == 10)
                 hunter.buildWall(false);
-            hunter.move();
             if (preyMovable) {
-                prey.move(W);
+                if (!prey.hasTarget()) {
+                    prey.getTarget(hunter.position, hunter.direction);
+                }
+                prey.moveTowardsTarget(hunter.direction);
             } else {
                 preyMovable = true;
             }
+            hunter.move();
             count++;
         }
         System.out.println(count);
@@ -168,8 +171,12 @@ class Hunter {
 class Prey {
     int[] position;
     Evasion game;
+    int[] target;
+    boolean hasTarget;
+    int[] direction;
+    int[] opponentDirection;
     
-    public void move(int[] direction) {
+    public void move() {
         int x = position[0] + direction[0];
         int y = position[1] + direction[1];
         int[][] board = game.board;
@@ -207,10 +214,152 @@ class Prey {
         }
     }
     
+    /**
+     * set direction before setting target
+     */
+    private boolean setTarget(int x, int y) {
+        if (x < 0 || x >= 500) {
+            hasTarget = false;
+            return false;
+        }
+        if (y < 0 || y >= 500) {
+            hasTarget = false;
+            return false;
+        }
+        int[][] board = game.board;
+        int xx = position[0] + direction[0];
+        int yy = position[1] + direction[1];
+        while (xx != x) {
+            if (board[xx][yy] != 0) {
+                hasTarget = false;
+                return false;
+            }
+            xx += direction[0];
+            yy += direction[1];
+        }
+        if (yy != y) {
+            hasTarget = false;
+            return false;
+        }
+        target[0] = x;
+        target[1] = y;
+        this.hasTarget = true;
+        return true;
+    }
+    
+    public void getTarget(int[] position, int[] direction) {
+        if (gettingCloser(position, direction)) {
+            if (minDist(position, direction) <= 4) {
+                int[] futurePosition =
+                {this.position[0], position[1] + (this.position[0] - position[0]) * direction[1] / direction[0] };
+                int dist = Math.abs(futurePosition[1]) - Math.abs(this.position[1]);
+                if (Math.abs(futurePosition[1]) > Math.abs(this.position[1])) {
+                    this.direction[0] = 0;
+                    this.direction[1] = -direction[1];
+                    if (!setTarget(this.position[0], futurePosition[1] + this.direction[1] * 6)) {
+                        this.direction[0] = direction[0];
+                        if (!setTarget(this.position[0] + this.direction[0] * (6 - dist), this.position[1]
+                                       + this.direction[1] * (6 - dist))) {
+                            this.direction[1] = 0;
+                            if (!setTarget(this.position[0] + this.direction[0] * (6 - dist), this.position[1])) {
+                                this.direction[0] = -direction[0];
+                                this.direction[0] = direction[1];
+                                if (!setTarget(this.position[0] + dist * this.direction[0], this.position[1] + dist
+                                               * this.direction[1])) {
+                                    this.direction[0] = 0;
+                                    this.direction[1] = direction[1];
+                                    if (!setTarget(this.position[0], this.position[1] + (dist + 1) * this.direction[1])) {
+                                        this.direction[0] = -direction[0];
+                                        this.direction[1] = 0;
+                                        setTarget(this.position[0] + (dist + 1) * this.direction[0], this.position[1]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    this.direction[0] = -direction[0];
+                    this.direction[1] = 0;
+                    if (!setTarget(futurePosition[0] + this.direction[0] * 6, this.position[1])) {
+                        this.direction[1] = direction[1];
+                        if (!setTarget(this.position[0] + this.direction[0] * (6 - dist), this.position[1]
+                                       + this.direction[1] * (6 - dist))) {
+                            this.direction[0] = 0;
+                            if (!setTarget(this.position[0], this.position[1] + this.direction[1] * (6 - dist))) {
+                                this.direction[0] = direction[0];
+                                this.direction[0] = -direction[1];
+                                if (!setTarget(this.position[0] + dist * this.direction[0], this.position[1] + dist
+                                               * this.direction[1])) {
+                                    this.direction[0] = direction[0];
+                                    this.direction[1] = 0;
+                                    if (!setTarget(this.position[0] + (dist + 1) * this.direction[0], this.position[1])) {
+                                        this.direction[0] = 0;
+                                        this.direction[1] = -direction[1];
+                                        setTarget(this.position[0], this.position[1] + (dist + 1) * this.direction[1]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                this.direction[0] = -direction[0];
+                this.direction[1] = -direction[1];
+                setTarget(this.position[0] + this.direction[0], this.position[1] + this.direction[1]);
+            }
+        } else {
+            this.direction[0] = direction[0];
+            this.direction[1] = direction[1];
+            setTarget(this.position[0] + this.direction[0], this.position[1] + this.direction[1]);
+        }
+        opponentDirection[0] = direction[0];
+        opponentDirection[1] = direction[1];
+    }
+    
+    private double minDist(int[] position, int[] direction) {
+        double a = direction[1];
+        double b = -direction[0];
+        double c = position[1] * direction[0] - position[0] * direction[1];
+        double numerator = Math.pow(a * this.position[0] + b * this.position[1] + c, 2);
+        double denominator = a * a + b * b;
+        return Math.sqrt(numerator / denominator);
+    }
+    
+    private boolean gettingCloser(int[] position, int[] direction) {
+        int x1 = position[0];
+        int y1 = position[1];
+        int x2 = this.position[0];
+        int y2 = this.position[1];
+        int dist = (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
+        x1 += direction[0];
+        y1 += direction[1];
+        return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2) < dist;
+    }
+    
+    public void moveTowardsTarget(int[] direction) {
+        if (opponentDirection[0] != direction[0] || opponentDirection[1] != direction[1]) {
+            hasTarget = false;
+            return;
+        }
+        int[][] board = game.board;
+        move();
+        if (position[0] == target[0] && position[1] == target[1]) {
+            hasTarget = false;
+        }
+        game.preyMovable = false;
+    }
+    
+    public boolean hasTarget() {
+        return this.hasTarget;
+    }
+    
     public Prey(Evasion game) {
         position = new int[2];
         position[0] = 330;
         position[1] = 200;
+        direction = new int[2];
+        opponentDirection = new int[2];
+        target = new int[2];
         this.game = game;
     }
 }
