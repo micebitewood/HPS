@@ -1,0 +1,64 @@
+Phases:
+1. Server initializes.
+2. Clients connect to server.
+3. Server sends the graph data to clients.
+4. Game starts. For each round, server sends the remaining node IDs to clients and clients answer with their moves. Repeat until the game is over.
+
+Protocol in phase 2:
+* Connect to localhost:<port> via socket.
+* Server sends "Team Name?<EOM>" to clients.
+* Clients respond with "TeamName<EOM>". No whitespace in team names.
+* Wait.
+
+Protocol in phase 3:
+* Server sends the graph data, followed by an <EOM>. The format is:
+---
+nodeid,xloc,yloc
+<nodeid>,<xloc>,<yloc>
+<nodeid>,<xloc>,<yloc>
+...
+<nodeid>,<xloc>,<yloc>
+<newline>
+nodeid1,nodeid2
+<nodeid1>,<nodeid2>
+<nodeid1>,<nodeid2>
+...
+<nodeid1>,<nodeid2>
+<EOM>
+---
+where the first part defines the coordinates of nodes and the second part defines the edges. Note that <nodeid>s will be given pre-sorted from 0 to N-1, where N is the number of nodes, and the ranges for <xloc> and <yloc> are [0, 19] and [0, 9], respectively. Do not make any assumption about the ordering of <nodeid1>s and <nodeid2>s, though. Typical data files are available at <a href="graph1.txt">typical data 1</a> and <a href="graph2.txt">typical data 2</a>.
+* Wait.
+
+Protocol in phase 4:
+* At the beginning of each round, server sends the following information to both clients:
+  - Remaining nodes
+  - The player's nanomunchers on graph
+  - The opponent's nanomunchers on graph
+  - Numbers of nodes munched by the player and the opponent
+  - Number of nanomunchers at the player's disposal and remaining time for the player
+and the format will be as follows:
+<numberOfRemainingNodes>:<nodeid>,<nodeid>,...,<nodeid>
+<numberOfPlayersNanomunchers>:<nodeid>,<nodeid>,...,<nodeid>
+<numberOfOpponentsNanomunchers>:<nodeid>,<nodeid>,...,<nodeid>
+<scorePlayer>,<scoreOpponent>
+<numberOfRemainingNanomunchers>,<remainingTimeInSeconds>
+<EOM>
+Sample:
+TODO
+Note that if the number of remaining nodes or nanomunchers is zero, neither <nodeid>s nor ":" will follow the number. In other words, there will be a single "0" character in the corresponding line.
+* If the number of the remaining nanomunchers for the player is 0, the game is over and the given scores are the final scores, and no further action is required for client. Otherwise, client responds with the number of nanomunchers to deploy at this round, their locations, and their programs. The format is as follows:
+<numberOfNanomunchers>:<nodeid>/<program>,<nodeid>/<program>,...,<nodeid>/<program><EOM>
+where <program> is a 4-character long string, consisting of lowercase letters "u", "l", "d", and "r", specifying the movement order of each nanomuncher. Note that each of the four characters must occur exactly once in the string. If the player decides not to deploy any nanomunchers, respond with "0<EOM>".
+Sample:
+3:57/lurd,20/drul,88/rldu<EOM>
+* Wait
+
+Some rules:
+* When two nanomunchers enter the same node at the same time: TODO
+* The game ends when no node gets munched for 4 consecutive rounds. Note that if both players do not deploy nanomunchers for the first 4 rounds, the game will end before the round 5 begins with the score of 0 vs 0.
+* Server will not provide any information about the nanomunchers' programs.
+* Server will contact only one client at a time. However, the moves received by both clients in the same round will be processed synchronously.
+
+Server:
+TODO, something like:
+java -jar NanomunchersServer.jar <port> <filenameGraph> <numberOfNanomunchers> <numberOfPlayers (defaults to 2, 1 for non-adversarial game)>
