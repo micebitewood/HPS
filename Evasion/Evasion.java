@@ -333,45 +333,53 @@ class Prey {
     int[] opponentDirection;
     int[] boundaries;// minX, maxX, minY, maxY
     
+    /*
+     * public void move() { int x = position[0] + direction[0]; int y = position[1] + direction[1]; int[][] board =
+     * game.board; game.preyMovable = false; if (x < boundaries[0] || x > boundaries[1]) { hasTarget = false; if (y <
+     * boundaries[2] || y > boundaries[3]) { return; } position[1] = y; return; } if (y < boundaries[2] || y >
+     * boundaries[3]) { position[0] = x; hasTarget = false; return; } if (game.board[x][y] == 0) { position[0] = x;
+     * position[1] = y; return; } hasTarget = false; if (board[x][position[1]] != 0) { if (board[position[0]][y] == 0) {
+     * position[1] = y; } } else if (board[position[0]][y] != 0) { position[0] = x; } else { int xx = x + direction[0];
+     * int yy = y + direction[1]; if (yy < boundaries[2] || yy > boundaries[3]) { position[0] = x; } else if (xx <
+     * boundaries[0] || xx > boundaries[1] || board[x][yy] != 0) { position[1] = y; } else if (board[xx][y] != 0) {
+     * position[0] = x; } } }
+     */
+    
     public void move() {
         int x = position[0] + direction[0];
         int y = position[1] + direction[1];
         int[][] board = game.board;
-        game.preyMovable = false;
-        if (x < boundaries[0] || x > boundaries[1]) {
+        if (x >= boundaries[0] && x <= boundaries[1] && y >= boundaries[2] && y <= boundaries[3] && board[x][y] == 0) {
+            position[0] = x;
+            position[1] = y;
+        } else {
             hasTarget = false;
-            if (y < boundaries[2] || y > boundaries[3]) {
+            if (x < 0 || x > 499) {
+                if (y < 0 || y > 499)
+                    return;
+                position[1] = y;
                 return;
             }
-            position[1] = y;
-            return;
-        }
-        if (y < boundaries[2] || y > boundaries[3]) {
-            position[0] = x;
-            hasTarget = false;
-            return;
-        }
-        if (game.board[x][y] == 0) {
-            position[0] = x;
-            position[1] = y;
-            return;
-        }
-        hasTarget = false;
-        if (board[x][position[1]] != 0) {
-            if (board[position[0]][y] == 0) {
-                position[1] = y;
+            if (y < 0 || y > 499) {
+                position[0] = x;
+                return;
             }
-        } else if (board[position[0]][y] != 0) {
-            position[0] = x;
-        } else {
-            int xx = x + direction[0];
-            int yy = y + direction[1];
-            if (yy < boundaries[2] || yy > boundaries[3]) {
+            if (board[x][position[1]] != 0) {
+                if (board[position[0]][y] == 0) {
+                    position[1] = y;
+                }
+            } else if (board[position[0]][y] != 0) {
                 position[0] = x;
-            } else if (xx < boundaries[0] || xx > boundaries[1] || board[x][yy] != 0) {
-                position[1] = y;
-            } else if (board[xx][y] != 0) {
-                position[0] = x;
+            } else {
+                int xx = x + direction[0];
+                int yy = y + direction[1];
+                if (yy < boundaries[2] || yy > boundaries[3]) {
+                    position[0] = x;
+                } else if (xx < boundaries[0] || xx > boundaries[1] || board[x][yy] != 0) {
+                    position[1] = y;
+                } else if (board[xx][y] != 0) {
+                    position[0] = x;
+                }
             }
         }
     }
@@ -391,47 +399,24 @@ class Prey {
         int[][] board = game.board;
         int xx = position[0] + direction[0];
         int yy = position[1] + direction[1];
+        this.hasTarget = true;
         while (xx != x && xx >= boundaries[0] && xx <= boundaries[1] && yy >= boundaries[2] && yy <= boundaries[3]) {
             if (board[xx][yy] != 0) {
                 hasTarget = false;
+                target[0] = xx - direction[0];
+                target[1] = yy - direction[1];
                 return false;
             }
             xx += direction[0];
             yy += direction[1];
         }
         if (yy != y) {
-            hasTarget = false;
-            return false;
-        }
-        int minX = (3 * boundaries[0] + boundaries[1]) / 4;
-        int maxX = (boundaries[0] + 3 * boundaries[1]) / 4;
-        int minY = (3 * boundaries[2] + boundaries[3]) / 4;
-        int maxY = (boundaries[2] + 3 * boundaries[3]) / 4;
-        while (x < minX + 6 && direction[0] < 0) {
-            x -= direction[0];
-            y -= direction[1];
-        }
-        while (x > maxX - 6 && direction[0] > 0) {
-            x -= direction[0];
-            y -= direction[1];
-        }
-        while (y < minY + 6 && direction[1] < 0) {
-            x -= direction[0];
-            y -= direction[1];
-        }
-        while (y > maxY - 6 && direction[1] > 0) {
-            x -= direction[0];
-            y -= direction[1];
-        }
-        if (x == position[0] && y == position[1]) {
-            hasTarget = false;
-            direction[0] = 0;
-            direction[1] = 0;
+            target[0] = position[0] + direction[0];
+            target[1] = position[1] + direction[1];
             return false;
         }
         target[0] = x;
         target[1] = y;
-        this.hasTarget = true;
         return true;
     }
     
@@ -494,92 +479,39 @@ class Prey {
             } else {
                 this.direction[0] = -direction[0];
                 this.direction[1] = -direction[1];
-                int targetX = (position[0] + 2 * this.position[0]) / 3;
-                int targetY = this.position[1] + this.direction[1] * Math.abs(targetX - this.position[0]);
-                if (Math.abs(targetY - futurePosition[1]) > 50) {
-                    this.direction[1] = 0;
-                    targetY = this.position[1];
+                if (dist > 40) {
+                    if (this.position[1] == boundaries[2] + 1 || this.position[1] == boundaries[3] - 1)
+                        this.direction[1] = direction[1];
+                    if (this.position[0] == boundaries[0] + 1 || this.position[0] == boundaries[1] - 1)
+                        this.direction[0] = direction[0];
                 }
-                if (dist > 10) {
-                    boolean nearBoundary = false;
-                    if (this.position[0] < (3 * boundaries[0] + boundaries[1]) / 4) {
-                        this.direction[0] = 1;
-                        nearBoundary = true;
-                    } else if (this.position[0] > (boundaries[0] + 3 * boundaries[1]) / 4) {
-                        this.direction[0] = -1;
-                        nearBoundary = true;
-                    }
-                    if (this.position[1] < (3 * boundaries[2] + boundaries[3]) / 4) {
-                        this.direction[1] = 1;
-                        nearBoundary = true;
-                    } else if (this.position[1] > (boundaries[2] + 3 * boundaries[3]) / 4) {
-                        this.direction[1] = -1;
-                        nearBoundary = true;
-                    }
-                    if (nearBoundary) {
-                        targetX = this.position[0] + this.direction[0];
-                        targetY = this.position[1] + this.direction[1];
-                    }
-                }
+                int maxDist = Math.abs(position[0] - this.position[0]) / 3;
+                int tempDist = Math.abs(position[1] - this.position[1]) / 3;
+                if (tempDist > maxDist)
+                    maxDist = tempDist;
+                int targetX = this.position[0] + maxDist * this.direction[0];
+                int targetY = this.position[1] + maxDist * this.direction[1];
                 setTarget(targetX, targetY);
             }
         } else {
-            if (isBehind(position, direction)) {
-                this.direction[0] = direction[0];
-                this.direction[1] = direction[1];
-                int xx = position[0];
-                int yy = position[1];
-                int[][] board = game.board;
-                int dist = 0;
-                while (xx >= boundaries[0] && xx <= boundaries[1] && yy >= boundaries[2] && yy <= boundaries[3]
-                       && board[xx][yy] == 0) {
-                    xx += direction[0];
-                    yy += direction[1];
-                    dist++;
-                }
-                setTarget(this.position[0] + dist * this.direction[0], this.position[1] + this.direction[1] * dist);
-            } else {
-                boolean nearBoundary = false;
-                if (this.position[0] < (boundaries[0] + boundaries[1]) / 4) {
-                    this.direction[0] = 1;
-                    nearBoundary = true;
-                } else if (this.position[0] > 3 * (boundaries[0] + boundaries[1]) / 4) {
-                    this.direction[0] = -1;
-                    nearBoundary = true;
-                }
-                if (this.position[1] < (boundaries[2] + boundaries[3]) / 4) {
-                    this.direction[1] = 1;
-                    nearBoundary = true;
-                } else if (this.position[1] > 3 * (boundaries[2] + boundaries[3]) / 4) {
-                    this.direction[1] = -1;
-                    nearBoundary = true;
-                }
-                if (nearBoundary) {
-                    int targetX = this.position[0] + this.direction[0];
-                    int targetY = this.position[1] + this.direction[1];
-                    setTarget(targetX, targetY);
-                }
+            this.direction[0] = direction[0];
+            this.direction[1] = direction[1];
+            int xx = position[0];
+            int yy = position[1];
+            int[][] board = game.board;
+            int dist = 0;
+            while (xx >= boundaries[0] && xx <= boundaries[1] && yy >= boundaries[2] && yy <= boundaries[3]
+                   && board[xx][yy] == 0) {
+                xx += direction[0];
+                yy += direction[1];
+                dist++;
             }
+            setTarget(this.position[0] + dist * this.direction[0], this.position[1] + this.direction[1] * dist);
+            
         }
         System.out.println("target set: " + target[0] + ", " + target[1]);
         opponentDirection[0] = direction[0];
         opponentDirection[1] = direction[1];
-    }
-    
-    private boolean isBehind(int[] position, int[] direction) {
-        boolean xBehind = false;
-        boolean yBehind = false;
-        if (this.position[0] <= position[0] && direction[0] > 0) {
-            xBehind = true;
-        } else if (this.position[0] >= position[0] && direction[0] < 0) {
-            xBehind = true;
-        }
-        if (this.position[1] <= position[1] && direction[1] > 0) {
-            yBehind = true;
-        } else if (this.position[1] >= position[1] && direction[1] < 0) {
-            yBehind = true;
-        }
-        return xBehind && yBehind;
     }
     
     private boolean gettingCloser(int[] position, int[] direction) {
@@ -587,10 +519,11 @@ class Prey {
         int y1 = position[1];
         int x2 = this.position[0];
         int y2 = this.position[1];
-        int dist = (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
-        x1 += direction[0];
-        y1 += direction[1];
-        return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2) < dist;
+        if ((x2 - x1) / direction[0] > 0)
+            return true;
+        if ((y2 - y1) / direction[1] > 0)
+            return true;
+        return false;
     }
     
     public void moveTowardsTarget(int[] direction) {
