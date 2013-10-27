@@ -221,19 +221,23 @@ class Hunter {
             boolean vWall = false;
             boolean hWall = false;
             
-            if (direction[0] == 1) {
-                if (preyPosition[0] - position[0] > count % 2 && preyPosition[0] - position[0] <= WALL_CONST)
+            int[] dist = new int[] {Math.abs(preyPosition[0] - position[0]), Math.abs(preyPosition[1] - position[1]) };
+            int minDist = (dist[0] < dist[1]) ? dist[0] : dist[1];
+            int safetyDist = 3 * game.wallTime + WALL_CONST;
+            
+            if (direction[0] == 1 && preyPosition[0] - position[0] > count % 2) {
+                if (dist[0] <= WALL_CONST || minDist >= safetyDist && dist[1] == minDist)
                     vWall = true;
-            } else if (direction[0] == -1) {
-                if (position[0] - preyPosition[0] > count % 2 && position[0] - preyPosition[0] <= WALL_CONST)
+            } else if (direction[0] == -1 && position[0] - preyPosition[0] > count % 2) {
+                if (dist[0] <= WALL_CONST || minDist >= safetyDist && dist[1] == minDist)
                     vWall = true;
             }
             
-            if (direction[1] == 1) {
-                if (preyPosition[1] - position[1] > count % 2 && preyPosition[1] - position[1] <= WALL_CONST)
+            if (direction[1] == 1 && preyPosition[1] - position[1] > count % 2) {
+                if (dist[1] <= WALL_CONST || minDist >= safetyDist && dist[0] == minDist)
                     hWall = true;
-            } else if (direction[1] == -1) {
-                if (position[1] - preyPosition[1] > count % 2 && position[1] - preyPosition[1] <= WALL_CONST)
+            } else if (direction[1] == -1 && position[1] - preyPosition[1] > count % 2) {
+                if (dist[1] <= WALL_CONST || minDist >= safetyDist && dist[0] == minDist)
                     hWall = true;
             }
             
