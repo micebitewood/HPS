@@ -12,6 +12,8 @@ public class Evasion {
     private Hunter hunter;
     private Prey prey;
     int[][] board;
+    int wallTime;
+    int maxNumWalls;
     int wallNum;
     boolean preyMovable;
     int minDuration = 10;
@@ -20,7 +22,9 @@ public class Evasion {
         this.hunter = new Hunter(this);
         this.prey = new Prey(this);
         board = new int[500][500];
-        preyMovable = true;
+        preyMovable = false;
+        wallTime = 30;
+        maxNumWalls = 5;
         wallNum = 1;
     }
     
@@ -34,18 +38,44 @@ public class Evasion {
         int count = 0;
         int duration = 0;
         while (getDist() > MIN_DIST) {
-            // hunter.buildWall(false);
+            HunterMove hunterMove = hunter.play(count, prey.position);
+            if (hunterMove.buildWall) {
+                System.out.println(String.format(
+                                                 "Time %d: Build wall %d: (%3d, %3d) to (%3d, %3d), H(%3d, %3d), P(%3d, %3d)",
+                                                 count, wallNum,
+                                                 hunterMove.wall[0], hunterMove.wall[1], hunterMove.wall[2], hunterMove.wall[3],
+                                                 hunter.position[0], hunter.position[1], prey.position[0], prey.position[1]));
+                System.out.println(String.format("    new bounds: %3d by %3d: (%3d, %3d) to (%3d, %3d)",
+                                                 hunter.bounds[2] - hunter.bounds[0], hunter.bounds[3] - hunter.bounds[1],
+                                                 hunter.bounds[0], hunter.bounds[1], hunter.bounds[2], hunter.bounds[3]));
+                
+                prey.setBoundaries(hunter.bounds[0], hunter.bounds[2], hunter.bounds[1], hunter.bounds[3]);
+                hunter.buildWall(hunterMove.wall[2] != hunterMove.wall[0]);
+            }
+            if (hunterMove.destroyWall > 0) {
+                System.out.println(String.format("Time %d: Destroy wall %d", count, hunterMove.destroyWall));
+                
+                hunter.destroyWall(hunterMove.destroyWall);
+            }
+            
             if (preyMovable) {
                 if (!prey.hasTarget()) {
                     prey.getTarget(hunter.position, hunter.direction);
                 }
                 prey.moveTowardsTarget(hunter.direction);
+                System.out.println("position of prey: " + prey.position[0] + ", " + prey.position[1]);
+                System.out.println("direction of prey: " + prey.direction[0] + ", " + prey.direction[1]);
             } else {
                 preyMovable = true;
             }
             hunter.move();
+            System.out.println("position of hunter: " + hunter.position[0] + ", " + hunter.position[1]);
+            System.out.println("direction of hunter: " + hunter.direction[0] + ", " + hunter.direction[1]);
             duration++;
             count++;
+            if (count == 950) {
+                System.out.println();
+            }
         }
         System.out.println(count);
     }
@@ -56,7 +86,23 @@ public class Evasion {
     }
 }
 
+class HunterMove {
+    int[] direction;
+    boolean buildWall;
+    int destroyWall; // id of the wall to destroy, 0 for not destroying any walls
+    int[] wall; // {x1, y1, x2, y2} of the wall to build
+    
+    public HunterMove(int[] direction, boolean buildWall, int destroyWall, int[] wall) {
+        this.direction = direction;
+        this.buildWall = buildWall;
+        this.destroyWall = destroyWall;
+        this.wall = wall;
+    }
+}
+
 class Hunter {
+    static final int WALL_CONST = 2; // 2 should be minimum, experiment with larger value
+    
     // y
     // ^
     // |
@@ -64,6 +110,10 @@ class Hunter {
     /* direction[0] is horizontal, ranging from -1 to 1; direction[1] is vertical, and also from -1 to 1. */
     int[] direction;
     int[] position;
+    int wallTimer = 0;
+    int wallCount = 0;
+    int[] bounds = {0, 0, 499, 499 };
+    int wallToDestroy = 0;
     Evasion game;
     
     public void move() {
@@ -82,7 +132,7 @@ class Hunter {
             return;
         }
         /* y is a wall */
-        if (y == -1 || y == 500) {// || ) {
+        if (y == -1 || y == 500) {
             direction[1] = -direction[1];
             position[0] = x;
             return;
@@ -159,6 +209,116 @@ class Hunter {
         return true;
     }
     
+    public void destroyWall(int id) {
+        int[][] board = game.board;
+        for (int x = 0; x < 500; ++x)
+            for (int y = 0; y < 500; ++y)
+                if (board[x][y] == id)
+                    board[x][y] = 0;
+    }
+    
+    public HunterMove play(int count, int[] preyPosition) {
+        boolean buildWall = false;
+        int destroyWall = 0;
+        int[] wall = null;
+        
+        if (wallTimer == 0 && wallCount < game.maxNumWalls) {
+            // If we are allowed to build a wall
+            
+            // Turn these on, in case we want to build a wall
+            boolean vWall = false;
+            boolean hWall = false;
+            
+            if (direction[0] == 1)
+                if (preyPosition[0] > position[0] && preyPosition[0] - position[0] <= WALL_CONST)
+                    vWall = true;
+                else if (direction[0] == -1)
+                    if (preyPosition[0] < position[0] && preyPosition[0] - position[0] >= -WALL_CONST)
+                        vWall = true;
+            
+            if (direction[1] == 1)
+                if (preyPosition[1] > position[1] && preyPosition[1] - position[1] <= WALL_CONST)
+                    hWall = true;
+                else if (direction[1] == -1)
+                    if (preyPosition[1] < position[1] && preyPosition[1] - position[1] >= -WALL_CONST)
+                        hWall = true;
+            
+            // Don't bother if our bounds are tight enough
+            if (vWall && bounds[2] - bounds[0] <= 5)
+                vWall = false;
+            if (hWall && bounds[3] - bounds[1] <= 5)
+                hWall = false;
+            
+            if (vWall) {
+                buildWall = true;
+                wall = new int[] {position[0], bounds[1], position[0], bounds[3] };
+                if (direction[0] == 1)
+                    bounds[0] = position[0] + 1;
+                else
+                    bounds[2] = position[0] - 1;
+                
+                // See if there's a wall that's out of bound and if there is,
+                // put it to wallToDestroy
+                if (direction[0] == 1) {
+                    for (int i = 0; i < bounds[0]; ++i)
+                        if (game.board[i][position[1]] > 0) {
+                            wallToDestroy = game.board[i][position[1]];
+                            break;
+                        }
+                } else {
+                    for (int i = bounds[2] + 1; i < 500; ++i)
+                        if (game.board[i][position[1]] > 0) {
+                            wallToDestroy = game.board[i][position[1]];
+                            break;
+                        }
+                }
+            } else if (hWall) {
+                buildWall = true;
+                wall = new int[] {bounds[0], position[1], bounds[2], position[1] };
+                if (direction[1] == 1)
+                    bounds[1] = position[1] + 1;
+                else
+                    bounds[3] = position[1] - 1;
+                
+                // See if there's a wall that's out of bound and if there is,
+                // put it to wallToDestroy
+                if (direction[1] == 1) {
+                    for (int i = 0; i < bounds[1]; ++i)
+                        if (game.board[position[0]][i] > 0) {
+                            wallToDestroy = game.board[position[0]][i];
+                            break;
+                        }
+                } else {
+                    for (int i = bounds[3] + 1; i < 500; ++i)
+                        if (game.board[position[0]][i] > 0) {
+                            wallToDestroy = game.board[position[0]][i];
+                            break;
+                        }
+                }
+            }
+            
+            if (vWall || hWall) {
+                buildWall = true;
+                ++wallCount;
+                wallTimer = game.wallTime;
+            }
+        }
+        
+        if (!buildWall && wallToDestroy > 0) {
+            // See if there's any useless wall to destroy.
+            // NB: IF the architecture is changed that we can build and destroy in a same
+            // round, just remove "!buildWall &&".
+            
+            destroyWall = wallToDestroy;
+            wallToDestroy = 0;
+            --wallCount;
+        }
+        
+        if (wallTimer > 0)
+            --wallTimer;
+        return new HunterMove(direction, buildWall, destroyWall, wall);
+    }
+    
     public Hunter(Evasion game) {
         direction = new int[2];
         direction[0] = 1;
@@ -177,21 +337,22 @@ class Prey {
     boolean hasTarget;
     int[] direction;
     int[] opponentDirection;
+    int[] boundaries;// minX, maxX, minY, maxY
     
     public void move() {
         int x = position[0] + direction[0];
         int y = position[1] + direction[1];
         int[][] board = game.board;
         game.preyMovable = false;
-        if (x == -1 || x == 500) {
+        if (x < boundaries[0] || x > boundaries[1]) {
             hasTarget = false;
-            if (y == -1 || y == 500) {
+            if (y < boundaries[2] || y > boundaries[3]) {
                 return;
             }
             position[1] = y;
             return;
         }
-        if (y == -1 || y == 500) {
+        if (y < boundaries[2] || y > boundaries[3]) {
             position[0] = x;
             hasTarget = false;
             return;
@@ -211,14 +372,21 @@ class Prey {
         } else {
             int xx = x + direction[0];
             int yy = y + direction[1];
-            if (yy == -1 || yy == 500) {
+            if (yy < boundaries[2] || yy > boundaries[3]) {
                 position[0] = x;
-            } else if (xx == -1 || xx == 500 || board[x][yy] != 0) {
+            } else if (xx < boundaries[0] || xx > boundaries[1] || board[x][yy] != 0) {
                 position[1] = y;
             } else if (board[xx][y] != 0) {
                 position[0] = x;
             }
         }
+    }
+    
+    public void setBoundaries(int minX, int maxX, int minY, int maxY) {
+        this.boundaries[0] = minX;
+        this.boundaries[1] = maxX;
+        this.boundaries[2] = minY;
+        this.boundaries[3] = maxY;
     }
     
     /**
@@ -228,7 +396,7 @@ class Prey {
         int[][] board = game.board;
         int xx = position[0] + direction[0];
         int yy = position[1] + direction[1];
-        while (xx != x) {
+        while (xx != x && xx >= boundaries[0] && xx <= boundaries[1] && yy >= boundaries[2] && yy <= boundaries[3]) {
             if (board[xx][yy] != 0) {
                 hasTarget = false;
                 return false;
@@ -240,23 +408,27 @@ class Prey {
             hasTarget = false;
             return false;
         }
-        while (x < 6) {
+        int minX = (3 * boundaries[0] + boundaries[1]) / 4;
+        int maxX = (boundaries[0] + 3 * boundaries[1]) / 4;
+        int minY = (3 * boundaries[2] + boundaries[3]) / 4;
+        int maxY = (boundaries[2] + 3 * boundaries[3]) / 4;
+        while (x < minX + 6 && direction[0] < 0) {
             x -= direction[0];
             y -= direction[1];
         }
-        while (x > 493) {
+        while (x > maxX - 6 && direction[0] > 0) {
             x -= direction[0];
             y -= direction[1];
         }
-        while (y < 6) {
+        while (y < minY + 6 && direction[1] < 0) {
             x -= direction[0];
             y -= direction[1];
         }
-        while (y > 493) {
+        while (y > maxY - 6 && direction[1] > 0) {
             x -= direction[0];
             y -= direction[1];
         }
-        if (x == position[0]) {
+        if (x == position[0] && y == position[1]) {
             hasTarget = false;
             return false;
         }
@@ -270,6 +442,7 @@ class Prey {
         if (gettingCloser(position, direction)) {
             int[] futurePosition =
             {this.position[0], position[1] + (this.position[0] - position[0]) * direction[1] / direction[0] };
+            System.out.println("future position for hunter: " + futurePosition[0] + ", " + futurePosition[1]);
             int dist = Math.abs(Math.abs(futurePosition[1]) - Math.abs(this.position[1]));
             if (dist < 6) {
                 if (Math.abs(futurePosition[1]) > Math.abs(this.position[1])) {
@@ -326,24 +499,88 @@ class Prey {
                 this.direction[1] = -direction[1];
                 int targetX = (position[0] + 2 * this.position[0]) / 3;
                 int targetY = this.position[1] + this.direction[1] * Math.abs(targetX - this.position[0]);
+                if (Math.abs(targetY - futurePosition[1]) > 50) {
+                    this.direction[1] = 0;
+                    targetY = this.position[1];
+                }
+                boolean nearBoundary = false;
+                if (this.position[0] < (3 * boundaries[0] + boundaries[1]) / 4) {
+                    this.direction[0] = 1;
+                    nearBoundary = true;
+                } else if (this.position[0] > (boundaries[0] + 3 * boundaries[1]) / 4) {
+                    this.direction[0] = -1;
+                    nearBoundary = true;
+                }
+                if (this.position[1] < (3 * boundaries[2] + boundaries[3]) / 4) {
+                    this.direction[1] = 1;
+                    nearBoundary = true;
+                } else if (this.position[1] > (boundaries[2] + 3 * boundaries[3]) / 4) {
+                    this.direction[1] = -1;
+                    nearBoundary = true;
+                }
+                if (nearBoundary) {
+                    targetX = this.position[0] + this.direction[0];
+                    targetY = this.position[1] + this.direction[1];
+                }
                 setTarget(targetX, targetY);
             }
         } else {
-            this.direction[0] = direction[0];
-            this.direction[1] = direction[1];
-            int xx = position[0];
-            int yy = position[1];
-            int[][] board = game.board;
-            int dist = 0;
-            while (xx >= 0 && xx < 500 && yy >= 0 && yy < 500 && board[xx][yy] == 0) {
-                xx += direction[0];
-                yy += direction[1];
-                dist++;
+            if (isBehind(position, direction)) {
+                this.direction[0] = direction[0];
+                this.direction[1] = direction[1];
+                int xx = position[0];
+                int yy = position[1];
+                int[][] board = game.board;
+                int dist = 0;
+                while (xx >= boundaries[0] && xx <= boundaries[1] && yy >= boundaries[2] && yy <= boundaries[3]
+                       && board[xx][yy] == 0) {
+                    xx += direction[0];
+                    yy += direction[1];
+                    dist++;
+                }
+                setTarget(this.position[0] + dist * this.direction[0], this.position[1] + this.direction[1] * dist);
+            } else {
+                boolean nearBoundary = false;
+                if (this.position[0] < (boundaries[0] + boundaries[1]) / 4) {
+                    this.direction[0] = 1;
+                    nearBoundary = true;
+                } else if (this.position[0] > 3 * (boundaries[0] + boundaries[1]) / 4) {
+                    this.direction[0] = -1;
+                    nearBoundary = true;
+                }
+                if (this.position[1] < (boundaries[2] + boundaries[3]) / 4) {
+                    this.direction[1] = 1;
+                    nearBoundary = true;
+                } else if (this.position[1] > 3 * (boundaries[2] + boundaries[3]) / 4) {
+                    this.direction[1] = -1;
+                    nearBoundary = true;
+                }
+                if (nearBoundary) {
+                    int targetX = this.position[0] + this.direction[0];
+                    int targetY = this.position[1] + this.direction[1];
+                    setTarget(targetX, targetY);
+                }
             }
-            setTarget(this.position[0] + dist * this.direction[0], this.position[1] + this.direction[1] * dist);
         }
+        System.out.println("target set: " + target[0] + ", " + target[1]);
         opponentDirection[0] = direction[0];
         opponentDirection[1] = direction[1];
+    }
+    
+    private boolean isBehind(int[] position, int[] direction) {
+        boolean xBehind = false;
+        boolean yBehind = false;
+        if (this.position[0] <= position[0] && direction[0] > 0) {
+            xBehind = true;
+        } else if (this.position[0] >= position[0] && direction[0] < 0) {
+            xBehind = true;
+        }
+        if (this.position[1] <= position[1] && direction[1] > 0) {
+            yBehind = true;
+        } else if (this.position[1] >= position[1] && direction[1] < 0) {
+            yBehind = true;
+        }
+        return xBehind && yBehind;
     }
     
     private boolean gettingCloser(int[] position, int[] direction) {
@@ -380,6 +617,11 @@ class Prey {
         direction = new int[2];
         opponentDirection = new int[2];
         target = new int[2];
+        boundaries = new int[4];
+        boundaries[0] = 0;
+        boundaries[1] = 499;
+        boundaries[2] = 0;
+        boundaries[3] = 499;
         this.game = game;
     }
 }
