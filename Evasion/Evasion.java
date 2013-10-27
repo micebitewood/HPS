@@ -1,13 +1,5 @@
 public class Evasion {
     
-    private final static int[] N = {0, 1 };
-    private final static int[] NE = {1, 1 };
-    private final static int[] E = {1, 0 };
-    private final static int[] SE = {1, -1 };
-    private final static int[] S = {0, -1 };
-    private final static int[] SW = {-1, -1 };
-    private final static int[] W = {-1, 0 };
-    private final static int[] NW = {-1, 1 };
     private final static double MIN_DIST = 4;
     private Hunter hunter;
     private Prey prey;
@@ -73,7 +65,7 @@ public class Evasion {
             System.out.println("direction of hunter: " + hunter.direction[0] + ", " + hunter.direction[1]);
             duration++;
             count++;
-            if (count == 950) {
+            if (count % 10 == 0) {
                 System.out.println();
             }
         }
@@ -229,19 +221,21 @@ class Hunter {
             boolean vWall = false;
             boolean hWall = false;
             
-            if (direction[0] == 1)
-                if (preyPosition[0] > position[0] && preyPosition[0] - position[0] <= WALL_CONST)
+            if (direction[0] == 1) {
+                if (preyPosition[0] - position[0] > count % 2 && preyPosition[0] - position[0] <= WALL_CONST)
                     vWall = true;
-                else if (direction[0] == -1)
-                    if (preyPosition[0] < position[0] && preyPosition[0] - position[0] >= -WALL_CONST)
-                        vWall = true;
+            } else if (direction[0] == -1) {
+                if (position[0] - preyPosition[0] > count % 2 && position[0] - preyPosition[0] <= WALL_CONST)
+                    vWall = true;
+            }
             
-            if (direction[1] == 1)
-                if (preyPosition[1] > position[1] && preyPosition[1] - position[1] <= WALL_CONST)
+            if (direction[1] == 1) {
+                if (preyPosition[1] - position[1] > count % 2 && preyPosition[1] - position[1] <= WALL_CONST)
                     hWall = true;
-                else if (direction[1] == -1)
-                    if (preyPosition[1] < position[1] && preyPosition[1] - position[1] >= -WALL_CONST)
-                        hWall = true;
+            } else if (direction[1] == -1) {
+                if (position[1] - preyPosition[1] > count % 2 && position[1] - preyPosition[1] <= WALL_CONST)
+                    hWall = true;
+            }
             
             // Don't bother if our bounds are tight enough
             if (vWall && bounds[2] - bounds[0] <= 5)
@@ -387,6 +381,7 @@ class Prey {
         this.boundaries[1] = maxX;
         this.boundaries[2] = minY;
         this.boundaries[3] = maxY;
+        hasTarget = false;
     }
     
     /**
@@ -430,6 +425,8 @@ class Prey {
         }
         if (x == position[0] && y == position[1]) {
             hasTarget = false;
+            direction[0] = 0;
+            direction[1] = 0;
             return false;
         }
         target[0] = x;
@@ -503,24 +500,26 @@ class Prey {
                     this.direction[1] = 0;
                     targetY = this.position[1];
                 }
-                boolean nearBoundary = false;
-                if (this.position[0] < (3 * boundaries[0] + boundaries[1]) / 4) {
-                    this.direction[0] = 1;
-                    nearBoundary = true;
-                } else if (this.position[0] > (boundaries[0] + 3 * boundaries[1]) / 4) {
-                    this.direction[0] = -1;
-                    nearBoundary = true;
-                }
-                if (this.position[1] < (3 * boundaries[2] + boundaries[3]) / 4) {
-                    this.direction[1] = 1;
-                    nearBoundary = true;
-                } else if (this.position[1] > (boundaries[2] + 3 * boundaries[3]) / 4) {
-                    this.direction[1] = -1;
-                    nearBoundary = true;
-                }
-                if (nearBoundary) {
-                    targetX = this.position[0] + this.direction[0];
-                    targetY = this.position[1] + this.direction[1];
+                if (dist > 10) {
+                    boolean nearBoundary = false;
+                    if (this.position[0] < (3 * boundaries[0] + boundaries[1]) / 4) {
+                        this.direction[0] = 1;
+                        nearBoundary = true;
+                    } else if (this.position[0] > (boundaries[0] + 3 * boundaries[1]) / 4) {
+                        this.direction[0] = -1;
+                        nearBoundary = true;
+                    }
+                    if (this.position[1] < (3 * boundaries[2] + boundaries[3]) / 4) {
+                        this.direction[1] = 1;
+                        nearBoundary = true;
+                    } else if (this.position[1] > (boundaries[2] + 3 * boundaries[3]) / 4) {
+                        this.direction[1] = -1;
+                        nearBoundary = true;
+                    }
+                    if (nearBoundary) {
+                        targetX = this.position[0] + this.direction[0];
+                        targetY = this.position[1] + this.direction[1];
+                    }
                 }
                 setTarget(targetX, targetY);
             }
