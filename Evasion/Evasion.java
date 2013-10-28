@@ -40,8 +40,6 @@ public class Evasion {
     Map<Integer, Integer[]> horizontalWalls;
     
     public Evasion(boolean isHunter, int wallTime, int maxNumWalls) {
-        this.hunter = new Hunter(this);
-        this.prey = new Prey(this);
         this.isHunter = isHunter;
         this.wallTime = wallTime;
         this.maxNumWalls = maxNumWalls;
@@ -50,6 +48,8 @@ public class Evasion {
         wallNums = new HashMap<Integer, WallPair>();
         verticalWalls = new HashMap<Integer, Integer[]>();
         horizontalWalls = new HashMap<Integer, Integer[]>();
+        this.hunter = new Hunter(this);
+        this.prey = new Prey(this);
     }
     
     private void parseSpec(String str) {
