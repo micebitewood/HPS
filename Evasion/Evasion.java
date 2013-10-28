@@ -1,23 +1,77 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
+import java.net.UnknownHostException;
+
 public class Evasion {
     
+    public static final int[] NN = {0, -1 };
+    public static final int[] SS = {0, 1 };
+    public static final int[] EE = {1, 0 };
+    public static final int[] WW = {-1, 0 };
+    public static final int[] NE = {1, -1 };
+    public static final int[] NW = {-1, -1 };
+    public static final int[] SE = {1, 1 };
+    public static final int[] SW = {-1, 1 };
+    public static final int[] ZZ = {0, 0 };
+    public static Socket socket;
+    public static PrintWriter out;
+    public static BufferedReader in;
+    
     private final static double MIN_DIST = 4;
+    private boolean isHunter;
     private Hunter hunter;
     private Prey prey;
     int[][] board;
     int wallTime;
     int maxNumWalls;
     int wallNum;
-    boolean preyMovable;
+    int[][] walls;
+    int wallCount;
     int minDuration = 10;
     
-    public Evasion() {
+    public Evasion(boolean isHunter, int wallTime, int maxNumWalls) {
         this.hunter = new Hunter(this);
         this.prey = new Prey(this);
+        this.isHunter = isHunter;
         board = new int[500][500];
-        preyMovable = false;
-        wallTime = 30;
-        maxNumWalls = 5;
+        this.wallTime = wallTime;
+        this.maxNumWalls = maxNumWalls;
         wallNum = 1;
+        walls = new int[maxNumWalls][4];
+    }
+    
+    private void parseSpec(String str) {
+        String[] specs = str.split("\n");
+        wallCount = Integer.parseInt(specs[1]);
+        for (int i = 0; i < wallCount; i++) {
+            String[] wallSpecs = specs[i + 2].split(" ");
+            int wallNum = Integer.parseInt(wallSpecs[0]);
+            String[] coord = wallSpecs[1].split("[,()]");
+            int k = 0;
+            for (int j = 0; j < coord.length; j++) {
+                if (!coord[j].equals(""))
+                    walls[wallNum - 1][k++] = Integer.parseInt(coord[j]);
+            }
+        }
+        int wallTimeLeft = Integer.parseInt(specs[3 + wallCount]);
+        String[] hunterSpecs = specs[4 + wallCount].split(" ");
+        if (hunterSpecs[1].equalsIgnoreCase("NE")) {
+            hunter.setDir(NE);
+        } else if (hunterSpecs[1].equalsIgnoreCase("NW")) {
+            hunter.setDir(NW);
+        } else if (hunterSpecs[1].equalsIgnoreCase("SE")) {
+            hunter.setDir(SE);
+        } else if (hunterSpecs[1].equalsIgnoreCase("SW")) {
+            hunter.setDir(SW);
+        }
+        String[] hunterPos = hunterSpecs[2].split("[,()]");
+        hunter.setPos(Integer.parseInt(hunterPos[1]), Integer.parseInt(hunterPos[2]));
+        String[] preySpecs = specs[5 + wallCount].split(" ");
+        String[] preyPos = preySpecs[1].split("[,()]");
+        prey.setPos(Integer.parseInt(preyPos[1]), Integer.parseInt(preyPos[2]));
     }
     
     private double getDist() {
@@ -26,55 +80,181 @@ public class Evasion {
         return dist;
     }
     
-    public void start() {
+    public void start() throws IOException {
         int count = 0;
-        int duration = 0;
         while (getDist() > MIN_DIST) {
-            HunterMove hunterMove = hunter.play(count, prey.position);
-            if (hunterMove.buildWall) {
-                System.out.println(String.format(
-                                                 "Time %d: Build wall %d: (%3d, %3d) to (%3d, %3d), H(%3d, %3d), P(%3d, %3d)",
-                                                 count, wallNum,
-                                                 hunterMove.wall[0], hunterMove.wall[1], hunterMove.wall[2], hunterMove.wall[3],
-                                                 hunter.position[0], hunter.position[1], prey.position[0], prey.position[1]));
-                System.out.println(String.format("    new bounds: %3d by %3d: (%3d, %3d) to (%3d, %3d)",
-                                                 hunter.bounds[2] - hunter.bounds[0], hunter.bounds[3] - hunter.bounds[1],
-                                                 hunter.bounds[0], hunter.bounds[1], hunter.bounds[2], hunter.bounds[3]));
-                
-                prey.setBoundaries(hunter.bounds[0], hunter.bounds[2], hunter.bounds[1], hunter.bounds[3]);
-                hunter.buildWall(hunterMove.wall[2] != hunterMove.wall[0]);
-            }
-            if (hunterMove.destroyWall > 0) {
-                System.out.println(String.format("Time %d: Destroy wall %d", count, hunterMove.destroyWall));
-                
-                hunter.destroyWall(hunterMove.destroyWall);
-            }
-            
-            if (preyMovable) {
-                if (!prey.hasTarget()) {
-                    prey.getTarget(hunter.position, hunter.direction);
+            parseSpec(read());
+            if (isHunter) {
+                HunterMove hunterMove = hunter.play(count, prey.position, walls);
+                if (hunterMove.buildWall) {
+                    System.out.println(String.format(
+                                                     "Time %d: Build wall %d: (%3d, %3d) to (%3d, %3d), H(%3d, %3d), P(%3d, %3d)",
+                                                     count, wallNum,
+                                                     hunterMove.wall[0], hunterMove.wall[1], hunterMove.wall[2], hunterMove.wall[3],
+                                                     hunter.position[0], hunter.position[1], prey.position[0], prey.position[1]));
+                    System.out.println(String.format("    new bounds: %3d by %3d: (%3d, %3d) to (%3d, %3d)",
+                                                     hunter.bounds[2] - hunter.bounds[0], hunter.bounds[3] - hunter.bounds[1],
+                                                     hunter.bounds[0], hunter.bounds[1], hunter.bounds[2], hunter.bounds[3]));
+                    
+                    prey.setBoundaries(hunter.bounds[0], hunter.bounds[2], hunter.bounds[1], hunter.bounds[3]);
+//                    hunter.buildWall(hunterMove.wall[2] != hunterMove.wall[0]);
                 }
-                prey.moveTowardsTarget(hunter.direction);
-                System.out.println("position of prey: " + prey.position[0] + ", " + prey.position[1]);
-                System.out.println("direction of prey: " + prey.direction[0] + ", " + prey.direction[1]);
+                if (hunterMove.destroyWall > 0) {
+                    System.out.println(String.format("Time %d: Destroy wall %d", count, hunterMove.destroyWall));
+//                    hunter.destroyWall(hunterMove.destroyWall);
+                }
+                hunter.move();
+                sendHunterMove(hunterMove);
+                System.out.println("position of hunter: " + hunter.position[0] + ", " + hunter.position[1]);
+                System.out.println("direction of hunter: " + hunter.direction[0] + ", " + hunter.direction[1]);
             } else {
-                preyMovable = true;
+                    if (!prey.hasTarget()) {
+                        prey.getTarget(hunter.position, hunter.direction);
+                    }
+                    prey.moveTowardsTarget(hunter.direction);
+                    sendPreyMove();
+                    System.out.println("position of prey: " + prey.position[0] + ", " + prey.position[1]);
+                    System.out.println("direction of prey: " + prey.direction[0] + ", " + prey.direction[1]);
             }
-            hunter.move();
-            System.out.println("position of hunter: " + hunter.position[0] + ", " + hunter.position[1]);
-            System.out.println("direction of hunter: " + hunter.direction[0] + ", " + hunter.direction[1]);
-            duration++;
             count++;
-            if (count % 10 == 0) {
-                System.out.println();
-            }
         }
-        System.out.println(count);
     }
     
-    public static void main(String[] args) {
-        Evasion game = new Evasion();
-        game.start();
+    private void sendPreyMove() {
+        String msg;
+        int[] direction = prey.direction;
+        if (direction[0] == -1) {
+            if (direction[1] == -1)
+                msg = "NW";
+            else if (direction[1] == 0)
+                msg = "WW";
+            else
+                msg = "SW";
+        } else if (direction[0] == 0) {
+            if (direction[1] == -1)
+                msg = "NN";
+            else if (direction[1] == 0)
+                msg = "ZZ";
+            else
+                msg = "SS";
+        } else {
+            if (direction[1] == -1)
+                msg = "NE";
+            else if (direction[1] == 0)
+                msg = "EE";
+            else
+                msg = "SE";
+        }
+        System.out.println("prey: " + msg);
+        send(msg);
+    }
+    
+    private void sendHunterMove(HunterMove hunterMove) {
+        boolean hasSent = false;
+        if (hunterMove.buildWall) {
+            StringBuffer sb = new StringBuffer();
+            int[] direction = hunterMove.direction;
+            if (direction[0] == 1 && direction[1] == 1) {
+                sb.append("SE");
+            } else if (direction[0] == 1 && direction[1] == -1) {
+                sb.append("NE");
+            } else if (direction[0] == -1 && direction[1] == -1) {
+                sb.append("NW");
+            } else {
+                sb.append("SW");
+            }
+            sb.append("w(");// hunterMove.wall[0], hunterMove.wall[1], hunterMove.wall[2], hunterMove.wall[3],\
+            sb.append(hunterMove.wall[0] + "," + hunterMove.wall[1] + "),(" + hunterMove.wall[2] + ","
+            + hunterMove.wall[3] + ")");
+            System.out.println("hunter: " + sb.toString());
+            hasSent = true;
+            send(sb.toString());
+        }
+        if (hunterMove.destroyWall > 0) {
+            StringBuffer sb = new StringBuffer();
+            int[] direction = hunterMove.direction;
+            if (direction[0] == 1 && direction[1] == 1) {
+                sb.append("SE");
+            } else if (direction[0] == 1 && direction[1] == -1) {
+                sb.append("NE");
+            } else if (direction[0] == -1 && direction[1] == -1) {
+                sb.append("NW");
+            } else {
+                sb.append("SW");
+            }
+            sb.append("wx" + hunterMove.destroyWall);
+            hasSent = true;
+            send(sb.toString());
+        }
+        if (!hasSent) {
+            StringBuffer sb = new StringBuffer();
+            int[] direction = hunterMove.direction;
+            if (direction[0] == 1 && direction[1] == 1) {
+                sb.append("SE");
+            } else if (direction[0] == 1 && direction[1] == -1) {
+                sb.append("NE");
+            } else if (direction[0] == -1 && direction[1] == -1) {
+                sb.append("NW");
+            } else {
+                sb.append("SW");
+            }
+            send(sb.toString());
+        }
+        
+    }
+    
+    public static String read() throws IOException {
+        StringBuffer sb = new StringBuffer();
+        String temp;
+        temp = in.readLine();
+        System.out.println(temp);
+        if (temp.equalsIgnoreCase("Walls")) {
+            sb.append(temp + '\n');
+            temp = in.readLine();
+            sb.append(temp + '\n');
+            int wallCount = Integer.parseInt(temp.trim());
+            for (int i = 0; i < wallCount; i++) {
+                temp = in.readLine();
+                sb.append(temp + '\n');
+            }
+            for (int i = 0; i < 5; i++) {
+                temp = in.readLine();
+                sb.append(temp + '\n');
+            }
+            System.out.println(sb.toString());
+            return sb.toString();
+        } else {
+            return temp;
+        }
+    }
+    
+    public static void send(String str) {
+        out.println(str);
+    }
+    
+    public static void main(String[] args) throws UnknownHostException, IOException {
+        if (args.length == 2) {
+            String player = args[0];
+            boolean isHunter = false;
+            if (player.equalsIgnoreCase("H")) {
+                isHunter = true;
+            }
+            int port = Integer.parseInt(args[1]);
+            socket = new Socket("127.0.0.1", port);
+            out = new PrintWriter(socket.getOutputStream(), true);
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            
+            String q = read();
+            send("JJ");
+            String wallsSpec = read();
+            String[] timeAndNum = wallsSpec.split(" ");
+            Evasion game = new Evasion(isHunter, Integer.parseInt(timeAndNum[0]), Integer.parseInt(timeAndNum[1]));
+            game.start();
+            
+            in.close();
+            out.close();
+            socket.close();
+        }
     }
 }
 
@@ -107,6 +287,18 @@ class Hunter {
     int[] bounds = {0, 0, 499, 499 };
     int wallToDestroy = 0;
     Evasion game;
+    
+    // TODO new function
+    public void setPos(int x, int y) {
+        this.position[0] = x;
+        this.position[1] = y;
+    }
+    
+    // TODO new function
+    public void setDir(int[] dir) {
+        this.direction[0] = dir[0];
+        this.direction[1] = dir[1];
+    }
     
     public void move() {
         int[][] board = game.board;
@@ -209,7 +401,7 @@ class Hunter {
                     board[x][y] = 0;
     }
     
-    public HunterMove play(int count, int[] preyPosition) {
+    public HunterMove play(int count, int[] preyPosition, int[][] walls) {
         boolean buildWall = false;
         int destroyWall = 0;
         int[] wall = null;
@@ -221,22 +413,22 @@ class Hunter {
             boolean vWall = false;
             boolean hWall = false;
             
-            int[] dist = new int[] {Math.abs(preyPosition[0]-position[0]), Math.abs(preyPosition[1]-position[1])};
-            int minDist = (dist[0]<dist[1])?dist[0]:dist[1];
-            int safetyDist = 3*game.wallTime + WALL_CONST;
+            int[] dist = new int[] {Math.abs(preyPosition[0] - position[0]), Math.abs(preyPosition[1] - position[1]) };
+            int minDist = (dist[0] < dist[1]) ? dist[0] : dist[1];
+            int safetyDist = 3 * game.wallTime + WALL_CONST;
             
-            if (direction[0] == 1 && preyPosition[0] - position[0] > count%2) {
+            if (direction[0] == 1 && preyPosition[0] - position[0] > count % 2) {
                 if (dist[0] <= WALL_CONST || minDist >= safetyDist && dist[1] == minDist)
                     vWall = true;
-            } else if (direction[0] == -1 && position[0] - preyPosition[0] > count%2) {
+            } else if (direction[0] == -1 && position[0] - preyPosition[0] > count % 2) {
                 if (dist[0] <= WALL_CONST || minDist >= safetyDist && dist[1] == minDist)
                     vWall = true;
             }
             
-            if (direction[1] == 1 && preyPosition[1] - position[1] > count%2) {
+            if (direction[1] == 1 && preyPosition[1] - position[1] > count % 2) {
                 if (dist[1] <= WALL_CONST || minDist >= safetyDist && dist[0] == minDist)
                     hWall = true;
-            } else if (direction[1] == -1 && position[1] - preyPosition[1] > count%2) {
+            } else if (direction[1] == -1 && position[1] - preyPosition[1] > count % 2) {
                 if (dist[1] <= WALL_CONST || minDist >= safetyDist && dist[0] == minDist)
                     hWall = true;
             }
@@ -258,15 +450,15 @@ class Hunter {
                 // See if there's a wall that's out of bound and if there is,
                 // put it to wallToDestroy
                 if (direction[0] == 1) {
-                    for (int i = 0; i < bounds[0]; ++i)
-                        if (game.board[i][position[1]] > 0) {
-                            wallToDestroy = game.board[i][position[1]];
+                    for (int i = 0; i < wallCount; ++i)
+                        if (walls[i][0] < bounds[0] && walls[i][2] < bounds[0]) {
+                            wallToDestroy = i+1;
                             break;
                         }
                 } else {
-                    for (int i = bounds[2] + 1; i < 500; ++i)
-                        if (game.board[i][position[1]] > 0) {
-                            wallToDestroy = game.board[i][position[1]];
+                    for (int i = 0; i < wallCount; ++i)
+                        if (walls[i][0] > bounds[2] && walls[i][2] > bounds[2]) {
+                            wallToDestroy = i+1;
                             break;
                         }
                 }
@@ -281,15 +473,15 @@ class Hunter {
                 // See if there's a wall that's out of bound and if there is,
                 // put it to wallToDestroy
                 if (direction[1] == 1) {
-                    for (int i = 0; i < bounds[1]; ++i)
-                        if (game.board[position[0]][i] > 0) {
-                            wallToDestroy = game.board[position[0]][i];
+                    for (int i = 0; i < wallCount; ++i)
+                        if (walls[i][1] < bounds[1] && walls[i][3] < bounds[1]) {
+                            wallToDestroy = i+1;
                             break;
                         }
                 } else {
-                    for (int i = bounds[3] + 1; i < 500; ++i)
-                        if (game.board[position[0]][i] > 0) {
-                            wallToDestroy = game.board[position[0]][i];
+                    for (int i = 0; i < wallCount; ++i)
+                        if (walls[i][1] > bounds[3] && walls[i][3] > bounds[3]) {
+                            wallToDestroy = i+1;
                             break;
                         }
                 }
@@ -304,8 +496,6 @@ class Hunter {
         
         if (!buildWall && wallToDestroy > 0) {
             // See if there's any useless wall to destroy.
-            // NB: IF the architecture is changed that we can build and destroy in a same
-            // round, just remove "!buildWall &&".
             
             destroyWall = wallToDestroy;
             wallToDestroy = 0;
@@ -337,11 +527,18 @@ class Prey {
     int[] opponentDirection;
     int[] boundaries;// minX, maxX, minY, maxY
     
+    public void setPos(int x, int y) {
+        if (this.position[0] != x || this.position[1] != y) {
+            System.out.println("prey position unequal");
+            this.position[0] = x;
+            this.position[1] = y;
+        }
+    }
+    
     public void move() {
         int x = position[0] + direction[0];
         int y = position[1] + direction[1];
         int[][] board = game.board;
-        game.preyMovable = false;
         if (x < boundaries[0] || x > boundaries[1]) {
             hasTarget = false;
             if (y < boundaries[2] || y > boundaries[3]) {
@@ -606,7 +803,6 @@ class Prey {
         if (position[0] == target[0] && position[1] == target[1]) {
             hasTarget = false;
         }
-        game.preyMovable = false;
     }
     
     public boolean hasTarget() {
