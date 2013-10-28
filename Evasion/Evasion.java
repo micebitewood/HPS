@@ -345,18 +345,18 @@ class Hunter {
             int safetyDist = 3 * game.wallTime + WALL_CONST;
             
             if (direction[0] == 1 && preyPosition[0] - position[0] > count % 2) {
-                if (dist[0] <= WALL_CONST || minDist >= safetyDist && dist[1] == minDist)
+                if (dist[0] <= WALL_CONST || game.maxNumWalls > 4 && minDist >= safetyDist && dist[1] == minDist)
                     vWall = true;
             } else if (direction[0] == -1 && position[0] - preyPosition[0] > count % 2) {
-                if (dist[0] <= WALL_CONST || minDist >= safetyDist && dist[1] == minDist)
+                if (dist[0] <= WALL_CONST || game.maxNumWalls > 4 && minDist >= safetyDist && dist[1] == minDist)
                     vWall = true;
             }
             
             if (direction[1] == 1 && preyPosition[1] - position[1] > count % 2) {
-                if (dist[1] <= WALL_CONST || minDist >= safetyDist && dist[0] == minDist)
+                if (dist[1] <= WALL_CONST || game.maxNumWalls > 4 && minDist >= safetyDist && dist[0] == minDist)
                     hWall = true;
             } else if (direction[1] == -1 && position[1] - preyPosition[1] > count % 2) {
-                if (dist[1] <= WALL_CONST || minDist >= safetyDist && dist[0] == minDist)
+                if (dist[1] <= WALL_CONST || game.maxNumWalls > 4 && minDist >= safetyDist && dist[0] == minDist)
                     hWall = true;
             }
             
@@ -418,6 +418,39 @@ class Hunter {
                 buildWall = true;
 //                ++wallCount;
 //                wallTimer = game.wallTime;
+            }
+        }
+        
+        if (wallTimer <= 1 && wallCount == game.maxNumWalls && wallToDestroy == 0) {
+            // In case we have to destroy a wall to build a new one (when game.maxNumWalls == 4)
+            
+            int[] dist = new int[] {Math.abs(preyPosition[0] - position[0]), Math.abs(preyPosition[1] - position[1]) };
+            
+            if (direction[0] == 1 && preyPosition[0] - position[0] > count % 2 + 1) {
+                for (int i = 0; i < wallCount; ++i)
+                    if (walls[i][0] < position[0] && walls[i][2] < position[0] && dist[0] <= dist[1]) {
+                        wallToDestroy = i+1;
+                        break;
+                    }
+            } else if (direction[0] == -1 && position[0] - preyPosition[0] > count % 2 + 1) {
+                for (int i = 0; i < wallCount; ++i)
+                    if (walls[i][0] > position[0] && walls[i][2] > position[0] && dist[0] <= dist[1]) {
+                        wallToDestroy = i+1;
+                        break;
+                    }
+            }
+            if (direction[1] == 1 && preyPosition[1] - position[1] > count % 2 + 1) {
+                for (int i = 0; i < wallCount; ++i)
+                    if (walls[i][1] < position[1] && walls[i][3] < position[1] && dist[0] > dist[1]) {
+                        wallToDestroy = i+1;
+                        break;
+                    }
+            } else if (direction[1] == -1 && position[1] - preyPosition[1] > count % 2 + 1) {
+                for (int i = 0; i < wallCount; ++i)
+                    if (walls[i][1] > position[1] && walls[i][3] > position[1] && dist[0] > dist[1]) {
+                        wallToDestroy = i+1;
+                        break;
+                    }
             }
         }
         
