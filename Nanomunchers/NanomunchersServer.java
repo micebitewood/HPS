@@ -20,11 +20,13 @@ public class NanomunchersServer extends JApplet {
     static final int SIZE_Y = 10; // TODO: Make sure of this later
     static final int MAX_NUM_NODES = SIZE_X * SIZE_Y;
 
-    final static int CELL_SIZE = 40;
-    final static int BOARD_WIDTH = SIZE_X * CELL_SIZE;
-    final static int BOARD_HEIGHT = SIZE_Y * CELL_SIZE;
-    final static int APPLET_WIDTH = BOARD_WIDTH + 200;
-    final static int APPLET_HEIGHT = BOARD_HEIGHT;
+    static final int CELL_SIZE = 40;
+    static final int BOARD_WIDTH = SIZE_X * CELL_SIZE;
+    static final int BOARD_HEIGHT = SIZE_Y * CELL_SIZE;
+    static final int APPLET_WIDTH = BOARD_WIDTH + 200;
+    static final int APPLET_HEIGHT = BOARD_HEIGHT;
+    static final Color[] PLAYER_COLOR = { Color.YELLOW, Color.PINK };
+    static final int[] DIR_ANGLE = { 90, 180, 270, 0 };
 
     private Set<Integer> edges = new HashSet<Integer>();
     private Map<Integer, Integer> locs = new HashMap<Integer, Integer>();
@@ -101,13 +103,16 @@ public class NanomunchersServer extends JApplet {
 
         initCanvas();
 
-        Nanomuncher test = new Nanomuncher(10, "urld");
-        System.out.println(test);
-        int[] dir = test.getDirVec();
-        System.out.println(dir[0] + " " + dir[1]);
-        System.out.println(test);
-        dir = test.getDirVec();
-        System.out.println(dir[0] + " " + dir[1]);
+        // Add munchers for test
+        munchers1.add(new Nanomuncher(0, "urld"));
+        munchers1.add(new Nanomuncher(4, "ldru"));
+        munchers1.add(new Nanomuncher(5, "dulr"));
+        munchers1.add(new Nanomuncher(8, "rudl"));
+        munchers1.add(new Nanomuncher(2, "lrud"));
+        munchers2.add(new Nanomuncher(18, "urdl"));
+        munchers2.add(new Nanomuncher(72, "rldu"));
+        munchers2.add(new Nanomuncher(51, "durl"));
+        updateCanvas();
     }
 
     public void stop() {
@@ -128,27 +133,31 @@ public class NanomunchersServer extends JApplet {
                                     .contains((board[pos] - 1) * MAX_NUM_NODES
                                             + board[pos + SIZE_Y] - 1))) {
                         g.setColor(Color.BLUE);
-                        g.fillRect(x * CELL_SIZE + CELL_SIZE - 2, y * CELL_SIZE
-                                - 1, 4, CELL_SIZE + 2);
+                        g.fillRect(x * CELL_SIZE + CELL_SIZE - 2, y * CELL_SIZE - 1, 4, CELL_SIZE + 2);
+//                        g.setColor(Color.BLACK);
+//                        g.fillRect(x * CELL_SIZE + CELL_SIZE - 1, y * CELL_SIZE - 1, 2, CELL_SIZE + 2);
                     }
                     if (y < SIZE_Y - 1
                             && (board[pos + 1] == 0 || !edges
                                     .contains((board[pos] - 1) * MAX_NUM_NODES
                                             + board[pos + 1] - 1))) {
                         g.setColor(Color.BLUE);
-                        g.fillRect(x * CELL_SIZE - 1, y * CELL_SIZE + CELL_SIZE
-                                - 2, CELL_SIZE + 2, 4);
+                        g.fillRect(x * CELL_SIZE - 1, y * CELL_SIZE + CELL_SIZE - 2, CELL_SIZE + 2, 4);
+//                        g.setColor(Color.BLACK);
+//                        g.fillRect(x * CELL_SIZE - 1, y * CELL_SIZE + CELL_SIZE - 1, CELL_SIZE + 2, 2);
                     }
                 } else {
                     if (x < SIZE_X - 1 && board[pos + SIZE_Y] != 0) {
                         g.setColor(Color.BLUE);
-                        g.fillRect(x * CELL_SIZE + CELL_SIZE - 2, y * CELL_SIZE
-                                - 1, 4, CELL_SIZE + 2);
+                        g.fillRect(x * CELL_SIZE + CELL_SIZE - 2, y * CELL_SIZE - 1, 4, CELL_SIZE + 2);
+//                        g.setColor(Color.BLACK);
+//                        g.fillRect(x * CELL_SIZE + CELL_SIZE - 1, y * CELL_SIZE - 1, 2, CELL_SIZE + 2);
                     }
                     if (y < SIZE_Y - 1 && board[pos + 1] != 0) {
                         g.setColor(Color.BLUE);
-                        g.fillRect(x * CELL_SIZE - 1, y * CELL_SIZE + CELL_SIZE
-                                - 2, CELL_SIZE + 2, 4);
+                        g.fillRect(x * CELL_SIZE - 1, y * CELL_SIZE + CELL_SIZE - 2, CELL_SIZE + 2, 4);
+//                        g.setColor(Color.BLACK);
+//                        g.fillRect(x * CELL_SIZE - 1, y * CELL_SIZE + CELL_SIZE - 1, CELL_SIZE + 2, 2);
                     }
                 }
             }
@@ -158,7 +167,39 @@ public class NanomunchersServer extends JApplet {
     }
 
     private void updateCanvas() {
-        // Update canvas with the current state
+        Graphics g = m_canvas.getOffscreenGraphics();
+        
+        for (int x=0; x<SIZE_X; ++x) {
+            for (int y=0; y<SIZE_Y; ++y) {
+                if (board[x*SIZE_Y+y] == -1) {
+                    g.setColor(PLAYER_COLOR[0]);
+                    g.fillOval(x * CELL_SIZE + 16, y * CELL_SIZE + 16, 7, 7);
+                } else if (board[x*SIZE_Y+y] == -2) {
+                    g.setColor(PLAYER_COLOR[1]);
+                    g.fillOval(x * CELL_SIZE + 16, y * CELL_SIZE + 16, 7, 7);
+                }
+            }
+        }
+        
+        for (Nanomuncher muncher : munchers1) {
+            int angle = DIR_ANGLE[muncher.getCurrentProgram()];
+            int loc = locs.get(muncher.pos);
+            int x = loc / SIZE_Y;
+            int y = loc % SIZE_Y;
+            
+            g.setColor(PLAYER_COLOR[0]);
+            g.fillArc(x*CELL_SIZE+5, y*CELL_SIZE+5, 29, 29, angle+30, 300);
+        }
+        
+        for (Nanomuncher muncher : munchers2) {
+            int angle = DIR_ANGLE[muncher.getCurrentProgram()];
+            int loc = locs.get(muncher.pos);
+            int x = loc / SIZE_Y;
+            int y = loc % SIZE_Y;
+            
+            g.setColor(PLAYER_COLOR[1]);
+            g.fillArc(x*CELL_SIZE+5, y*CELL_SIZE+5, 29, 29, angle+30, 300);
+        }
     }
 
     public class NanomunchersCanvas extends Canvas {
@@ -233,11 +274,18 @@ class Nanomuncher {
 
     public int[] getDirVec() {
         int curProgram = program[counter % 4];
-        ++counter;
         return (curProgram == 0) ? new int[] { 0, -1 }
                 : (curProgram == 1) ? new int[] { -1, 0 }
                         : (curProgram == 2) ? new int[] { 0, 1 } : new int[] {
                                 1, 0 };
+    }
+
+    public int getCurrentProgram() {
+        return program[counter % 4];
+    }
+
+    public void advance() {
+        ++counter;
     }
 
     public Nanomuncher(int pos, String program) {
