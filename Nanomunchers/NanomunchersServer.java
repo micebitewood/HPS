@@ -12,6 +12,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.swing.JApplet;
 
@@ -103,6 +104,7 @@ public class NanomunchersServer extends JApplet {
 
         initCanvas();
 
+        // NB: Probably the code below should be moved into main()
         // Add munchers for test
         munchers1.add(new Nanomuncher(0, "urld"));
         munchers1.add(new Nanomuncher(4, "ldru"));
@@ -112,7 +114,117 @@ public class NanomunchersServer extends JApplet {
         munchers2.add(new Nanomuncher(18, "urdl"));
         munchers2.add(new Nanomuncher(72, "rldu"));
         munchers2.add(new Nanomuncher(51, "durl"));
-        updateCanvas();
+        
+        int noUpdate = 0;
+        while (noUpdate < 4) {
+            boolean wasUpdated = false;
+            for (Nanomuncher muncher : munchers1) {
+                int nodeid = muncher.pos;
+                int loc = locs.get(nodeid);
+                
+                if (board[loc] <= 0) {
+                    ++muncher.hunger;
+                    if(muncher.hunger == 4) {
+                        muncher.isDead = true;
+                    }
+                } else {
+                    board[loc] = -1;
+                    muncher.hunger = 0;
+                    ++scores[0];
+                    wasUpdated = true;
+                }
+            }
+            
+            for (Nanomuncher muncher : munchers2) {
+                int nodeid = muncher.pos;
+                int loc = locs.get(nodeid);
+                
+                if (board[loc] <= 0) {
+                    ++muncher.hunger;
+                    if(muncher.hunger == 4) {
+                        muncher.isDead = true;
+                    }
+                } else {
+                    board[loc] = -2;
+                    muncher.hunger = 0;
+                    ++scores[1];
+                    wasUpdated = true;
+                }
+            }
+            
+            int flag;
+            do {
+                flag = -1;
+                for (int i=0; i<munchers1.size(); ++i)
+                    if (munchers1.get(i).isDead) {
+                        flag = i;
+                        break;
+                    }
+                
+                if (flag >= 0)
+                    munchers1.remove(flag);
+            } while (flag >= 0);
+            
+            do {
+                flag = -1;
+                for (int i=0; i<munchers2.size(); ++i)
+                    if (munchers2.get(i).isDead) {
+                        flag = i;
+                        break;
+                    }
+                
+                if (flag >= 0)
+                    munchers2.remove(flag);
+            } while (flag >= 0);
+            
+            updateCanvas();
+            try {
+                TimeUnit.MILLISECONDS.sleep(500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            
+            for (Nanomuncher muncher : munchers1) {
+                int nodeid = muncher.pos;
+                int loc = locs.get(nodeid);
+                
+                int[] dir = muncher.getDirVec();
+                
+                int x = loc / SIZE_Y + dir[0];
+                int y = loc % SIZE_Y + dir[1];
+                
+                if (x >= 0 && x < SIZE_X && y >= 0 && y < SIZE_Y && board[x*SIZE_Y+y] > 0 && edges.contains(nodeid*MAX_NUM_NODES + board[x*SIZE_Y+y]-1))
+                    muncher.pos = board[x*SIZE_Y+y]-1;
+            }
+            
+            for (Nanomuncher muncher : munchers2) {
+                int nodeid = muncher.pos;
+                int loc = locs.get(nodeid);
+                
+                int[] dir = muncher.getDirVec();
+                
+                int x = loc / SIZE_Y + dir[0];
+                int y = loc % SIZE_Y + dir[1];
+                
+                if (x >= 0 && x < SIZE_X && y >= 0 && y < SIZE_Y && board[x*SIZE_Y+y] > 0 && edges.contains(nodeid*MAX_NUM_NODES + board[x*SIZE_Y+y]-1))
+                    muncher.pos = board[x*SIZE_Y+y]-1;
+            }
+            
+            updateCanvas();
+            try {
+                TimeUnit.MILLISECONDS.sleep(500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            
+            for (Nanomuncher muncher : munchers1)
+                muncher.advance();
+            for (Nanomuncher muncher : munchers2)
+                muncher.advance();
+            
+            if (!wasUpdated)
+                ++noUpdate;
+        }
     }
 
     public void stop() {
@@ -172,10 +284,14 @@ public class NanomunchersServer extends JApplet {
         for (int x=0; x<SIZE_X; ++x) {
             for (int y=0; y<SIZE_Y; ++y) {
                 if (board[x*SIZE_Y+y] == -1) {
-                    g.setColor(PLAYER_COLOR[0]);
+                    g.setColor(Color.BLACK);
+                    g.fillOval(x*CELL_SIZE+5, y*CELL_SIZE+5, 29, 29);
+                    g.setColor(PLAYER_COLOR[0].darker());
                     g.fillOval(x * CELL_SIZE + 16, y * CELL_SIZE + 16, 7, 7);
                 } else if (board[x*SIZE_Y+y] == -2) {
-                    g.setColor(PLAYER_COLOR[1]);
+                    g.setColor(Color.BLACK);
+                    g.fillOval(x*CELL_SIZE+5, y*CELL_SIZE+5, 29, 29);
+                    g.setColor(PLAYER_COLOR[1].darker());
                     g.fillOval(x * CELL_SIZE + 16, y * CELL_SIZE + 16, 7, 7);
                 }
             }
@@ -200,6 +316,8 @@ public class NanomunchersServer extends JApplet {
             g.setColor(PLAYER_COLOR[1]);
             g.fillArc(x*CELL_SIZE+5, y*CELL_SIZE+5, 29, 29, angle+30, 300);
         }
+        
+        m_canvas.repaint();
     }
 
     public class NanomunchersCanvas extends Canvas {
@@ -253,6 +371,8 @@ class Nanomuncher {
     int pos; // Node ID
     int[] program; // [4], 0: up, 1: left, 2: down, 3: right
     int counter = 0;
+    int hunger = 0;
+    boolean isDead = false;
 
     private int dirCharToNum(char c) {
         return (c == 'u') ? 0 : (c == 'l') ? 1 : (c == 'd') ? 2
