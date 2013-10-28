@@ -53,13 +53,20 @@ public class Evasion {
     }
     
     private void parseSpec(String str) {
-    System.out.println(str);
         String[] specs = str.split("\n");
         wallCount = Integer.parseInt(specs[1]);
         Set<Integer> existingWallNums = new HashSet<Integer>();
         for (int i = 0; i < wallCount; i++) {
             String[] wallSpecs = specs[i + 2].split(" ");
             int wallNum = Integer.parseInt(wallSpecs[0]);
+            {
+                String[] coord = wallSpecs[1].split("[,()]");
+                int k = 0;
+                for (int j = 0; j < coord.length; j++) {
+                    if (!coord[j].equals(""))
+                        walls[wallNum - 1][k++] = Integer.parseInt(coord[j]);
+                }
+            }
             existingWallNums.add(wallNum);
             if (!wallNums.containsKey(wallNum)) {
                 String[] coord = wallSpecs[1].split("[,()]");
@@ -74,7 +81,6 @@ public class Evasion {
                     horizontalWalls.put(wall[1], new Integer[] {wall[0], wall[2] });
                     wallNums.put(wallNum, new WallPair(wall[1], horizontalWalls));
                 }
-                walls[wallNum-1] = wall;
             }
         }
         for (int wallNum : wallNums.keySet()) {
