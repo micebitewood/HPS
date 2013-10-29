@@ -7,7 +7,6 @@ import java.net.UnknownHostException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Random;
 
 public class Evasion {
     
@@ -25,7 +24,6 @@ public class Evasion {
     public static BufferedReader in;
     public static boolean gameOver;
     
-    private final static double MIN_DIST = 4;
     private boolean isHunter;
     private Hunter hunter;
     private Prey prey;
@@ -101,8 +99,8 @@ public class Evasion {
                     Integer[] yy = new Integer[range.length + 2];
                     for (int j = 0; j < range.length; j++)
                         yy[j] = range[j];
-                    yy[range.length - 2] = wall[1];
-                    yy[range.length - 1] = wall[3];
+                    yy[yy.length - 2] = wall[1];
+                    yy[yy.length - 1] = wall[3];
                     verticalWalls.put(wall[0], yy);
                 }
             }
@@ -114,8 +112,8 @@ public class Evasion {
                     Integer[] xx = new Integer[range.length + 2];
                     for (int j = 0; j < range.length; j++)
                         xx[j] = range[j];
-                    xx[range.length - 2] = wall[0];
-                    xx[range.length - 1] = wall[2];
+                    xx[xx.length - 2] = wall[0];
+                    xx[xx.length - 1] = wall[2];
                     horizontalWalls.put(wall[1], xx);
                 }
             }
@@ -295,7 +293,7 @@ public class Evasion {
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             
-            String q = read();
+            read();
             send("JJ");
             String wallsSpec = read();
             String[] timeAndNum = wallsSpec.split(" ");
@@ -347,13 +345,11 @@ class Hunter {
     int wallToDestroy = 0;
     Evasion game;
     
-    // TODO new function
     public void setPos(int x, int y) {
         this.position[0] = x;
         this.position[1] = y;
     }
     
-    // TODO new function
     public void setDir(int[] dir) {
         this.direction[0] = dir[0];
         this.direction[1] = dir[1];
@@ -520,7 +516,6 @@ class Prey {
     int[] opponentDirection;
     Map<Integer, Integer[]> verticalWalls;
     Map<Integer, Integer[]> horizontalWalls;
-    private Random random;
     
     public void setPos(int x, int y) {
         if (this.position[0] != x || this.position[1] != y) {
@@ -777,6 +772,5 @@ class Prey {
         this.verticalWalls = game.verticalWalls;
         this.horizontalWalls = game.horizontalWalls;
         hasTarget = false;
-        random = new Random(System.currentTimeMillis());
     }
 }
