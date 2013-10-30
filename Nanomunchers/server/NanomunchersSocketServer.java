@@ -17,6 +17,7 @@ import java.util.Set;
 public class NanomunchersSocketServer {
     
     int numOfMunchers;
+    int noMoveCount;
     List<String> nodeStrs;
     List<String> edgeStrs;
     Map<Integer, Integer[]> locations;
@@ -32,6 +33,7 @@ public class NanomunchersSocketServer {
     
     private NanomunchersSocketServer(String input, int numOfMunchers) {
         this.numOfMunchers = numOfMunchers;
+        noMoveCount = 0;
         locations = new HashMap<Integer, Integer[]>();
         nodeStrs = new ArrayList<String>();
         edgeStrs = new ArrayList<String>();
@@ -102,13 +104,14 @@ public class NanomunchersSocketServer {
     }
     
     public void startGame() throws IOException {
-        /*
-         * if (!isAdversarial) { while (!player1.isGameOver) { System.out.println("**** Remaining nodes: " +
-         * (locations.size() - munched.size()) + " ****"); System.out.println("player1 move"); player1.move();
-         * munched.addAll(newlyMunched); player1.getStatus(); newlyMunched.clear();
-         * System.out.println("player1 get move"); player1.getNextMove(); munched.addAll(newlyMunched); } } else {
-         */
         while (!player1.isGameOver && !player2.isGameOver) {
+            if (noMoveCount >= 8) {
+                System.out.println("=================final score=================");
+                System.out.println(0 + " : " + 0);
+                System.exit(0);
+            } else if (noMoveCount != -1) {
+                System.out.println("current noMoveCount: " + noMoveCount);
+            }
             System.out.println("**** Remaining nodes: " + (locations.size() - munched.size()) + " ****");
             System.out.println("player1 move");
             Map<Integer, Nanomuncher> move1 = player1.move();
@@ -352,6 +355,7 @@ class Player extends Thread {
         }
         out.println("<EOM>");
         if (isGameOver) {
+            System.out.println("game is over");
             try {
                 close();
             } catch (IOException e) {
@@ -361,7 +365,7 @@ class Player extends Thread {
             isGameOver = true;
     }
     
-    private String receive() throws IOException {
+    public String receive() throws IOException {
         StringBuffer sb = new StringBuffer();
         String temp;
         while (!(temp = in.readLine()).equalsIgnoreCase("<EOM>")) {
@@ -372,36 +376,44 @@ class Player extends Thread {
     }
     
     public void getNextMove() {
+        send(status);
+        long startTime = System.currentTimeMillis();
+        if (gameOver())
+            return;
+        Move nextMove = new Move(this);
+        nextMove.start();
         try {
-            send(status);
-            long startTime = System.currentTimeMillis();
-            if (gameOver())
-                return;
-            Move nextMove = new Move(receive());
-            timeRemaining -= System.currentTimeMillis() - startTime;
-            Map<Integer, String> idAndPrograms = nextMove.moves;
-            if (idAndPrograms != null) {
-                for (int id : idAndPrograms.keySet()) {
-                    if (game.newMunchers.containsKey(id)) {
-                        System.out.println("dup in: " + id);
-                        game.dups.add(id);
-                    } else if (!game.munched.contains(id)) {
-                        System.out.println("new muncher arrives: " + id + " " + idAndPrograms.get(id) + " loc: "
-                                           + game.locations.get(id)[0] + ", "
-                                           + game.locations.get(id)[1]);
-                        idToMunchers.put(id, new Nanomuncher(idAndPrograms.get(id), id));
-                        game.newlyMunched.add(id);
-                        game.newMunchers.put(id, this);
-                        score++;
-                    }
-                    currMuncherNum++;
-                    if (currMuncherNum == totalMunchers) {
-                        break;
-                    }
+            nextMove.join(timeRemaining);
+        } catch (InterruptedException e) {
+            System.out.println("interrupted");
+        }
+        timeRemaining -= System.currentTimeMillis() - startTime;
+        if (timeRemaining <= 0) {
+            isGameOver = true;
+        }
+        Map<Integer, String> idAndPrograms = nextMove.moves;
+        if (idAndPrograms.size() == 0 && game.noMoveCount != -1)
+            game.noMoveCount++;
+        if (idAndPrograms != null && idAndPrograms.size() != 0) {
+            game.noMoveCount = -1;
+            for (int id : idAndPrograms.keySet()) {
+                if (game.newMunchers.containsKey(id)) {
+                    System.out.println("dup in: " + id);
+                    game.dups.add(id);
+                } else if (!game.munched.contains(id)) {
+                    System.out.println("new muncher arrives: " + id + " " + idAndPrograms.get(id) + " loc: "
+                                       + game.locations.get(id)[0] + ", "
+                                       + game.locations.get(id)[1]);
+                    idToMunchers.put(id, new Nanomuncher(idAndPrograms.get(id), id));
+                    game.newlyMunched.add(id);
+                    game.newMunchers.put(id, this);
+                    score++;
+                }
+                currMuncherNum++;
+                if (currMuncherNum == totalMunchers) {
+                    break;
                 }
             }
-        } catch (IOException e) {
-            System.out.println("error in receiving messages from clients, skip this round");
         }
     }
     
@@ -501,30 +513,40 @@ class Nanomuncher {
     }
 }
 
-class Move {
+class Move extends Thread {
+    Player player;
     public Map<Integer, String> moves;
     
-    public Move(String str) {
-        String[] specs = str.split(":");
-        int num = Integer.parseInt(specs[0]);
-        if (num > 0) {
-            String[] moveStrs = specs[1].split(",");
-            if (num != moveStrs.length) {
-                moves = null;
-            } else {
-                moves = new HashMap<Integer, String>();
-                for (int i = 0; i < num; i++) {
-                    String[] idAndProgram = moveStrs[i].split("/");
-                    int id = Integer.parseInt(idAndProgram[0]);
-                    if (moves.containsKey(id)) {
-                        moves = null;
-                        return;
+    @Override
+    public void run() {
+        try {
+            String str = player.receive();
+            String[] specs = str.split(":");
+            int num = Integer.parseInt(specs[0]);
+            if (num > 0) {
+                String[] moveStrs = specs[1].split(",");
+                if (num != moveStrs.length) {
+                    System.out.println("invalid number");
+                    moves = null;
+                } else {
+                    for (int i = 0; i < num; i++) {
+                        String[] idAndProgram = moveStrs[i].split("/");
+                        int id = Integer.parseInt(idAndProgram[0]);
+                        if (moves.containsKey(id)) {
+                            moves = null;
+                            return;
+                        }
+                        moves.put(id, idAndProgram[1]);
                     }
-                    moves.put(id, idAndProgram[1]);
                 }
             }
-        } else {
-            moves = null;
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+    }
+    
+    public Move(Player player) {
+        this.player = player;
+        moves = new HashMap<Integer, String>();
     }
 }
