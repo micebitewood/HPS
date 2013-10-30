@@ -1,3 +1,4 @@
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -88,22 +89,29 @@ public class RandomPlayer {
         }
         String[] stats = str.split("\n");
         String[] munched = stats[0].split(":");
-        String[] nodes = munched[1].split(",");
-        for (int i = 0; i < Integer.parseInt(munched[0]); i++) {
-            remainingNodes.remove(Integer.parseInt(nodes[i]));
+        if (Integer.parseInt(munched[0]) > 0) {
+            String[] nodes = munched[1].split(",");
+            for (int i = 0; i < Integer.parseInt(munched[0]); i++) {
+                remainingNodes.remove(Integer.parseInt(nodes[i]));
+            }
         }
         myNanomunchers = new ArrayList<Nanomuncher>();
         String[] myMunchers = stats[1].split(":");
-        String[] myMuncherDetails = myMunchers[1].split(",");
-        for (int i = 0; i < Integer.parseInt(myMunchers[0]); i++) {
-            String[] muncher = myMuncherDetails[i].split("/");
-            myNanomunchers.add(new Nanomuncher(muncher[1], Integer.parseInt(muncher[0]), Integer.parseInt(muncher[2])));
+        if (Integer.parseInt(myMunchers[0]) > 0) {
+            String[] myMuncherDetails = myMunchers[1].split(",");
+            for (int i = 0; i < Integer.parseInt(myMunchers[0]); i++) {
+                String[] muncher = myMuncherDetails[i].split("/");
+                myNanomunchers.add(new Nanomuncher(muncher[1], Integer.parseInt(muncher[0]), Integer
+                                                   .parseInt(muncher[2])));
+            }
         }
         otherNanomunchers = new ArrayList<Integer>();
         String[] otherMunchers = stats[2].split(":");
-        String[] otherMuncherDetails = otherMunchers[1].split(",");
-        for (int i = 0; i < Integer.parseInt(otherMunchers[0]); i++) {
-            otherNanomunchers.add(Integer.parseInt(otherMuncherDetails[i]));
+        if (Integer.parseInt(otherMunchers[0]) > 0) {
+            String[] otherMuncherDetails = otherMunchers[1].split(",");
+            for (int i = 0; i < Integer.parseInt(otherMunchers[0]); i++) {
+                otherNanomunchers.add(Integer.parseInt(otherMuncherDetails[i]));
+            }
         }
         String[] scores = stats[3].split(",");
         myScore = Integer.parseInt(scores[0]);
@@ -133,16 +141,22 @@ public class RandomPlayer {
             sb.append(temp + "\n");
         }
         sb.deleteCharAt(sb.length() - 1);
+        System.out.println("receive:");
+        System.out.println(sb.toString());
         return sb.toString();
     }
     
     public void send(String str) {
+        System.out.println("send:");
         out.println(str);
+        System.out.println(str);
         out.println("<EOM>");
+        System.out.println("<EOM>");
     }
     
     public void startGame() throws IOException {
         while (parseStat(receive())) {
+            System.out.println("remaining munchers: " + remainingMunchers);
             randomeMove();
         }
     }

@@ -6,11 +6,11 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 
@@ -26,8 +26,6 @@ public class NanomunchersSocketServer {
     Map<Integer, Player> newMunchers;
     Set<Integer> dups;
     
-    private ServerSocket server;
-    private ServerSocket animation;
     private Player player1;
     private Player player2;
     private boolean isAdversarial;
@@ -95,38 +93,75 @@ public class NanomunchersSocketServer {
     
     public void startGame() throws IOException {
         if (!isAdversarial) {
-            while (!player1.gameOver()) {
-                newlyMunched.clear();
+            while (!player1.isGameOver) {
+                System.out.println("**** Remaining nodes: " + (locations.size() - munched.size()) + " ****");
+                System.out.println("player1 move");
                 player1.move();
-                player1.getNextMove();
-            }
-            player1.close();
-        } else {
-            while (!player1.gameOver() || !player2.gameOver()) {
+                munched.addAll(newlyMunched);
+                player1.getStatus();
                 newlyMunched.clear();
-                Map<Integer, Character> move1 = player1.move();
-                Map<Integer, Character> move2 = player2.move();
-                solveConflicts(move1, move2);
-                dups.clear();
+                System.out.println("player1 get move");
                 player1.getNextMove();
+                munched.addAll(newlyMunched);
+            }
+        } else {
+            while (!player1.isGameOver && !player2.isGameOver) {
+                System.out.println("**** Remaining nodes: " + (locations.size() - munched.size()) + " ****");
+                System.out.println("player1 move");
+                Map<Integer, Nanomuncher> move1 = player1.move();
+                System.out.println("player2 move");
+                Map<Integer, Nanomuncher> move2 = player2.move();
+                solveConflicts(move1, move2);
+                munched.addAll(newlyMunched);
+                player1.getStatus();
+                player2.getStatus();
+                newlyMunched.clear();
+                System.out.println("player1 get move");
+                player1.getNextMove();
+                System.out.println("player2 get move");
                 player2.getNextMove();
                 solveConflicts();
+                munched.addAll(newlyMunched);
             }
-            player1.close();
-            player2.close();
+            Player remainingPlayer;
+            if (player1.isGameOver) {
+                System.out.println("Player2 remains");
+                remainingPlayer = player2;
+            } else {
+                System.out.println("Player1 remains");
+                remainingPlayer = player1;
+            }
+            while (!remainingPlayer.isGameOver) {
+                System.out.println("**** Remaining nodes: " + (locations.size() - munched.size()) + " ****");
+                System.out.println("remaining player move");
+                remainingPlayer.move();
+                munched.addAll(newlyMunched);
+                remainingPlayer.getStatus();
+                newlyMunched.clear();
+                System.out.println("remaining player get move");
+                remainingPlayer.getNextMove();
+                munched.addAll(newlyMunched);
+            }
         }
+        System.out.println("=================final score=================");
+        System.out.println(player1.score + " : " + player2.score);
     }
     
-    private void solveConflicts(Map<Integer, Character> move1, Map<Integer, Character> move2) {
+    private void solveConflicts(Map<Integer, Nanomuncher> move1, Map<Integer, Nanomuncher> move2) {
         for (int id : move1.keySet()) {
             if (move2.containsKey(id)) {
-                char dir1 = move1.get(id);
-                char dir2 = move2.get(id);
+                Nanomuncher muncher1 = move1.get(id);
+                Nanomuncher muncher2 = move2.get(id);
+                char dir1 = muncher1.program.charAt(muncher1.programCounter);
+                char dir2 = muncher2.program.charAt(muncher2.programCounter);
+                System.out.println("conflicts: " + id + " player1: " + dir1 + " player2: " + dir2);
                 if (isLarger(dir1, dir2)) {
-                    player2.idToMuncher.remove(id);
+                    System.out.println("player1 wins");
+                    player2.idToMunchers.remove(id);
                     player2.score--;
                 } else {
-                    player1.idToMuncher.remove(id);
+                    System.out.println("player2 wins");
+                    player1.idToMunchers.remove(id);
                     player1.score--;
                 }
             }
@@ -136,15 +171,21 @@ public class NanomunchersSocketServer {
     private void solveConflicts() {
         if (dups.size() != 0) {
             for (int id : dups) {
+                System.out.print("dup " + id + ": ");
                 if (random.nextBoolean() == true) {
+                    System.out.println("chooses player1");
                     newMunchers.put(id, player1);
+                    player2.idToMunchers.remove(id);
                     player2.score--;
                 } else {
+                    System.out.println("chooses player2");
                     newMunchers.put(id, player2);
+                    player1.idToMunchers.remove(id);
                     player1.score--;
                 }
             }
         }
+        dups.clear();
     }
     
     private boolean isLarger(char dir1, char dir2) {
@@ -223,12 +264,12 @@ class Player {
     String teamName;
     Player opponent;
     int score;
-    Nanomuncher[] munchers;
-    Map<Integer, Nanomuncher> idToMuncher;
+    Map<Integer, Nanomuncher> idToMunchers;
     long timeRemaining;
-    
+    List<String> status;
     int totalMunchers;
     int currMuncherNum;
+    boolean isGameOver;
     
     private List<String> genData(List<String> nodes, List<String> edges) {
         List<String> data = new ArrayList<String>();
@@ -243,60 +284,85 @@ class Player {
         this.opponent = opponent;
     }
     
-    public Map<Integer, Character> move() {
-        Map<Integer, Character> moves = new HashMap<Integer, Character>();
-        for (int i = 0; i < munchers.length; i++) {
-            Nanomuncher muncher = munchers[i];
+    public Map<Integer, Nanomuncher> move() {
+        Map<Integer, Nanomuncher> moves = new HashMap<Integer, Nanomuncher>();
+        Set<Integer> removes = new HashSet<Integer>();
+        for (Entry<Integer, Nanomuncher> idToMuncher : idToMunchers.entrySet()) {
+            Nanomuncher muncher = idToMuncher.getValue();
             if (muncher != null) {
+                removes.add(muncher.position);
+                System.out.println("muncher from: " + muncher.position + " " + muncher.program + " "
+                                   + muncher.programCounter + " loc: " + game.locations.get(muncher.position)[0] + ", "
+                                   + game.locations.get(muncher.position)[1]);
                 String program = muncher.program;
                 int programCounter = muncher.programCounter;
                 Map<Character, Integer> edges = game.edges.get(muncher.position);
-                idToMuncher.remove(muncher.position);
+                System.out.print("neibours: ");
+                if (edges == null) {
+                    continue;
+                }
+                for (Entry<Character, Integer> entry : edges.entrySet()) {
+                    System.out.print(entry.getKey() + " " + entry.getValue() + ", ");
+                }
+                System.out.println();
+                int count = 0;
                 do {
+                    programCounter++;
+                    programCounter %= 4;
                     char direction = program.charAt(programCounter);
-                    if (edges.containsKey(direction)) {
+                    if (edges.containsKey(direction) && !game.munched.contains(edges.get(direction))) {
                         int id = edges.get(direction);
-                        moves.put(id, direction);
+                        moves.put(id, muncher);
+                        muncher.position = id;
                         muncher.programCounter = programCounter;
                         game.newlyMunched.add(id);
-                        idToMuncher.put(id, muncher);
+                        System.out.println("munched: " + id + " " + muncher.program + " " + muncher.programCounter
+                                           + " loc: " + game.locations.get(id)[0] + ", "
+                                           + game.locations.get(id)[1]);
                         score++;
                         break;
                     }
-                    programCounter++;
-                } while (programCounter != muncher.programCounter);
-                if (programCounter == muncher.programCounter) {
-                    munchers[i] = null;
+                    count++;
+                } while (count < 4);
+                if (count == 4) {
+                    System.out.println("this muncher dies in " + muncher.position);
                 }
             }
         }
-        game.munched.addAll(game.newlyMunched);
+        for (int id : removes) {
+            idToMunchers.remove(id);
+        }
+        idToMunchers.putAll(moves);
         return moves;
     }
     
     private void getName() throws IOException {
-        send("TeamName?");
         this.teamName = receive();
-    }
-    
-    private void send(String str) {
-        send(Arrays.asList(str));
     }
     
     private void send(List<String> strs) {
         for (String str : strs) {
             out.println(str);
         }
-        if (strs.size() == 0)
+        if (strs.size() == 0) {
             out.println(0 + "");
+        }
         out.println("<EOM>");
+        if (isGameOver) {
+            try {
+                close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        } else if (gameOver())
+            isGameOver = true;
     }
     
     private String receive() throws IOException {
         StringBuffer sb = new StringBuffer();
         String temp;
         while (!(temp = in.readLine()).equalsIgnoreCase("<EOM>")) {
-            sb.append(temp + "@");
+            sb.append(temp + "\n");
         }
         sb.deleteCharAt(sb.length() - 1);
         return sb.toString();
@@ -304,17 +370,22 @@ class Player {
     
     public void getNextMove() {
         try {
-            send(getStatus());
-            game.newlyMunched.clear();
+            send(status);
+            if (gameOver())
+                return;
             Move nextMove = new Move(receive());
             Map<Integer, String> idAndPrograms = nextMove.moves;
             if (idAndPrograms != null) {
                 for (int id : idAndPrograms.keySet()) {
                     if (game.newMunchers.containsKey(id)) {
+                        System.out.println("dup in: " + id);
                         game.dups.add(id);
                     } else if (!game.munched.contains(id)) {
-                        munchers[currMuncherNum] = new Nanomuncher(idAndPrograms.get(id), id);
-                        idToMuncher.put(id, munchers[currMuncherNum]);
+                        System.out.println("new muncher arrives: " + id + " " + idAndPrograms.get(id) + " loc: "
+                                           + game.locations.get(id)[0] + ", "
+                                           + game.locations.get(id)[1]);
+                        idToMunchers.put(id, new Nanomuncher(idAndPrograms.get(id), id));
+                        game.newlyMunched.add(id);
                         game.newMunchers.put(id, this);
                         score++;
                     }
@@ -329,11 +400,11 @@ class Player {
         }
     }
     
-    private List<String> getStatus() {
+    public void getStatus() {
         
-        List<String> status = new ArrayList<String>();
+        status = new ArrayList<String>();
         if (gameOver()) {
-            return status;
+            return;
         }
         // newly munched nodes
         StringBuffer sb = new StringBuffer();
@@ -345,15 +416,16 @@ class Player {
         status.add(sb.toString().substring(0, sb.length() - 1));
         // player's munchers
         sb = new StringBuffer();
-        sb.append(idToMuncher.size() + ":");
-        for (int id : idToMuncher.keySet()) {
-            sb.append(id + ",");
+        sb.append(idToMunchers.size() + ":");
+        for (Entry<Integer, Nanomuncher> entry : idToMunchers.entrySet()) {
+            Nanomuncher muncher = entry.getValue();
+            sb.append(muncher.position + "/" + muncher.program + "/" + muncher.programCounter + ",");
         }
         status.add(sb.toString().substring(0, sb.length() - 1));
         // opponent's munchers
         sb = new StringBuffer();
-        sb.append(opponent.idToMuncher.size() + ":");
-        for (int id : opponent.idToMuncher.keySet()) {
+        sb.append(opponent.idToMunchers.size() + ":");
+        for (int id : opponent.idToMunchers.keySet()) {
             sb.append(id + ",");
         }
         status.add(sb.toString().substring(0, sb.length() - 1));
@@ -365,37 +437,37 @@ class Player {
         sb = new StringBuffer();
         sb.append((totalMunchers - currMuncherNum) + "," + timeRemaining);
         status.add(sb.toString());
-        return status;
     }
     
-    public boolean gameOver() {
-        return currMuncherNum == totalMunchers;
+    private boolean gameOver() {
+        return (idToMunchers.size() == 0 && currMuncherNum == totalMunchers)
+        || game.locations.size() - game.munched.size() == 0;
     }
     
     public Player() {
-        munchers = new Nanomuncher[0];
-        idToMuncher = new HashMap<Integer, Nanomuncher>();
+        idToMunchers = new HashMap<Integer, Nanomuncher>();
         
         totalMunchers = 0;
         currMuncherNum = 0;
+        isGameOver = false;
     }
     
     public Player(int port, NanomunchersSocketServer game) throws IOException {
         this.game = game;
         totalMunchers = game.numOfMunchers;
         currMuncherNum = 0;
+        isGameOver = false;
         server = new ServerSocket(port);
         this.socket = server.accept();
         out = new PrintWriter(socket.getOutputStream(), true);
         in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        munchers = new Nanomuncher[totalMunchers];
-        idToMuncher = new HashMap<Integer, Nanomuncher>();
+        idToMunchers = new HashMap<Integer, Nanomuncher>();
         
         getName();
         send(genData(game.nodeStrs, game.edgeStrs));
     }
     
-    public void close() throws IOException {
+    private void close() throws IOException {
         in.close();
         out.close();
         socket.close();
@@ -410,7 +482,7 @@ class Nanomuncher {
     public Nanomuncher(String program, int position) {
         this.program = program;
         this.position = position;
-        this.programCounter = 0;
+        this.programCounter = -1;
     }
 }
 
@@ -420,20 +492,24 @@ class Move {
     public Move(String str) {
         String[] specs = str.split(":");
         int num = Integer.parseInt(specs[0]);
-        String[] moveStrs = specs[1].split(",");
-        if (num != moveStrs.length) {
-            moves = null;
-        } else {
-            moves = new HashMap<Integer, String>();
-            for (int i = 0; i < num; i++) {
-                String[] idAndProgram = moveStrs[i].split("/");
-                int id = Integer.parseInt(idAndProgram[0]);
-                if (moves.containsKey(id)) {
-                    moves = null;
-                    return;
+        if (num > 0) {
+            String[] moveStrs = specs[1].split(",");
+            if (num != moveStrs.length) {
+                moves = null;
+            } else {
+                moves = new HashMap<Integer, String>();
+                for (int i = 0; i < num; i++) {
+                    String[] idAndProgram = moveStrs[i].split("/");
+                    int id = Integer.parseInt(idAndProgram[0]);
+                    if (moves.containsKey(id)) {
+                        moves = null;
+                        return;
+                    }
+                    moves.put(id, idAndProgram[1]);
                 }
-                moves.put(id, idAndProgram[1]);
             }
+        } else {
+            moves = null;
         }
     }
 }
