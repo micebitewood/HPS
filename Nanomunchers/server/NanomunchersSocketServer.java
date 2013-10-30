@@ -86,10 +86,12 @@ public class NanomunchersSocketServer {
         }
     }
     
-    public NanomunchersSocketServer(String input, int numOfMunchers, int port) {
+    public NanomunchersSocketServer(String input, int numOfMunchers, int port) throws InterruptedException {
         this(input, numOfMunchers);
         try {
             player1 = new Player(port, this);
+            player1.start();
+            player1.join();
             player2 = new Player();
             player2.setOpponent(player1);
             player1.setOpponent(player2);
