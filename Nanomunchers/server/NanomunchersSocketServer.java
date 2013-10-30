@@ -84,7 +84,9 @@ public class NanomunchersSocketServer {
         }
         try {
             player1 = new Player(port, this);
-            player1.setOpponent(new Player());
+            player2 = new Player();
+            player2.setOpponent(player1);
+            player1.setOpponent(player2);
         } catch (IOException e) {
             System.out.println("cannot connect to client");
             System.exit(0);
@@ -92,57 +94,50 @@ public class NanomunchersSocketServer {
     }
     
     public void startGame() throws IOException {
-        if (!isAdversarial) {
-            while (!player1.isGameOver) {
-                System.out.println("**** Remaining nodes: " + (locations.size() - munched.size()) + " ****");
-                System.out.println("player1 move");
-                player1.move();
-                munched.addAll(newlyMunched);
-                player1.getStatus();
-                newlyMunched.clear();
-                System.out.println("player1 get move");
-                player1.getNextMove();
-                munched.addAll(newlyMunched);
-            }
-        } else {
-            while (!player1.isGameOver && !player2.isGameOver) {
-                System.out.println("**** Remaining nodes: " + (locations.size() - munched.size()) + " ****");
-                System.out.println("player1 move");
-                Map<Integer, Nanomuncher> move1 = player1.move();
-                System.out.println("player2 move");
-                Map<Integer, Nanomuncher> move2 = player2.move();
-                solveConflicts(move1, move2);
-                munched.addAll(newlyMunched);
-                player1.getStatus();
-                player2.getStatus();
-                newlyMunched.clear();
-                System.out.println("player1 get move");
-                player1.getNextMove();
-                System.out.println("player2 get move");
-                player2.getNextMove();
-                solveConflicts();
-                munched.addAll(newlyMunched);
-            }
-            Player remainingPlayer;
-            if (player1.isGameOver) {
-                System.out.println("Player2 remains");
-                remainingPlayer = player2;
-            } else {
-                System.out.println("Player1 remains");
-                remainingPlayer = player1;
-            }
-            while (!remainingPlayer.isGameOver) {
-                System.out.println("**** Remaining nodes: " + (locations.size() - munched.size()) + " ****");
-                System.out.println("remaining player move");
-                remainingPlayer.move();
-                munched.addAll(newlyMunched);
-                remainingPlayer.getStatus();
-                newlyMunched.clear();
-                System.out.println("remaining player get move");
-                remainingPlayer.getNextMove();
-                munched.addAll(newlyMunched);
-            }
+        /*
+         * if (!isAdversarial) { while (!player1.isGameOver) { System.out.println("**** Remaining nodes: " +
+         * (locations.size() - munched.size()) + " ****"); System.out.println("player1 move"); player1.move();
+         * munched.addAll(newlyMunched); player1.getStatus(); newlyMunched.clear();
+         * System.out.println("player1 get move"); player1.getNextMove(); munched.addAll(newlyMunched); } } else {
+         */
+        while (!player1.isGameOver && !player2.isGameOver) {
+            System.out.println("**** Remaining nodes: " + (locations.size() - munched.size()) + " ****");
+            System.out.println("player1 move");
+            Map<Integer, Nanomuncher> move1 = player1.move();
+            System.out.println("player2 move");
+            Map<Integer, Nanomuncher> move2 = player2.move();
+            solveConflicts(move1, move2);
+            munched.addAll(newlyMunched);
+            player1.getStatus();
+            player2.getStatus();
+            newlyMunched.clear();
+            System.out.println("player1 get move");
+            player1.getNextMove();
+            System.out.println("player2 get move");
+            player2.getNextMove();
+            solveConflicts();
+            munched.addAll(newlyMunched);
         }
+        Player remainingPlayer;
+        if (player1.isGameOver) {
+            System.out.println("Player2 remains");
+            remainingPlayer = player2;
+        } else {
+            System.out.println("Player1 remains");
+            remainingPlayer = player1;
+        }
+        while (!remainingPlayer.isGameOver) {
+            System.out.println("**** Remaining nodes: " + (locations.size() - munched.size()) + " ****");
+            System.out.println("remaining player move");
+            remainingPlayer.move();
+            munched.addAll(newlyMunched);
+            remainingPlayer.getStatus();
+            newlyMunched.clear();
+            System.out.println("remaining player get move");
+            remainingPlayer.getNextMove();
+            munched.addAll(newlyMunched);
+        }
+        // }
         System.out.println("=================final score=================");
         System.out.println(player1.score + " : " + player2.score);
     }
@@ -449,7 +444,8 @@ class Player {
         
         totalMunchers = 0;
         currMuncherNum = 0;
-        isGameOver = false;
+        score = 0;
+        isGameOver = true;
     }
     
     public Player(int port, NanomunchersSocketServer game) throws IOException {
