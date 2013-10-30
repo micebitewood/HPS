@@ -1,4 +1,3 @@
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -154,9 +153,10 @@ public class RandomPlayer {
         System.out.println("<EOM>");
     }
     
-    public void startGame() throws IOException {
+    public void startGame() throws IOException, InterruptedException {
         while (parseStat(receive())) {
             System.out.println("remaining munchers: " + remainingMunchers);
+            Thread.sleep(500);
             randomeMove();
         }
     }
@@ -183,7 +183,7 @@ public class RandomPlayer {
         send(sb.toString().substring(0, sb.length() - 1));
     }
     
-    public static void main(String[] args) throws UnknownHostException, IOException {
+    public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException {
         if (args.length != 1) {
             System.out.println("java RandomPlayer <port>");
             System.exit(0);

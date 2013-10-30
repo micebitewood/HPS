@@ -28,23 +28,9 @@ public class NanomunchersSocketServer {
     
     private Player player1;
     private Player player2;
-    private boolean isAdversarial;
     private Random random;
     
-    public NanomunchersSocketServer(String input, int numOfMunchers, int port1, int port2) {
-        this(input, numOfMunchers, port1);
-        isAdversarial = true;
-        try {
-            player2 = new Player(port2, this);
-            player1.setOpponent(player2);
-            player2.setOpponent(player1);
-        } catch (IOException e) {
-            System.out.println("cannot connect to client");
-            System.exit(0);
-        }
-    }
-    
-    public NanomunchersSocketServer(String input, int numOfMunchers, int port) {
+    private NanomunchersSocketServer(String input, int numOfMunchers) {
         this.numOfMunchers = numOfMunchers;
         locations = new HashMap<Integer, Integer[]>();
         nodeStrs = new ArrayList<String>();
@@ -55,7 +41,6 @@ public class NanomunchersSocketServer {
         newMunchers = new HashMap<Integer, Player>();
         edges = new HashMap<Integer, Map<Character, Integer>>();
         random = new Random(System.currentTimeMillis());
-        isAdversarial = false;
         
         BufferedReader br;
         boolean startNodes = false;
@@ -82,6 +67,27 @@ public class NanomunchersSocketServer {
             System.out.println("cannot open input file, please check again");
             System.exit(0);
         }
+    }
+    
+    public NanomunchersSocketServer(String input, int numOfMunchers, int port1, int port2) throws InterruptedException {
+        this(input, numOfMunchers);
+        try {
+            player1 = new Player(port1, this);
+            player2 = new Player(port2, this);
+            player1.start();
+            player2.start();
+            player1.join();
+            player2.join();
+            player1.setOpponent(player2);
+            player2.setOpponent(player1);
+        } catch (IOException e) {
+            System.out.println("cannot connect to client");
+            System.exit(0);
+        }
+    }
+    
+    public NanomunchersSocketServer(String input, int numOfMunchers, int port) {
+        this(input, numOfMunchers);
         try {
             player1 = new Player(port, this);
             player2 = new Player();
@@ -231,7 +237,7 @@ public class NanomunchersSocketServer {
         }
     }
     
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         // args: input numOfMunchers port port
         if (args.length != 3 && args.length != 4) {
             System.out.println("java SocketServer <input> <numOfMunchers> <port> <port>");
@@ -250,7 +256,7 @@ public class NanomunchersSocketServer {
     }
 }
 
-class Player {
+class Player extends Thread {
     ServerSocket server;
     Socket socket;
     PrintWriter out;
@@ -331,7 +337,7 @@ class Player {
         return moves;
     }
     
-    private void getName() throws IOException {
+    private void setName() throws IOException {
         this.teamName = receive();
     }
     
@@ -366,9 +372,11 @@ class Player {
     public void getNextMove() {
         try {
             send(status);
+            long startTime = System.currentTimeMillis();
             if (gameOver())
                 return;
             Move nextMove = new Move(receive());
+            timeRemaining -= System.currentTimeMillis() - startTime;
             Map<Integer, String> idAndPrograms = nextMove.moves;
             if (idAndPrograms != null) {
                 for (int id : idAndPrograms.keySet()) {
@@ -453,20 +461,29 @@ class Player {
         totalMunchers = game.numOfMunchers;
         currMuncherNum = 0;
         isGameOver = false;
+        timeRemaining = 120 * 1000;
         server = new ServerSocket(port);
-        this.socket = server.accept();
-        out = new PrintWriter(socket.getOutputStream(), true);
-        in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        idToMunchers = new HashMap<Integer, Nanomuncher>();
-        
-        getName();
-        send(genData(game.nodeStrs, game.edgeStrs));
     }
     
     private void close() throws IOException {
         in.close();
         out.close();
         socket.close();
+    }
+    
+    @Override
+    public void run() {
+        try {
+            this.socket = server.accept();
+            out = new PrintWriter(socket.getOutputStream(), true);
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            idToMunchers = new HashMap<Integer, Nanomuncher>();
+            setName();
+            send(genData(game.nodeStrs, game.edgeStrs));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        
     }
 }
 
