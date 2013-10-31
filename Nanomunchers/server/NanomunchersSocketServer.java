@@ -71,11 +71,12 @@ public class NanomunchersSocketServer {
         }
     }
     
-    public NanomunchersSocketServer(String input, int numOfMunchers, int port1, int port2) throws InterruptedException {
+    public NanomunchersSocketServer(String input, int numOfMunchers, int time1, int port1, int time2, int port2)
+    throws InterruptedException {
         this(input, numOfMunchers);
         try {
-            player1 = new Player(port1, this);
-            player2 = new Player(port2, this);
+            player1 = new Player(time1, port1, this);
+            player2 = new Player(time2, port2, this);
             player1.start();
             player2.start();
             player1.join();
@@ -88,10 +89,10 @@ public class NanomunchersSocketServer {
         }
     }
     
-    public NanomunchersSocketServer(String input, int numOfMunchers, int port) throws InterruptedException {
+    public NanomunchersSocketServer(String input, int numOfMunchers, int time, int port) throws InterruptedException {
         this(input, numOfMunchers);
         try {
-            player1 = new Player(port, this);
+            player1 = new Player(time, port, this);
             player1.start();
             player1.join();
             player2 = new Player();
@@ -106,51 +107,50 @@ public class NanomunchersSocketServer {
     public void startGame() throws IOException {
         while (!player1.isGameOver && !player2.isGameOver) {
             if (noMoveCount >= 2) {
+                System.out.println("oops! No one moves!");
                 System.out.println("=================final score=================");
                 System.out.println(0 + " : " + 0);
                 System.exit(0);
-            } else if (noMoveCount != -1) {
-                System.out.println("current noMoveCount: " + noMoveCount);
             }
             System.out.println("**** Remaining nodes: " + (locations.size() - munched.size()) + " ****");
-            System.out.println(player1.teamName + " move");
+            System.out.println(player1.teamName + " moveing");
             Map<Integer, Nanomuncher> move1 = player1.move();
-            System.out.println(player2.teamName + " move");
+            System.out.println(player2.teamName + " moveing");
             Map<Integer, Nanomuncher> move2 = player2.move();
             solveConflicts(move1, move2);
             munched.addAll(newlyMunched);
             player1.getStatus();
             player2.getStatus();
             newlyMunched.clear();
-            System.out.println(player1.teamName + " get next move");
+            System.out.println(player1.teamName + " getting next move");
             player1.getNextMove();
-            System.out.println(player2.teamName + " get next move");
+            System.out.println(player2.teamName + " getting next move");
             player2.getNextMove();
             solveConflicts();
             munched.addAll(newlyMunched);
         }
         Player remainingPlayer;
         if (player1.isGameOver) {
-            System.out.println("Player2 remains");
+            System.out.println(player2.teamName + " remains");
             remainingPlayer = player2;
         } else {
-            System.out.println("Player1 remains");
+            System.out.println(player1.teamName + " remains");
             remainingPlayer = player1;
         }
         while (!remainingPlayer.isGameOver) {
             System.out.println("**** Remaining nodes: " + (locations.size() - munched.size()) + " ****");
-            System.out.println(remainingPlayer.teamName + " move");
+            System.out.println(remainingPlayer.teamName + " moveing");
             remainingPlayer.move();
             munched.addAll(newlyMunched);
             remainingPlayer.getStatus();
             newlyMunched.clear();
-            System.out.println("remaining player get move");
+            System.out.println(remainingPlayer.teamName + " getting next move");
             remainingPlayer.getNextMove();
             munched.addAll(newlyMunched);
         }
         // }
         System.out.println("=================final score=================");
-        System.out.println(player1.score + " : " + player2.score);
+        System.out.println(player1.teamName + ": " + player1.score + ", " + player2.teamName + ": " + player2.score);
     }
     
     private void solveConflicts(Map<Integer, Nanomuncher> move1, Map<Integer, Nanomuncher> move2) {
@@ -162,11 +162,11 @@ public class NanomunchersSocketServer {
                 char dir2 = muncher2.program.charAt(muncher2.programCounter);
                 System.out.println("conflicts: " + id + " player1: " + dir1 + " player2: " + dir2);
                 if (isLarger(dir1, dir2)) {
-                    System.out.println("player1 wins");
+                    System.out.println(player1.teamName + " wins this conflict");
                     player2.idToMunchers.remove(id);
                     player2.score--;
                 } else {
-                    System.out.println("player2 wins");
+                    System.out.println(player2.teamName + " wins this conflict");
                     player1.idToMunchers.remove(id);
                     player1.score--;
                 }
@@ -179,12 +179,12 @@ public class NanomunchersSocketServer {
             for (int id : dups) {
                 System.out.print("dup " + id + ": ");
                 if (random.nextBoolean() == true) {
-                    System.out.println("chooses player1");
+                    System.out.println("chooses " + player1.teamName);
                     newMunchers.put(id, player1);
                     player2.idToMunchers.remove(id);
                     player2.score--;
                 } else {
-                    System.out.println("chooses player2");
+                    System.out.println("chooses " + player2.teamName);
                     newMunchers.put(id, player2);
                     player1.idToMunchers.remove(id);
                     player1.score--;
@@ -244,20 +244,26 @@ public class NanomunchersSocketServer {
     
     public static void main(String[] args) throws IOException, InterruptedException {
         // args: input numOfMunchers port port
-        if (args.length != 3 && args.length != 4) {
-            System.out.println("java SocketServer <input> <numOfMunchers> <port> <port>");
-        }
-        NanomunchersSocketServer server;
-        String inputFile = args[0];
-        int numOfMunchers = Integer.parseInt(args[1]);
-        int port1 = Integer.parseInt(args[2]);
-        if (args.length == 4) {
-            int port2 = Integer.parseInt(args[3]);
-            server = new NanomunchersSocketServer(inputFile, numOfMunchers, port1, port2);
+        if (args.length != 4 && args.length != 6) {
+            System.out
+            .println("adversarial version:\n    java -jar SocketServerNanomunchers.jar <input> <numOfMunchers> <time1> <port1> <time2> <port2>");
+            System.out
+            .println("non-adversarial version:\n    java -jar SocketServerNanomunchers.jar <input> <numOfMunchers> <time> <port>");
         } else {
-            server = new NanomunchersSocketServer(inputFile, numOfMunchers, port1);
+            NanomunchersSocketServer server;
+            String inputFile = args[0];
+            int numOfMunchers = Integer.parseInt(args[1]);
+            int time1 = Integer.parseInt(args[2]);
+            int port1 = Integer.parseInt(args[3]);
+            if (args.length > 4) {
+                int time2 = Integer.parseInt(args[4]);
+                int port2 = Integer.parseInt(args[5]);
+                server = new NanomunchersSocketServer(inputFile, numOfMunchers, time1, port1, time2, port2);
+            } else {
+                server = new NanomunchersSocketServer(inputFile, numOfMunchers, time1, port1);
+            }
+            server.startGame();
         }
-        server.startGame();
     }
 }
 
@@ -470,12 +476,12 @@ class Player extends Thread {
         isGameOver = true;
     }
     
-    public Player(int port, NanomunchersSocketServer game) throws IOException {
+    public Player(int time, int port, NanomunchersSocketServer game) throws IOException {
         this.game = game;
         totalMunchers = game.numOfMunchers;
         currMuncherNum = 0;
         isGameOver = false;
-        timeRemaining = 120 * 1000;
+        timeRemaining = time * 1000;
         server = new ServerSocket(port);
     }
     
