@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 
 public class RandomPlayer {
     static Socket client;
@@ -128,7 +129,8 @@ public class RandomPlayer {
         locations = new HashMap<Integer, Integer[]>();
         edges = new HashMap<Integer, Map<Character, Integer>>();
         remainingNodes = new HashSet<Integer>();
-        send("JJ");
+        String teamName = UUID.randomUUID().toString();
+        send(teamName);
         parseData(receive());
         random = new Random(System.currentTimeMillis());
     }

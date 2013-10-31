@@ -113,18 +113,18 @@ public class NanomunchersSocketServer {
                 System.out.println("current noMoveCount: " + noMoveCount);
             }
             System.out.println("**** Remaining nodes: " + (locations.size() - munched.size()) + " ****");
-            System.out.println("player1 move");
+            System.out.println(player1.teamName + " move");
             Map<Integer, Nanomuncher> move1 = player1.move();
-            System.out.println("player2 move");
+            System.out.println(player2.teamName + " move");
             Map<Integer, Nanomuncher> move2 = player2.move();
             solveConflicts(move1, move2);
             munched.addAll(newlyMunched);
             player1.getStatus();
             player2.getStatus();
             newlyMunched.clear();
-            System.out.println("player1 get move");
+            System.out.println(player1.teamName + " get next move");
             player1.getNextMove();
-            System.out.println("player2 get move");
+            System.out.println(player2.teamName + " get next move");
             player2.getNextMove();
             solveConflicts();
             munched.addAll(newlyMunched);
@@ -139,7 +139,7 @@ public class NanomunchersSocketServer {
         }
         while (!remainingPlayer.isGameOver) {
             System.out.println("**** Remaining nodes: " + (locations.size() - munched.size()) + " ****");
-            System.out.println("remaining player move");
+            System.out.println(remainingPlayer.teamName + " move");
             remainingPlayer.move();
             munched.addAll(newlyMunched);
             remainingPlayer.getStatus();
