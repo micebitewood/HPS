@@ -105,7 +105,7 @@ public class NanomunchersSocketServer {
     
     public void startGame() throws IOException {
         while (!player1.isGameOver && !player2.isGameOver) {
-            if (noMoveCount >= 8) {
+            if (noMoveCount >= 2) {
                 System.out.println("=================final score=================");
                 System.out.println(0 + " : " + 0);
                 System.exit(0);
