@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.UUID;
 
 public class RandomPlayer {
     static Socket client;
@@ -129,10 +128,10 @@ public class RandomPlayer {
         locations = new HashMap<Integer, Integer[]>();
         edges = new HashMap<Integer, Map<Character, Integer>>();
         remainingNodes = new HashSet<Integer>();
-        String teamName = UUID.randomUUID().toString();
-        send(teamName);
-        parseData(receive());
         random = new Random(System.currentTimeMillis());
+        send( new String[] {"Jaded", "Jaunty", "Jealous", "Jerky", "Jolly", "Joyful", "Juicy", "Jumpy", "Justifiable", "Juvenile"}[random.nextInt(10)]
+            + new String[] {"Jam", "Janitor", "Jelly", "Jerk", "Jet", "Jitterbug", "Journalist", "Judge", "Juice", "Juxtaposition"}[random.nextInt(10)]);
+        parseData(receive());
     }
     
     public String receive() throws IOException {
