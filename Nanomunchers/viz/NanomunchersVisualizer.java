@@ -32,7 +32,7 @@ public class NanomunchersVisualizer extends JApplet {
     static final Color[] PLAYER_COLOR_DARKER = {Color.YELLOW.darker().darker(), Color.RED.darker() };
     static final int[] DIR_ANGLE = {90, 180, 270, 0 };
     
-    static final int DELAY = 100;
+    static final int DELAY = 400;
     
     static final int PORT = 9394;
     
@@ -268,13 +268,25 @@ public class NanomunchersVisualizer extends JApplet {
                 int y = loc % SIZE_Y;
                 board[x * SIZE_Y + y] = update.player-2;
                 
-                g.setColor(Color.BLACK);
-                g.fillOval(x * CELL_SIZE + 5, y * CELL_SIZE + 5, 29, 29);
-                g.setColor(PLAYER_COLOR[update.player]);
-                if (dir != 'n')
-                    g.fillArc(x * CELL_SIZE + 5, y * CELL_SIZE + 5, 29, 29, angle + 30, 300);
-                else
+                int dx = (update.dir == 'l' ? -1 : update.dir == 'r' ? 1 : 0);
+                int dy = (update.dir == 'u' ? -1 : update.dir == 'd' ? 1 : 0);
+                
+                if (scene != 2) {
+                    g.setColor(Color.BLACK);
                     g.fillOval(x * CELL_SIZE + 5, y * CELL_SIZE + 5, 29, 29);
+                    if (scene == 3)
+                        g.fillOval(x * CELL_SIZE - dx * CELL_SIZE/2 + 5, y * CELL_SIZE - dy * CELL_SIZE/2 + 5, 29, 29);
+                    g.setColor(PLAYER_COLOR[update.player]);
+                    if (dir != 'n')
+                        g.fillArc(x * CELL_SIZE + 5, y * CELL_SIZE + 5, 29, 29, angle + 30, 300);
+                    else
+                        g.fillOval(x * CELL_SIZE + 5, y * CELL_SIZE + 5, 29, 29);
+                } else {
+                    g.setColor(Color.BLACK);
+                    g.fillOval(x * CELL_SIZE + 5, y * CELL_SIZE + 5, 29, 29);
+                    g.setColor(PLAYER_COLOR[update.player]);
+                    g.fillArc(x * CELL_SIZE - dx * CELL_SIZE/2 + 5, y * CELL_SIZE - dy * CELL_SIZE/2 + 5, 29, 29, angle + 15, 330);
+                }
             } else if (update.dir == 'x') {
                 int loc = locs.get(update.node);
                 int x = loc / SIZE_Y;
