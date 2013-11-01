@@ -118,13 +118,6 @@ public class NanomunchersSocketServer {
                 System.exit(0);
             }
             System.out.println("**** Remaining nodes: " + (locations.size() - munched.size()) + " ****");
-            System.out.println(player1.teamName + " moveing");
-            Map<Integer, Nanomuncher> move1 = player1.move();
-            System.out.println(player2.teamName + " moveing");
-            Map<Integer, Nanomuncher> move2 = player2.move();
-            solveConflicts(move1, move2);
-            viz.update();
-            munched.addAll(newlyMunched);
             player1.getStatus();
             player2.getStatus();
             newlyMunched.clear();
@@ -134,6 +127,13 @@ public class NanomunchersSocketServer {
             player2.getNextMove();
             solveConflicts();
             munched.addAll(newlyMunched);
+            System.out.println(player1.teamName + " moving");
+            Map<Integer, Nanomuncher> move1 = player1.move();
+            System.out.println(player2.teamName + " moving");
+            Map<Integer, Nanomuncher> move2 = player2.move();
+            solveConflicts(move1, move2);
+            munched.addAll(newlyMunched);
+            viz.update();
         }
         Player remainingPlayer;
         if (player1.isGameOver) {
@@ -145,19 +145,20 @@ public class NanomunchersSocketServer {
         }
         while (!remainingPlayer.isGameOver) {
             System.out.println("**** Remaining nodes: " + (locations.size() - munched.size()) + " ****");
-            System.out.println(remainingPlayer.teamName + " moveing");
-            remainingPlayer.move();
-            viz.update();
-            munched.addAll(newlyMunched);
             remainingPlayer.getStatus();
             newlyMunched.clear();
             System.out.println(remainingPlayer.teamName + " getting next move");
             remainingPlayer.getNextMove();
             munched.addAll(newlyMunched);
+            System.out.println(remainingPlayer.teamName + " moving");
+            remainingPlayer.move();
+            munched.addAll(newlyMunched);
+            viz.update();
         }
         // }
         System.out.println("=================final score=================");
         System.out.println(player1.teamName + ": " + player1.score + ", " + player2.teamName + ": " + player2.score);
+        viz.finish();
     }
     
     private void solveConflicts(Map<Integer, Nanomuncher> move1, Map<Integer, Nanomuncher> move2) {
@@ -169,10 +170,14 @@ public class NanomunchersSocketServer {
                 char dir2 = muncher2.program.charAt(muncher2.programCounter);
                 System.out.println("conflicts: " + id + " player1: " + dir1 + " player2: " + dir2);
                 if (isLarger(dir1, dir2)) {
+                    vizUpdate.remove("1," + id + "," + dir2);
+                    vizUpdate.put("1," + id + ",c", "x");
                     System.out.println(player1.teamName + " wins this conflict");
                     player2.idToMunchers.remove(id);
                     player2.score--;
                 } else {
+                    vizUpdate.remove("0," + id + "," + dir1);
+                    vizUpdate.put("0," + id + ",c", "x");
                     System.out.println(player2.teamName + " wins this conflict");
                     player1.idToMunchers.remove(id);
                     player1.score--;
@@ -188,13 +193,17 @@ public class NanomunchersSocketServer {
                 if (random.nextBoolean() == true) {
                     System.out.println("chooses " + player1.teamName);
                     newMunchers.put(id, player1);
-//                    vizUpdate.put(id, String.format("%d,%d,n,%c", 0, id, 'u'));
+                    vizUpdate.put("0," + id + ",n", player1.idToMunchers.get(id).program);
+                    vizUpdate.remove("1," + id + ",n");
+                    vizUpdate.put("1," + id + ",c", "x");
                     player2.idToMunchers.remove(id);
                     player2.score--;
                 } else {
                     System.out.println("chooses " + player2.teamName);
                     newMunchers.put(id, player2);
-//                    vizUpdate.put(id, String.format("%d,%d,n,%c", 1, id, 'u'));
+                    vizUpdate.put("1," + id + ",n", player2.idToMunchers.get(id).program);
+                    vizUpdate.remove("0," + id + ",n");
+                    vizUpdate.put("0," + id + ",c", "x");
                     player1.idToMunchers.remove(id);
                     player1.score--;
                 }
@@ -203,7 +212,7 @@ public class NanomunchersSocketServer {
         dups.clear();
     }
     
-    private boolean isLarger(char dir1, char dir2) {
+    public boolean isLarger(char dir1, char dir2) {
         if (dir1 == 'u')
             return true;
         if (dir1 == 'l' && dir2 != 'u')
@@ -313,13 +322,13 @@ class Player extends Thread {
             Nanomuncher muncher = idToMuncher.getValue();
             if (muncher != null) {
                 removes.add(muncher.position);
-                System.out.println("muncher from: " + muncher.position + " " + muncher.program + " "
+                System.out.println("muncher at: " + muncher.position + " " + muncher.program + " "
                                    + muncher.programCounter + " loc: " + game.locations.get(muncher.position)[0] + ", "
                                    + game.locations.get(muncher.position)[1]);
                 String program = muncher.program;
                 int programCounter = muncher.programCounter;
                 Map<Character, Integer> edges = game.edges.get(muncher.position);
-                System.out.print("neibours: ");
+                System.out.print("neighbors: ");
                 if (edges == null) {
                     continue;
                 }
@@ -334,11 +343,21 @@ class Player extends Thread {
                     char direction = program.charAt(programCounter);
                     if (edges.containsKey(direction) && !game.munched.contains(edges.get(direction))) {
                         int id = edges.get(direction);
+                        if (moves.containsKey(id)) {
+                            if (game.isLarger(moves.get(id).program.charAt(moves.get(id).programCounter), direction)) {
+                                game.vizUpdate.put(playerid + "," + muncher.position + "," + direction, "x");
+                                System.out.println("this muncher dies at " + id);
+                                break;
+                            } else {
+                                score--;
+                            }
+                        }
                         moves.put(id, muncher);
                         muncher.position = id;
                         muncher.programCounter = programCounter;
                         game.newlyMunched.add(id);
-                        game.vizUpdate.put(String.format("%d,%d,%c", playerid, id, program.charAt(programCounter)), program.substring((programCounter+1)%4));
+                        game.vizUpdate.put(playerid + "," + id + "," + program.charAt(programCounter),
+                                           program.substring((programCounter+1)%4));
                         System.out.println("munched: " + id + " " + muncher.program + " " + muncher.programCounter
                                            + " loc: " + game.locations.get(id)[0] + ", "
                                            + game.locations.get(id)[1]);
@@ -348,8 +367,8 @@ class Player extends Thread {
                     count++;
                 } while (count < 4);
                 if (count == 4) {
-                    game.vizUpdate.put(String.format("%d,%d,x", playerid, muncher.position), "x");
-                    System.out.println("this muncher dies in " + muncher.position);
+                    game.vizUpdate.put(playerid + "," + muncher.position + ",x", "x");
+                    System.out.println("this muncher dies at " + muncher.position);
                 }
             }
         }
@@ -418,14 +437,15 @@ class Player extends Thread {
                 if (game.newMunchers.containsKey(id)) {
                     System.out.println("dup in: " + id);
                     game.dups.add(id);
-                } else if (!game.munched.contains(id)) {
+                }
+                if (!game.munched.contains(id)) {
                     System.out.println("new muncher arrives: " + id + " " + idAndPrograms.get(id) + " loc: "
                                        + game.locations.get(id)[0] + ", "
                                        + game.locations.get(id)[1]);
                     idToMunchers.put(id, new Nanomuncher(idAndPrograms.get(id), id));
                     game.newlyMunched.add(id);
                     game.newMunchers.put(id, this);
-                    game.vizUpdate.put(String.format("%d,%d,n", playerid, id), idAndPrograms.get(id));
+                    game.vizUpdate.put(playerid + "," + id + ",n", idAndPrograms.get(id));
                     score++;
                 }
                 currMuncherNum++;
@@ -551,12 +571,21 @@ class Visualizer {
         out.println("<EOM>");
     }
     
+    private String receive() throws IOException {
+        StringBuffer sb = new StringBuffer();
+        String temp;
+        while (!(temp = in.readLine()).equalsIgnoreCase("<EOM>")) {
+            sb.append(temp + "@");
+        }
+        sb.deleteCharAt(sb.length() - 1);
+        return sb.toString();
+    }
+    
     public void update() {
         Map<String, String> vizUpdate = game.vizUpdate;
         if (vizUpdate.size() == 0 ) return;
         for (Entry<String, String> entry : vizUpdate.entrySet()) {
             String str = entry.getKey() + "," + entry.getValue();
-            System.out.println("Sending: " + str);
             out.println(str);
         }
         out.println("<EOM>");
@@ -567,14 +596,12 @@ class Visualizer {
         game.vizUpdate.clear();
     }
     
-    private String receive() throws IOException {
-        StringBuffer sb = new StringBuffer();
-        String temp;
-        while (!(temp = in.readLine()).equalsIgnoreCase("<EOM>")) {
-            sb.append(temp + "@");
+    public void finish() {
+        send(new ArrayList<String>());
+        try {
+            close();
+        } catch (IOException e) {
         }
-        sb.deleteCharAt(sb.length() - 1);
-        return sb.toString();
     }
     
     public Visualizer(int port, NanomunchersSocketServer game) throws IOException {
@@ -602,7 +629,7 @@ class Nanomuncher {
     public Nanomuncher(String program, int position) {
         this.program = program;
         this.position = position;
-        this.programCounter = -1;
+        this.programCounter = 3;
     }
 }
 

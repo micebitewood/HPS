@@ -37,6 +37,7 @@ public class NanomunchersVisualizer extends JApplet {
     static final int APPLET_WIDTH = BOARD_WIDTH + 200;
     static final int APPLET_HEIGHT = BOARD_HEIGHT;
     static final Color[] PLAYER_COLOR = {Color.YELLOW, Color.RED };
+    static final Color[] PLAYER_COLOR_DARKER = {Color.YELLOW.darker().darker(), Color.RED.darker() };
     static final int[] DIR_ANGLE = {90, 180, 270, 0 };
     
     static final int DELAY = 400;
@@ -54,7 +55,7 @@ public class NanomunchersVisualizer extends JApplet {
     private int[] board = new int[SIZE_X * SIZE_Y];
     private int[] scores = new int[2];
     
-    private List<VizData> vizUpdate;
+    private List<VizData> vizUpdate = new ArrayList<VizData>();
     
     private NanomunchersCanvas m_canvas;
     private JLabel m_scoreBoard;
@@ -63,7 +64,6 @@ public class NanomunchersVisualizer extends JApplet {
         String[] specs = data.split("\n");
         boolean startNodes = false;
         boolean startEdges = false;
-        int numNodes = 0;
         for (String line : specs) {
             String content = line.trim().toLowerCase();
             if (content.equals(""))
@@ -86,7 +86,6 @@ public class NanomunchersVisualizer extends JApplet {
                 locs.put(nodeid, xloc * SIZE_Y + yloc);
                 nodes.add(nodeid);
                 board[xloc * SIZE_Y + yloc] = nodeid + 1;
-                ++numNodes;
             }
         }
     }
@@ -97,7 +96,7 @@ public class NanomunchersVisualizer extends JApplet {
         }
         String[] stats = str.split("\n");
         
-        vizUpdate = new ArrayList<VizData>();
+        vizUpdate.clear();
         for (String stat : stats) {
             String[] items = stat.split(",");
             vizUpdate.add(new VizData(Integer.parseInt(items[0]), Integer.parseInt(items[1]), items[2].charAt(0), items[3].charAt(0)));
@@ -156,8 +155,11 @@ public class NanomunchersVisualizer extends JApplet {
                     updateCanvas(i);
                     Thread.sleep(DELAY);
                 }
+                System.out.println(String.format("[Scores] A: %d B: %d", scores[0], scores[1]));
                 send("OKAY");
             }
+            vizUpdate.clear();
+            updateCanvas(2);
         } catch (IOException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
@@ -238,13 +240,25 @@ public class NanomunchersVisualizer extends JApplet {
     private void updateCanvas(int scene) {
         Graphics g = m_canvas.getOffscreenGraphics();
         
+        for (VizData update : vizUpdate) {
+            if (update.nextDir != 'x') {
+                int loc = locs.get(update.node);
+                int x = loc / SIZE_Y;
+                int y = loc % SIZE_Y;
+                if (board[x * SIZE_Y + y] > 0) {
+                    board[x * SIZE_Y + y] = update.player-2;
+                    scores[update.player]++;
+                }
+            }
+        }
+        
         if (scene == 2) {
             for (int x = 0; x < SIZE_X; ++x) {
                 for (int y = 0; y < SIZE_Y; ++y) {
                     if (board[x * SIZE_Y + y] < 0) {
                         g.setColor(Color.BLACK);
                         g.fillOval(x * CELL_SIZE + 5, y * CELL_SIZE + 5, 29, 29);
-                        g.setColor(PLAYER_COLOR[board[x * SIZE_Y + y]+2].darker());
+                        g.setColor(PLAYER_COLOR_DARKER[board[x * SIZE_Y + y]+2]);
                         g.fillOval(x * CELL_SIZE + 16, y * CELL_SIZE + 16, 7, 7);
                     }
                 }
@@ -252,17 +266,15 @@ public class NanomunchersVisualizer extends JApplet {
         }
         
         for (VizData update : vizUpdate) {
+            if (update.dir == 'c' || update.dir != 'x' && update.nextDir == 'x') continue;
             if (scene / 2 == 0 && update.dir != 'n' || scene / 2 == 1 && update.dir == 'n') continue;
-            if (update.dir != 'x') {
+            
+            if (update.nextDir != 'x') {
                 char dir = (scene % 2 == 0) ? update.dir : update.nextDir;
                 int angle = DIR_ANGLE[dir == 'u' ? 0 : dir == 'l' ? 1 : dir == 'd' ? 2 : 3];
                 int loc = locs.get(update.node);
                 int x = loc / SIZE_Y;
                 int y = loc % SIZE_Y;
-                if (board[x * SIZE_Y + y] >= 0) {
-                    board[x * SIZE_Y + y] = update.player-2;
-                    scores[update.player]++;
-                }
                 
                 g.setColor(Color.BLACK);
                 g.fillOval(x * CELL_SIZE + 5, y * CELL_SIZE + 5, 29, 29);
@@ -271,7 +283,7 @@ public class NanomunchersVisualizer extends JApplet {
                     g.fillArc(x * CELL_SIZE + 5, y * CELL_SIZE + 5, 29, 29, angle + 30, 300);
                 else
                     g.fillOval(x * CELL_SIZE + 5, y * CELL_SIZE + 5, 29, 29);
-            } else {
+            } else if (update.dir == 'x') {
                 int loc = locs.get(update.node);
                 int x = loc / SIZE_Y;
                 int y = loc % SIZE_Y;
