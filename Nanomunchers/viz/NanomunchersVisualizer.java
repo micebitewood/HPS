@@ -1,15 +1,7 @@
 import java.awt.Canvas;
 import java.awt.Color;
-import java.awt.FlowLayout;
 import java.awt.Graphics;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.GridLayout;
 import java.awt.Image;
-import java.awt.Insets;
-import java.awt.Label;
-import java.awt.Panel;
-import java.awt.TextField;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -23,7 +15,6 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.swing.JApplet;
-import javax.swing.JLabel;
 
 public class NanomunchersVisualizer extends JApplet {
     
@@ -34,13 +25,14 @@ public class NanomunchersVisualizer extends JApplet {
     static final int CELL_SIZE = 40;
     static final int BOARD_WIDTH = SIZE_X * CELL_SIZE;
     static final int BOARD_HEIGHT = SIZE_Y * CELL_SIZE;
-    static final int APPLET_WIDTH = BOARD_WIDTH + 200;
+    static final int TEXT_WIDTH = 200;
+    static final int APPLET_WIDTH = BOARD_WIDTH + TEXT_WIDTH;
     static final int APPLET_HEIGHT = BOARD_HEIGHT;
     static final Color[] PLAYER_COLOR = {Color.YELLOW, Color.RED };
     static final Color[] PLAYER_COLOR_DARKER = {Color.YELLOW.darker().darker(), Color.RED.darker() };
     static final int[] DIR_ANGLE = {90, 180, 270, 0 };
     
-    static final int DELAY = 400;
+    static final int DELAY = 100;
     
     static final int PORT = 9394;
     
@@ -53,18 +45,24 @@ public class NanomunchersVisualizer extends JApplet {
     
     private Set<Integer> nodes = new HashSet<Integer>();
     private int[] board = new int[SIZE_X * SIZE_Y];
+    
+    private String[] teamNames = new String[2];
     private int[] scores = new int[2];
     
     private List<VizData> vizUpdate = new ArrayList<VizData>();
     
     private NanomunchersCanvas m_canvas;
-    private JLabel m_scoreBoard;
     
     private void parseData(String data) {
         String[] specs = data.split("\n");
+        int count = 0;
         boolean startNodes = false;
         boolean startEdges = false;
         for (String line : specs) {
+            if (count < 2) {
+                teamNames[count++] = line;
+                continue;
+            }
             String content = line.trim().toLowerCase();
             if (content.equals(""))
                 continue;
@@ -88,6 +86,12 @@ public class NanomunchersVisualizer extends JApplet {
                 board[xloc * SIZE_Y + yloc] = nodeid + 1;
             }
         }
+    }
+    
+    private void parseTeamNames(String str) {
+        String[] teamNames = str.split("\n");
+        this.teamNames[0] = teamNames[0];
+        this.teamNames[1] = teamNames[1];
     }
     
     public boolean parseStat(String str) {
@@ -114,15 +118,14 @@ public class NanomunchersVisualizer extends JApplet {
         } catch (IOException e) {
             System.out.println("port is unavailable");
         }
-        m_canvas = new NanomunchersCanvas(BOARD_WIDTH, BOARD_HEIGHT);
+        m_canvas = new NanomunchersCanvas(APPLET_WIDTH, APPLET_HEIGHT);
         m_canvas.setBackground(Color.BLACK);
-        m_scoreBoard = new JLabel("[Scores]");
     }
     
     public void start() {
-        send("NANOMUNCHERSVIZ");
         try {
             parseData(receive());
+            send("OKAY");
         } catch (IOException e) {
         }
         
@@ -131,13 +134,7 @@ public class NanomunchersVisualizer extends JApplet {
         setSize(APPLET_WIDTH, APPLET_HEIGHT);
         
         add(m_canvas);
-        m_canvas.setBounds(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
-        Panel p = new Panel();
-        p.setLayout(new FlowLayout());
-        p.add(m_scoreBoard);
-        p.setSize(200, APPLET_HEIGHT);
-        add(p);
-        p.setBounds(BOARD_WIDTH, 0, 200, BOARD_HEIGHT);
+        m_canvas.setBounds(0, 0, APPLET_WIDTH, APPLET_HEIGHT);
         
         initCanvas();
         
@@ -151,11 +148,10 @@ public class NanomunchersVisualizer extends JApplet {
                     }
                 }
                 for (int i=(isNewMuncher?0:2); i<4; ++i) {
-                    m_scoreBoard.setText(String.format("[Scores]\nA: %d\nB: %d", scores[0], scores[1]));
                     updateCanvas(i);
                     Thread.sleep(DELAY);
                 }
-                System.out.println(String.format("[Scores] A: %d B: %d", scores[0], scores[1]));
+                System.out.println(String.format("[SCORES] %s: %d, %s: %d", teamNames[0], scores[0], teamNames[1], scores[1]));
                 send("OKAY");
             }
             vizUpdate.clear();
@@ -165,7 +161,6 @@ public class NanomunchersVisualizer extends JApplet {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
     }
     
     public String receive() throws IOException {
@@ -176,17 +171,17 @@ public class NanomunchersVisualizer extends JApplet {
             sb.append(temp + "\n");
         }
         sb.deleteCharAt(sb.length() - 1);
-        System.out.println("receive:");
-        System.out.println(sb.toString());
+//        System.out.println("receive:");
+//        System.out.println(sb.toString());
         return sb.toString();
     }
     
     public void send(String str) {
-        System.out.println("send:");
+//        System.out.println("send:");
         out.println(str);
-        System.out.println(str);
+//        System.out.println(str);
         out.println("<EOM>");
-        System.out.println("<EOM>");
+//        System.out.println("<EOM>");
     }
     
     private void initCanvas() {
@@ -240,15 +235,11 @@ public class NanomunchersVisualizer extends JApplet {
     private void updateCanvas(int scene) {
         Graphics g = m_canvas.getOffscreenGraphics();
         
-        for (VizData update : vizUpdate) {
-            if (update.nextDir != 'x') {
-                int loc = locs.get(update.node);
-                int x = loc / SIZE_Y;
-                int y = loc % SIZE_Y;
-                if (board[x * SIZE_Y + y] > 0) {
-                    board[x * SIZE_Y + y] = update.player-2;
+        if (scene % 2 == 0) {
+            for (VizData update : vizUpdate) {
+                if (update.nextDir == 'x') continue;
+                if (scene == 0 && update.dir == 'n' || scene == 2 && update.dir != 'n')
                     scores[update.player]++;
-                }
             }
         }
         
@@ -275,6 +266,7 @@ public class NanomunchersVisualizer extends JApplet {
                 int loc = locs.get(update.node);
                 int x = loc / SIZE_Y;
                 int y = loc % SIZE_Y;
+                board[x * SIZE_Y + y] = update.player-2;
                 
                 g.setColor(Color.BLACK);
                 g.fillOval(x * CELL_SIZE + 5, y * CELL_SIZE + 5, 29, 29);
@@ -300,7 +292,28 @@ public class NanomunchersVisualizer extends JApplet {
             }
         }
         
+        updateText();
+        
         m_canvas.repaint();
+    }
+    
+    private void updateText() {
+        Graphics g = m_canvas.getOffscreenGraphics();
+        
+        g.setColor(Color.LIGHT_GRAY);
+        g.fillRect(BOARD_WIDTH, 0, TEXT_WIDTH, BOARD_HEIGHT);
+        
+        String str = String.format("[SCORES]\n\n%s: %d\n%s: %d", teamNames[0], scores[0], teamNames[1], scores[1]);
+        g.setColor(Color.BLACK);
+        drawMultilineText(g, str, BOARD_WIDTH + 10, 20);
+    }
+    
+    private void drawMultilineText(Graphics g, String str, int x, int y) {
+        String[] lines = str.split("\n");
+        for (String line : lines) {
+            g.drawChars(line.toCharArray(), 0, line.length(), x, y);
+            y += 15;
+        }
     }
     
     public class NanomunchersCanvas extends Canvas {

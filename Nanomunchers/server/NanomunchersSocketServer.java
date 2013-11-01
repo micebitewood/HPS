@@ -78,7 +78,6 @@ public class NanomunchersSocketServer {
     throws InterruptedException {
         this(input, numOfMunchers);
         try {
-            viz = new Visualizer(9394, this);
             player1 = new Player(time1, port1, this, 0);
             player2 = new Player(time2, port2, this, 1);
             player1.start();
@@ -87,6 +86,7 @@ public class NanomunchersSocketServer {
             player2.join();
             player1.setOpponent(player2);
             player2.setOpponent(player1);
+            viz = new Visualizer(9394, this, new String[] {player1.teamName, player2.teamName});
         } catch (IOException e) {
             System.out.println("cannot connect to client");
             System.exit(0);
@@ -96,13 +96,13 @@ public class NanomunchersSocketServer {
     public NanomunchersSocketServer(String input, int numOfMunchers, int time, int port) throws InterruptedException {
         this(input, numOfMunchers);
         try {
-            viz = new Visualizer(9394, this);
             player1 = new Player(time, port, this, 0);
             player1.start();
             player1.join();
             player2 = new Player();
             player2.setOpponent(player1);
             player1.setOpponent(player2);
+            viz = new Visualizer(9394, this, new String[] {player1.teamName, ""});
         } catch (IOException e) {
             System.out.println("cannot connect to client");
             System.exit(0);
@@ -133,6 +133,7 @@ public class NanomunchersSocketServer {
             Map<Integer, Nanomuncher> move2 = player2.move();
             solveConflicts(move1, move2);
             munched.addAll(newlyMunched);
+            System.out.println(player1.teamName + ": " + player1.score + ", " + player2.teamName + ": " + player2.score);
             viz.update();
         }
         Player remainingPlayer;
@@ -144,6 +145,12 @@ public class NanomunchersSocketServer {
             remainingPlayer = player1;
         }
         while (!remainingPlayer.isGameOver) {
+            if (noMoveCount >= 1) {
+                System.out.println("oops! No one moves!");
+                System.out.println("=================final score=================");
+                System.out.println(0 + " : " + 0);
+                System.exit(0);
+            }
             System.out.println("**** Remaining nodes: " + (locations.size() - munched.size()) + " ****");
             remainingPlayer.getStatus();
             newlyMunched.clear();
@@ -153,6 +160,7 @@ public class NanomunchersSocketServer {
             System.out.println(remainingPlayer.teamName + " moving");
             remainingPlayer.move();
             munched.addAll(newlyMunched);
+            System.out.println(player1.teamName + ": " + player1.score + ", " + player2.teamName + ": " + player2.score);
             viz.update();
         }
         // }
@@ -344,11 +352,13 @@ class Player extends Thread {
                     if (edges.containsKey(direction) && !game.munched.contains(edges.get(direction))) {
                         int id = edges.get(direction);
                         if (moves.containsKey(id)) {
-                            if (game.isLarger(moves.get(id).program.charAt(moves.get(id).programCounter), direction)) {
+                            char prevDirection = moves.get(id).program.charAt(moves.get(id).programCounter);
+                            if (game.isLarger(prevDirection, direction)) {
                                 game.vizUpdate.put(playerid + "," + muncher.position + "," + direction, "x");
                                 System.out.println("this muncher dies at " + id);
                                 break;
                             } else {
+                                game.vizUpdate.remove(playerid + "," + id + "," + prevDirection);
                                 score--;
                             }
                         }
@@ -547,19 +557,17 @@ class Visualizer {
     PrintWriter out;
     BufferedReader in;
     NanomunchersSocketServer game;
-    String teamName;
+    String[] teamNames;
     
     private List<String> genData(List<String> nodes, List<String> edges) {
         List<String> data = new ArrayList<String>();
+        data.add(teamNames[0]);
+        data.add(teamNames[1]);
         data.add("nodeid,xloc,yloc");
         data.addAll(nodes);
         data.add("nodeid1,nodeid2");
         data.addAll(edges);
         return data;
-    }
-    
-    private void setName() throws IOException {
-        this.teamName = receive();
     }
     
     private void send(List<String> strs) {
@@ -604,14 +612,16 @@ class Visualizer {
         }
     }
     
-    public Visualizer(int port, NanomunchersSocketServer game) throws IOException {
+    public Visualizer(int port, NanomunchersSocketServer game, String[] teamNames) throws IOException {
         this.game = game;
+        this.teamNames = teamNames;
         server = new ServerSocket(port);
         this.socket = server.accept();
         out = new PrintWriter(socket.getOutputStream(), true);
         in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         
         send(genData(game.nodeStrs, game.edgeStrs));
+        receive();
     }
     
     public void close() throws IOException {
