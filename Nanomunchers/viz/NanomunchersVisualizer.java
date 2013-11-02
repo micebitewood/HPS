@@ -32,8 +32,6 @@ public class NanomunchersVisualizer extends JApplet {
     static final Color[] PLAYER_COLOR_DARKER = {Color.YELLOW.darker().darker(), Color.RED.darker() };
     static final int[] DIR_ANGLE = {90, 180, 270, 0 };
     
-    static final int DELAY = 400;
-    
     static final int PORT = 9394;
     
     static Socket client;
@@ -50,6 +48,7 @@ public class NanomunchersVisualizer extends JApplet {
     private int[] scores = new int[2];
     
     private List<VizData> vizUpdate = new ArrayList<VizData>();
+    private int delay = 400;
     
     private NanomunchersCanvas m_canvas;
     
@@ -59,8 +58,12 @@ public class NanomunchersVisualizer extends JApplet {
         boolean startNodes = false;
         boolean startEdges = false;
         for (String line : specs) {
-            if (count < 2) {
-                teamNames[count++] = line;
+            if (count < 3) {
+                if (count < 2)
+                    teamNames[count] = line;
+                else
+                    delay = Integer.parseInt(line);
+                count++;
                 continue;
             }
             String content = line.trim().toLowerCase();
@@ -125,7 +128,7 @@ public class NanomunchersVisualizer extends JApplet {
     public void start() {
         try {
             parseData(receive());
-            send("OKAY");
+            send("DONE");
         } catch (IOException e) {
         }
         
@@ -149,10 +152,10 @@ public class NanomunchersVisualizer extends JApplet {
                 }
                 for (int i=(isNewMuncher?0:2); i<4; ++i) {
                     updateCanvas(i);
-                    Thread.sleep(DELAY);
+                    Thread.sleep(delay);
                 }
                 System.out.println(String.format("[SCORES] %s: %d, %s: %d", teamNames[0], scores[0], teamNames[1], scores[1]));
-                send("OKAY");
+                send("DONE");
             }
             vizUpdate.clear();
             updateCanvas(2);

@@ -16,9 +16,7 @@ import java.util.Set;
 
 public class NanomunchersSocketServer {
     
-    static final boolean hasViz = false;
     int numOfMunchers;
-    int noMoveCount;
     List<String> nodeStrs;
     List<String> edgeStrs;
     Map<Integer, Integer[]> locations;
@@ -33,10 +31,10 @@ public class NanomunchersSocketServer {
     private Player player2;
     private Visualizer viz;
     private Random random;
+    private boolean hasViz;
     
     private NanomunchersSocketServer(String input, int numOfMunchers) {
         this.numOfMunchers = numOfMunchers;
-        noMoveCount = 0;
         locations = new HashMap<Integer, Integer[]>();
         nodeStrs = new ArrayList<String>();
         edgeStrs = new ArrayList<String>();
@@ -47,6 +45,7 @@ public class NanomunchersSocketServer {
         edges = new HashMap<Integer, Map<Character, Integer>>();
         vizUpdate = new HashMap<String, String>();
         random = new Random(System.currentTimeMillis());
+        hasViz = false;
         
         BufferedReader br;
         boolean startNodes = false;
@@ -75,6 +74,36 @@ public class NanomunchersSocketServer {
         }
     }
     
+    public NanomunchersSocketServer(String input, int numOfMunchers, int time1, int port1, int time2, int port2, int delay, int portViz)
+    throws InterruptedException {
+        this(input, numOfMunchers);
+        hasViz = true;
+        try {
+            if (time2 != 0 || port2 != 0) {
+                player1 = new Player(time1, port1, this, 0);
+                player2 = new Player(time2, port2, this, 1);
+                player1.start();
+                player2.start();
+                player1.join();
+                player2.join();
+                player1.setOpponent(player2);
+                player2.setOpponent(player1);
+                viz = new Visualizer(portViz, this, delay, new String[] {player1.teamName, player2.teamName});
+            } else {
+                player1 = new Player(time1, port1, this, 0);
+                player1.start();
+                player1.join();
+                player2 = new Player();
+                player2.setOpponent(player1);
+                player1.setOpponent(player2);
+                viz = new Visualizer(portViz, this, delay, new String[] {player1.teamName, ""});
+            }
+        } catch (IOException e) {
+            System.out.println("cannot connect to client");
+            System.exit(0);
+        }
+    }
+    
     public NanomunchersSocketServer(String input, int numOfMunchers, int time1, int port1, int time2, int port2)
     throws InterruptedException {
         this(input, numOfMunchers);
@@ -87,8 +116,6 @@ public class NanomunchersSocketServer {
             player2.join();
             player1.setOpponent(player2);
             player2.setOpponent(player1);
-            if (hasViz)
-                viz = new Visualizer(9394, this, new String[] {player1.teamName, player2.teamName});
         } catch (IOException e) {
             System.out.println("cannot connect to client");
             System.exit(0);
@@ -104,8 +131,6 @@ public class NanomunchersSocketServer {
             player2 = new Player();
             player2.setOpponent(player1);
             player1.setOpponent(player2);
-            if (hasViz)
-                viz = new Visualizer(9394, this, new String[] {player1.teamName, ""});
         } catch (IOException e) {
             System.out.println("cannot connect to client");
             System.exit(0);
@@ -120,7 +145,7 @@ public class NanomunchersSocketServer {
             player1.getStatus();
             player2.getStatus();
             newlyMunched.clear();
-            if (player1.currMuncherNum < player1.totalMunchers) {
+            if (player1.currMuncherNum < player1.totalMunchers && !player1.isDone) {
                 System.out.println("  ** Receiving moves from " + player1.teamName);
                 player1.getNextMove();
             } else {
@@ -129,7 +154,7 @@ public class NanomunchersSocketServer {
                     player1.getNextMove();
                 }
             }
-            if (player2.currMuncherNum < player2.totalMunchers) {
+            if (player2.currMuncherNum < player2.totalMunchers && !player2.isDone) {
                 System.out.println("  ** Receiving moves from " + player2.teamName);
                 player2.getNextMove();
             } else {
@@ -140,9 +165,11 @@ public class NanomunchersSocketServer {
             }
             solveConflicts();
             munched.addAll(newlyMunched);
-            System.out.println("  ** " + player1.teamName + "'s munchers are moving");
+            if (!player1.idToMunchers.isEmpty())
+                System.out.println("  ** " + player1.teamName + "'s munchers are moving");
             Map<Integer, Nanomuncher> move1 = player1.move();
-            System.out.println("  ** " + player2.teamName + "'s munchers are moving");
+            if (!player2.idToMunchers.isEmpty())
+                System.out.println("  ** " + player2.teamName + "'s munchers are moving");
             Map<Integer, Nanomuncher> move2 = player2.move();
             solveConflicts(move1, move2);
             munched.addAll(newlyMunched);
@@ -162,7 +189,7 @@ public class NanomunchersSocketServer {
             remainingPlayer = player1;
         }
         while (!remainingPlayer.isGameOver && !isOver) {
-            System.out.println("========== Starting round " + count + " with " + (locations.size() - munched.size()) + "remaining nodes");
+            System.out.println("========== Starting round " + count + " with " + (locations.size() - munched.size()) + " remaining nodes");
             remainingPlayer.getStatus();
             newlyMunched.clear();
             if (remainingPlayer.currMuncherNum < remainingPlayer.totalMunchers) {
@@ -294,18 +321,36 @@ public class NanomunchersSocketServer {
     
     public static void main(String[] args) throws IOException, InterruptedException {
         // args: input numOfMunchers port port
-        if (args.length != 4 && args.length != 6) {
+        if (args.length != 4 && args.length != 6 && args.length != 8) {
             System.out
-            .println("adversarial mode:\n    java -jar SocketServerNanomunchers.jar <input> <numOfMunchers> <time1> <port1> <time2> <port2>");
+            .println("adversarial mode with visualization:");
             System.out
-            .println("non-adversarial mode:\n    java -jar SocketServerNanomunchers.jar <input> <numOfMunchers> <time> <port>");
+            .println("    java -jar SocketServerNanomunchers.jar <input> <numOfMunchers> <time1> <port1> <time2> <port2> <delayVizInMillis> <portViz>");
+            System.out
+            .println("non-adversarial mode with visualization:");
+            System.out
+            .println("    java -jar SocketServerNanomunchers.jar <input> <numOfMunchers> <time> <port> 0 0 <delayVizInMillis> <portViz>");
+            System.out
+            .println("adversarial mode without visualization:");
+            System.out
+            .println("    java -jar SocketServerNanomunchers.jar <input> <numOfMunchers> <time1> <port1> <time2> <port2>");
+            System.out
+            .println("non-adversarial mode without visualization:");
+            System.out
+            .println("    java -jar SocketServerNanomunchers.jar <input> <numOfMunchers> <time> <port>");
         } else {
             NanomunchersSocketServer server;
             String inputFile = args[0];
             int numOfMunchers = Integer.parseInt(args[1]);
             int time1 = Integer.parseInt(args[2]);
             int port1 = Integer.parseInt(args[3]);
-            if (args.length > 4) {
+            if (args.length > 6) {
+                int time2 = Integer.parseInt(args[4]);
+                int port2 = Integer.parseInt(args[5]);
+                int delay = Integer.parseInt(args[6]);
+                int portViz = Integer.parseInt(args[7]);
+                server = new NanomunchersSocketServer(inputFile, numOfMunchers, time1, port1, time2, port2, delay, portViz);
+            } else if (args.length > 4) {
                 int time2 = Integer.parseInt(args[4]);
                 int port2 = Integer.parseInt(args[5]);
                 server = new NanomunchersSocketServer(inputFile, numOfMunchers, time1, port1, time2, port2);
@@ -457,11 +502,11 @@ class Player extends Thread {
             send(new ArrayList<String>());
             return;
         }
-        long startTime = System.currentTimeMillis();
         send(status);
         if (gameOver())
             return;
         Move nextMove = new Move(this);
+        long startTime = System.currentTimeMillis();
         nextMove.start();
         try {
             nextMove.join(timeRemaining);
@@ -470,13 +515,12 @@ class Player extends Thread {
         }
         timeRemaining -= System.currentTimeMillis() - startTime;
         if (timeRemaining <= 0) {
-            isGameOver = true;
+            isDone = true;
+            System.out.println("  ** " + teamName + " timed out");
+            return;
         }
         Map<Integer, String> idAndPrograms = nextMove.moves;
-//         if (idAndPrograms.size() == 0 && game.noMoveCount != -1)
-//             game.noMoveCount++;
         if (idAndPrograms != null && idAndPrograms.size() != 0) {
-//             game.noMoveCount = -1;
             for (int id : idAndPrograms.keySet()) {
                 boolean isDup = false;
                 if (game.newMunchers.containsKey(id)) {
@@ -599,12 +643,14 @@ class Visualizer {
     PrintWriter out;
     BufferedReader in;
     NanomunchersSocketServer game;
+    int delay;
     String[] teamNames;
     
     private List<String> genData(List<String> nodes, List<String> edges) {
         List<String> data = new ArrayList<String>();
         data.add(teamNames[0]);
         data.add(teamNames[1]);
+        data.add(delay + "");
         data.add("nodeid,xloc,yloc");
         data.addAll(nodes);
         data.add("nodeid1,nodeid2");
@@ -654,8 +700,9 @@ class Visualizer {
         }
     }
     
-    public Visualizer(int port, NanomunchersSocketServer game, String[] teamNames) throws IOException {
+    public Visualizer(int port, NanomunchersSocketServer game, int delay, String[] teamNames) throws IOException {
         this.game = game;
+        this.delay = delay;
         this.teamNames = teamNames;
         server = new ServerSocket(port);
         this.socket = server.accept();
