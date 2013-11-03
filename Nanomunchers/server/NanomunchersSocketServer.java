@@ -181,8 +181,14 @@ public class NanomunchersSocketServer {
             if (hasViz)
                 viz.update();
             count++;
-            if (newlyMunched.isEmpty())
+            if ((newlyMunched.isEmpty() && player2.totalMunchers != 0)
+                || (player1.totalMunchers == player1.currMuncherNum && newlyMunched.isEmpty() && player2.totalMunchers == 0)) {
                 isOver = true;
+                if (!player1.isDone)
+                    player1.close();
+                if (!player2.isDone)
+                    player2.close();
+            }
         }
         System.out.println("==================== Final scores ====================");
         System.out.println(player1.teamName + ": " + player1.score + ", " + player2.teamName + ": " + player2.score);
@@ -598,7 +604,7 @@ class Player extends Thread {
         server = new ServerSocket(port);
     }
     
-    private void close() throws IOException {
+    public void close() throws IOException {
         in.close();
         out.close();
         socket.close();
