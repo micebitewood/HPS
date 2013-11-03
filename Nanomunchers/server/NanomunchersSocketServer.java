@@ -408,11 +408,10 @@ class Player extends Thread {
                                 score--;
                             }
                         }
-                        // TODO
                         moves.put(id, muncher);
-                        game.newlyMunched.add(id);
                         muncher.position = id;
                         muncher.programCounter = programCounter;
+                        game.newlyMunched.add(id);
                         game.vizUpdate.put(playerid + "," + id + "," + program.charAt(programCounter),
                                            program.substring((programCounter + 1) % 4));
                         System.out.println("       Moved " + direction + " to node " + id + " ("
@@ -424,8 +423,8 @@ class Player extends Thread {
                 } while (count < 4);
                 if (count == 4) {
                     game.vizUpdate.put(playerid + "," + muncher.position + ",x", "x");
-                    System.out.println("       Starved at node " + muncher.position);
                     muncher.programCounter = -1;
+                    System.out.println("       Starved at node " + muncher.position);
                 }
             }
         }
@@ -529,10 +528,10 @@ class Player extends Thread {
         }
         // newly munched nodes
         StringBuffer sb = new StringBuffer();
-        Map<Integer, Nanomuncher> newMunchers = game.newMunchers;
-        Set<Integer> used = new HashSet<Integer>();
         Set<Integer> newlyMunched = game.newlyMunched;
         sb.append(newlyMunched.size() + ":");
+        Map<Integer, Nanomuncher> newMunchers = game.newMunchers;
+        Set<Integer> used = new HashSet<Integer>();
         for (Entry<Integer, Nanomuncher> entry : newMunchers.entrySet()) {
             used.add(entry.getKey());
             sb.append(entry.getKey());
@@ -703,6 +702,7 @@ class Visualizer {
         in.close();
         out.close();
         socket.close();
+        server.close();
     }
 }
 
@@ -714,7 +714,7 @@ class Nanomuncher {
     public Nanomuncher(String program, int position) {
         this.program = program;
         this.position = position;
-        this.programCounter = -1;
+        this.programCounter = 3;
     }
 }
 
