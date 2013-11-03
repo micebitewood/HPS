@@ -74,7 +74,8 @@ public class NanomunchersSocketServer {
         }
     }
     
-    public NanomunchersSocketServer(String input, int numOfMunchers, int time1, int port1, int time2, int port2, int delay, int portViz)
+    public NanomunchersSocketServer(String input, int numOfMunchers, int time1, int port1, int time2, int port2,
+                                    int delay, int portViz)
     throws InterruptedException {
         this(input, numOfMunchers);
         hasViz = true;
@@ -88,7 +89,7 @@ public class NanomunchersSocketServer {
                 player2.join();
                 player1.setOpponent(player2);
                 player2.setOpponent(player1);
-                viz = new Visualizer(portViz, this, delay, new String[] {player1.teamName, player2.teamName});
+                viz = new Visualizer(portViz, this, delay, new String[] {player1.teamName, player2.teamName });
             } else {
                 player1 = new Player(time1, port1, this, 0);
                 player1.start();
@@ -96,7 +97,7 @@ public class NanomunchersSocketServer {
                 player2 = new Player();
                 player2.setOpponent(player1);
                 player1.setOpponent(player2);
-                viz = new Visualizer(portViz, this, delay, new String[] {player1.teamName, ""});
+                viz = new Visualizer(portViz, this, delay, new String[] {player1.teamName, "" });
             }
         } catch (IOException e) {
             System.out.println("cannot connect to client");
@@ -140,8 +141,9 @@ public class NanomunchersSocketServer {
     public void startGame() throws IOException {
         int count = 0;
         boolean isOver = false;
-        while (!player1.isGameOver && !player2.isGameOver && !isOver) {
-            System.out.println("========== Starting round " + count + " with " + (locations.size() - munched.size()) + " remaining nodes");
+        while (!isOver) {
+            System.out.println("========== Starting round " + count + " with " + (locations.size() - munched.size())
+                               + " remaining nodes");
             player1.getStatus();
             player2.getStatus();
             newlyMunched.clear();
@@ -173,46 +175,14 @@ public class NanomunchersSocketServer {
             Map<Integer, Nanomuncher> move2 = player2.move();
             solveConflicts(move1, move2);
             munched.addAll(newlyMunched);
-            System.out.println("  ** Current scores are: " + player1.teamName + ": " + player1.score + ", " + player2.teamName + ": " + player2.score);
+            System.out.println("  ** Current scores are: " + player1.teamName + ": " + player1.score + ", "
+                               + player2.teamName + ": " + player2.score);
             if (hasViz)
                 viz.update();
             count++;
             if (newlyMunched.isEmpty())
                 isOver = true;
         }
-        Player remainingPlayer;
-        if (player1.isGameOver) {
-//            System.out.println("  ** Game is over for " + player1.teamName);
-            remainingPlayer = player2;
-        } else {
-//            System.out.println("  ** Game is over for " + player2.teamName);
-            remainingPlayer = player1;
-        }
-        while (!remainingPlayer.isGameOver && !isOver) {
-            System.out.println("========== Starting round " + count + " with " + (locations.size() - munched.size()) + " remaining nodes");
-            remainingPlayer.getStatus();
-            newlyMunched.clear();
-            if (remainingPlayer.currMuncherNum < remainingPlayer.totalMunchers) {
-                System.out.println("  ** Receiving moves from " + remainingPlayer.teamName);
-                remainingPlayer.getNextMove();
-                munched.addAll(newlyMunched);
-            } else {
-                if (!remainingPlayer.isDone) {
-                    remainingPlayer.isDone = true;
-                    remainingPlayer.getNextMove();
-                }
-            }
-            System.out.println("  ** " + remainingPlayer.teamName + "'s munchers are moving");
-            remainingPlayer.move();
-            munched.addAll(newlyMunched);
-            System.out.println("  ** Current scores are: " + player1.teamName + ": " + player1.score + ", " + player2.teamName + ": " + player2.score);
-            if (hasViz)
-                viz.update();
-            count++;
-            if (newlyMunched.isEmpty())
-                isOver = true;
-        }
-        // }
         System.out.println("==================== Final scores ====================");
         System.out.println(player1.teamName + ": " + player1.score + ", " + player2.teamName + ": " + player2.score);
         if (hasViz)
@@ -227,7 +197,7 @@ public class NanomunchersSocketServer {
                 char dir1 = muncher1.program.charAt(muncher1.programCounter);
                 char dir2 = muncher2.program.charAt(muncher2.programCounter);
                 System.out.println("     - Resolving confliction at node " + id + ", moving directions: "
-                                 + dir1 + ", " + dir2);
+                                   + dir1 + ", " + dir2);
                 if (isLarger(dir1, dir2)) {
                     vizUpdate.remove("1," + id + "," + dir2);
                     vizUpdate.put("1," + id + ",c", "x");
@@ -339,25 +309,29 @@ public class NanomunchersSocketServer {
             System.out
             .println("    java -jar SocketServerNanomunchers.jar <input> <numOfMunchers> <time> <port>");
         } else {
-            NanomunchersSocketServer server;
-            String inputFile = args[0];
-            int numOfMunchers = Integer.parseInt(args[1]);
-            int time1 = Integer.parseInt(args[2]);
-            int port1 = Integer.parseInt(args[3]);
-            if (args.length > 6) {
-                int time2 = Integer.parseInt(args[4]);
-                int port2 = Integer.parseInt(args[5]);
-                int delay = Integer.parseInt(args[6]);
-                int portViz = Integer.parseInt(args[7]);
-                server = new NanomunchersSocketServer(inputFile, numOfMunchers, time1, port1, time2, port2, delay, portViz);
-            } else if (args.length > 4) {
-                int time2 = Integer.parseInt(args[4]);
-                int port2 = Integer.parseInt(args[5]);
-                server = new NanomunchersSocketServer(inputFile, numOfMunchers, time1, port1, time2, port2);
-            } else {
-                server = new NanomunchersSocketServer(inputFile, numOfMunchers, time1, port1);
+            while (true) {
+                NanomunchersSocketServer server;
+                String inputFile = args[0];
+                int numOfMunchers = Integer.parseInt(args[1]);
+                int time1 = Integer.parseInt(args[2]);
+                int port1 = Integer.parseInt(args[3]);
+                if (args.length > 6) {
+                    int time2 = Integer.parseInt(args[4]);
+                    int port2 = Integer.parseInt(args[5]);
+                    int delay = Integer.parseInt(args[6]);
+                    int portViz = Integer.parseInt(args[7]);
+                    server =
+                    new NanomunchersSocketServer(inputFile, numOfMunchers, time1, port1, time2, port2, delay,
+                                                 portViz);
+                } else if (args.length > 4) {
+                    int time2 = Integer.parseInt(args[4]);
+                    int port2 = Integer.parseInt(args[5]);
+                    server = new NanomunchersSocketServer(inputFile, numOfMunchers, time1, port1, time2, port2);
+                } else {
+                    server = new NanomunchersSocketServer(inputFile, numOfMunchers, time1, port1);
+                }
+                server.startGame();
             }
-            server.startGame();
         }
     }
 }
@@ -401,22 +375,17 @@ class Player extends Thread {
             if (muncher != null) {
                 removes.add(muncher.position);
                 System.out.println("     - Muncher at node " + muncher.position + " ("
-                                 + game.locations.get(muncher.position)[0] + ", "
-                                 + game.locations.get(muncher.position)[1] + ")/" + muncher.program
-                                 + "/" + (muncher.programCounter+1)%4 + " tries to move");
+                                   + game.locations.get(muncher.position)[0] + ", "
+                                   + game.locations.get(muncher.position)[1] + ")/" + muncher.program
+                                   + "/" + (muncher.programCounter + 1) % 4 + " tries to move");
                 String program = muncher.program;
                 int programCounter = muncher.programCounter;
                 Map<Character, Integer> edges = game.edges.get(muncher.position);
-//                System.out.print("neighbors: ");
                 if (edges == null) {
                     game.vizUpdate.put(playerid + "," + muncher.position + ",x", "x");
                     System.out.println("       Nowhere to go, starved at node " + muncher.position);
                     continue;
                 }
-//                for (Entry<Character, Integer> entry : edges.entrySet()) {
-//                    System.out.print(entry.getKey() + " " + entry.getValue() + ", ");
-//                }
-//                System.out.println();
                 int count = 0;
                 do {
                     programCounter++;
@@ -426,7 +395,7 @@ class Player extends Thread {
                         int id = edges.get(direction);
                         if (moves.containsKey(id)) {
                             System.out.println("       Moved " + direction + " to node " + id + " ("
-                                             + game.locations.get(id)[0] + ", " + game.locations.get(id)[1] + ")");
+                                               + game.locations.get(id)[0] + ", " + game.locations.get(id)[1] + ")");
                             char prevDirection = moves.get(id).program.charAt(moves.get(id).programCounter);
                             if (game.isLarger(prevDirection, direction)) {
                                 game.vizUpdate.put(playerid + "," + muncher.position + "," + direction, "x");
@@ -443,9 +412,9 @@ class Player extends Thread {
                         muncher.programCounter = programCounter;
                         game.newlyMunched.add(id);
                         game.vizUpdate.put(playerid + "," + id + "," + program.charAt(programCounter),
-                                           program.substring((programCounter+1)%4));
+                                           program.substring((programCounter + 1) % 4));
                         System.out.println("       Moved " + direction + " to node " + id + " ("
-                                         + game.locations.get(id)[0] + ", " + game.locations.get(id)[1] + ")");
+                                           + game.locations.get(id)[0] + ", " + game.locations.get(id)[1] + ")");
                         score++;
                         break;
                     }
@@ -476,15 +445,13 @@ class Player extends Thread {
             out.println(0 + "");
         }
         out.println("<EOM>");
-        if (isGameOver) {
-            System.out.println("game is over");
+        if (strs.size() == 0) {
             try {
                 close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        } else if (gameOver())
-            isGameOver = true;
+        }
     }
     
     public String receive() throws IOException {
@@ -569,7 +536,7 @@ class Player extends Thread {
         sb.append(idToMunchers.size() + ":");
         for (Entry<Integer, Nanomuncher> entry : idToMunchers.entrySet()) {
             Nanomuncher muncher = entry.getValue();
-            sb.append(muncher.position + "/" + muncher.program + "/" + (muncher.programCounter+1)%4 + ",");
+            sb.append(muncher.position + "/" + muncher.program + "/" + (muncher.programCounter + 1) % 4 + ",");
         }
         status.add(sb.toString().substring(0, sb.length() - 1));
         // opponent's munchers
@@ -619,6 +586,7 @@ class Player extends Thread {
         in.close();
         out.close();
         socket.close();
+        server.close();
     }
     
     @Override
@@ -679,7 +647,8 @@ class Visualizer {
     
     public void update() {
         Map<String, String> vizUpdate = game.vizUpdate;
-        if (vizUpdate.size() == 0 ) return;
+        if (vizUpdate.size() == 0)
+            return;
         for (Entry<String, String> entry : vizUpdate.entrySet()) {
             String str = entry.getKey() + "," + entry.getValue();
             out.println(str);
@@ -717,6 +686,7 @@ class Visualizer {
         in.close();
         out.close();
         socket.close();
+        server.close();
     }
 }
 

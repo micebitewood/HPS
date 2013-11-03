@@ -38,16 +38,16 @@ public class NanomunchersVisualizer extends JApplet {
     static PrintWriter out;
     static BufferedReader in;
     
-    private Set<Integer> edges = new HashSet<Integer>();
-    private Map<Integer, Integer> locs = new HashMap<Integer, Integer>();
+    private Set<Integer> edges;
+    private Map<Integer, Integer> locs;
     
-    private Set<Integer> nodes = new HashSet<Integer>();
-    private int[] board = new int[SIZE_X * SIZE_Y];
+    private Set<Integer> nodes;
+    private int[] board;
     
-    private String[] teamNames = new String[2];
-    private int[] scores = new int[2];
+    private String[] teamNames;
+    private int[] scores;
     
-    private List<VizData> vizUpdate = new ArrayList<VizData>();
+    private List<VizData> vizUpdate;
     private int delay = 400;
     
     private NanomunchersCanvas m_canvas;
@@ -113,56 +113,97 @@ public class NanomunchersVisualizer extends JApplet {
     }
     
     public void init() {
+        doInit();
+    }
+    
+    private void doInit() {
+        edges = new HashSet<Integer>();
+        locs = new HashMap<Integer, Integer>();
+        nodes = new HashSet<Integer>();
+        board = new int[SIZE_X * SIZE_Y];
+        teamNames = new String[2];
+        scores = new int[2];
+        vizUpdate = new ArrayList<VizData>();
         int port = PORT;
-        try {
-            client = new Socket("127.0.0.1", port);
-            out = new PrintWriter(client.getOutputStream(), true);
-            in = new BufferedReader(new InputStreamReader(client.getInputStream()));
-        } catch (IOException e) {
-            System.out.println("port is unavailable");
+        boolean isDone = false;
+        while (!isDone) {
+            try {
+                client = new Socket("127.0.0.1", port);
+                out = new PrintWriter(client.getOutputStream(), true);
+                in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+                isDone = true;
+            } catch (IOException e) {
+                System.out.println("port is unavailable, waiting 5 seconds");
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e1) {
+                    e1.printStackTrace();
+                }
+            }
         }
         m_canvas = new NanomunchersCanvas(APPLET_WIDTH, APPLET_HEIGHT);
         m_canvas.setBackground(Color.BLACK);
     }
     
-    public void start() {
+    public void stop() {
+        doStop();
+    }
+    
+    private void doStop() {
         try {
-            parseData(receive());
-            send("DONE");
+            client.close();
+            out.close();
+            in.close();
         } catch (IOException e) {
+            e.printStackTrace();
         }
-        
-        // Create layout
-        setLayout(null);
-        setSize(APPLET_WIDTH, APPLET_HEIGHT);
-        
-        add(m_canvas);
-        m_canvas.setBounds(0, 0, APPLET_WIDTH, APPLET_HEIGHT);
-        
-        initCanvas();
-        
-        try {
-            while (parseStat(receive())) {
-                boolean isNewMuncher = false;
-                for (VizData update : vizUpdate) {
-                    if (update.dir == 'n') {
-                        isNewMuncher = true;
-                        break;
-                    }
-                }
-                for (int i=(isNewMuncher?0:2); i<4; ++i) {
-                    updateCanvas(i);
-                    Thread.sleep(delay);
-                }
-                System.out.println(String.format("[SCORES] %s: %d, %s: %d", teamNames[0], scores[0], teamNames[1], scores[1]));
+        remove(m_canvas);
+    }
+    
+    public void start() {
+        while (true) {
+            try {
+                parseData(receive());
                 send("DONE");
+            } catch (IOException e) {
             }
-            vizUpdate.clear();
-            updateCanvas(2);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+            
+            // Create layout
+            setLayout(null);
+            setSize(APPLET_WIDTH, APPLET_HEIGHT);
+            
+            add(m_canvas);
+            m_canvas.setBounds(0, 0, APPLET_WIDTH, APPLET_HEIGHT);
+            
+            initCanvas();
+            
+            try {
+                while (parseStat(receive())) {
+                    boolean isNewMuncher = false;
+                    for (VizData update : vizUpdate) {
+                        if (update.dir == 'n') {
+                            isNewMuncher = true;
+                            break;
+                        }
+                    }
+                    for (int i=(isNewMuncher?0:2); i<4; ++i) {
+                        updateCanvas(i);
+                        Thread.sleep(delay);
+                    }
+                    System.out.println(String.format("[SCORES] %s: %d, %s: %d", teamNames[0], scores[0], teamNames[1], scores[1]));
+                    send("DONE");
+                }
+                vizUpdate.clear();
+                updateCanvas(2);
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            
+            System.out.println("Game is over");
+            doStop();
+            doInit();
         }
     }
     
@@ -174,17 +215,12 @@ public class NanomunchersVisualizer extends JApplet {
             sb.append(temp + "\n");
         }
         sb.deleteCharAt(sb.length() - 1);
-//        System.out.println("receive:");
-//        System.out.println(sb.toString());
         return sb.toString();
     }
     
     public void send(String str) {
-//        System.out.println("send:");
         out.println(str);
-//        System.out.println(str);
         out.println("<EOM>");
-//        System.out.println("<EOM>");
     }
     
     private void initCanvas() {
