@@ -23,7 +23,7 @@ public class NanomunchersSocketServer {
     Map<Integer, Map<Character, Integer>> edges;
     Set<Integer> munched;
     Set<Integer> newlyMunched;
-    Map<Integer, Player> newMunchers;
+    Map<Integer, Nanomuncher> newMunchers;
     Set<Integer> dups;
     Map<String, String> vizUpdate;
     
@@ -41,7 +41,7 @@ public class NanomunchersSocketServer {
         munched = new HashSet<Integer>();
         newlyMunched = new HashSet<Integer>();
         dups = new HashSet<Integer>();
-        newMunchers = new HashMap<Integer, Player>();
+        newMunchers = new HashMap<Integer, Nanomuncher>();
         edges = new HashMap<Integer, Map<Character, Integer>>();
         vizUpdate = new HashMap<String, String>();
         random = new Random(System.currentTimeMillis());
@@ -146,6 +146,7 @@ public class NanomunchersSocketServer {
                                + " remaining nodes");
             player1.getStatus();
             player2.getStatus();
+            newMunchers.clear();
             newlyMunched.clear();
             if (player1.currMuncherNum < player1.totalMunchers && !player1.isDone) {
                 System.out.println("  ** Receiving moves from " + player1.teamName);
@@ -221,7 +222,7 @@ public class NanomunchersSocketServer {
                 System.out.println("     - Resolving confliction at node " + id);
                 if (random.nextBoolean() == true) {
                     System.out.println("       " + player1.teamName + "'s muncher wins and lives on");
-                    newMunchers.put(id, player1);
+                    newMunchers.put(id, player1.idToMunchers.get(id));
                     vizUpdate.put("0," + id + ",n", player1.idToMunchers.get(id).program);
                     vizUpdate.remove("1," + id + ",n");
                     vizUpdate.put("1," + id + ",c", "x");
@@ -229,7 +230,7 @@ public class NanomunchersSocketServer {
                     player2.score--;
                 } else {
                     System.out.println("       " + player2.teamName + "'s muncher wins and lives on");
-                    newMunchers.put(id, player2);
+                    newMunchers.put(id, player2.idToMunchers.get(id));
                     vizUpdate.put("1," + id + ",n", player2.idToMunchers.get(id).program);
                     vizUpdate.remove("0," + id + ",n");
                     vizUpdate.put("0," + id + ",c", "x");
@@ -407,10 +408,11 @@ class Player extends Thread {
                                 score--;
                             }
                         }
+                        // TODO
                         moves.put(id, muncher);
+                        game.newlyMunched.add(id);
                         muncher.position = id;
                         muncher.programCounter = programCounter;
-                        game.newlyMunched.add(id);
                         game.vizUpdate.put(playerid + "," + id + "," + program.charAt(programCounter),
                                            program.substring((programCounter + 1) % 4));
                         System.out.println("       Moved " + direction + " to node " + id + " ("
@@ -423,6 +425,7 @@ class Player extends Thread {
                 if (count == 4) {
                     game.vizUpdate.put(playerid + "," + muncher.position + ",x", "x");
                     System.out.println("       Starved at node " + muncher.position);
+                    muncher.programCounter = -1;
                 }
             }
         }
@@ -497,9 +500,10 @@ class Player extends Thread {
                     System.out.println("     - New muncher deployed at node " + id + " ("
                                        + game.locations.get(id)[0] + ", "
                                        + game.locations.get(id)[1] + ")" + "/" + idAndPrograms.get(id) + "/0");
-                    idToMunchers.put(id, new Nanomuncher(idAndPrograms.get(id), id));
+                    Nanomuncher muncher = new Nanomuncher(idAndPrograms.get(id), id);
+                    idToMunchers.put(id, muncher);
                     game.newlyMunched.add(id);
-                    game.newMunchers.put(id, this);
+                    game.newMunchers.put(id, muncher);
                     game.vizUpdate.put(playerid + "," + id + ",n", idAndPrograms.get(id));
                     score++;
                 } else {
@@ -525,10 +529,22 @@ class Player extends Thread {
         }
         // newly munched nodes
         StringBuffer sb = new StringBuffer();
+        Map<Integer, Nanomuncher> newMunchers = game.newMunchers;
+        Set<Integer> used = new HashSet<Integer>();
         Set<Integer> newlyMunched = game.newlyMunched;
         sb.append(newlyMunched.size() + ":");
+        for (Entry<Integer, Nanomuncher> entry : newMunchers.entrySet()) {
+            used.add(entry.getKey());
+            sb.append(entry.getKey());
+            if (entry.getValue().programCounter != -1) {
+                sb.append("/" + entry.getValue().position);
+                used.add(entry.getValue().position);
+            }
+            sb.append(",");
+        }
         for (int id : newlyMunched) {
-            sb.append(id + ",");
+            if (!used.contains(id))
+                sb.append(id + ",");
         }
         status.add(sb.toString().substring(0, sb.length() - 1));
         // player's munchers
@@ -552,7 +568,8 @@ class Player extends Thread {
         status.add(sb.toString());
         // remaining munchers
         sb = new StringBuffer();
-        sb.append((totalMunchers - currMuncherNum) + "," + timeRemaining);
+        sb.append((totalMunchers - currMuncherNum) + "," + (opponent.totalMunchers - opponent.currMuncherNum) + ","
+                  + timeRemaining);
         status.add(sb.toString());
     }
     
@@ -697,7 +714,7 @@ class Nanomuncher {
     public Nanomuncher(String program, int position) {
         this.program = program;
         this.position = position;
-        this.programCounter = 3;
+        this.programCounter = -1;
     }
 }
 

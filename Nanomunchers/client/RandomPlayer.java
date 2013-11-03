@@ -30,6 +30,7 @@ public class RandomPlayer {
     private int myScore;
     private int opponentScore;
     private int remainingMunchers;
+    private int opponentRemainingMunchers;
     private long remainingTime;
     
     private void parseData(String data) {
@@ -89,7 +90,7 @@ public class RandomPlayer {
         String[] stats = str.split("\n");
         String[] munched = stats[0].split(":");
         if (Integer.parseInt(munched[0]) > 0) {
-            String[] nodes = munched[1].split(",");
+            String[] nodes = munched[1].split("[,/]");
             for (int i = 0; i < Integer.parseInt(munched[0]); i++) {
                 remainingNodes.remove(Integer.parseInt(nodes[i]));
             }
@@ -117,7 +118,8 @@ public class RandomPlayer {
         opponentScore = Integer.parseInt(scores[1]);
         String[] remainingInfo = stats[4].split(",");
         remainingMunchers = Integer.parseInt(remainingInfo[0]);
-        remainingTime = Long.parseLong(remainingInfo[1]);
+        opponentRemainingMunchers = Integer.parseInt(remainingInfo[1]);
+        remainingTime = Long.parseLong(remainingInfo[2]);
         return true;
     }
     
