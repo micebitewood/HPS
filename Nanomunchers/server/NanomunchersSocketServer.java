@@ -141,7 +141,7 @@ public class NanomunchersSocketServer {
     public void startGame() throws IOException {
         int count = 0;
         boolean isOver = false;
-        while (!player1.isGameOver && !player2.isGameOver && !isOver) {
+        while (!isOver) {
             System.out.println("========== Starting round " + count + " with " + (locations.size() - munched.size())
                                + " remaining nodes");
             player1.getStatus();
