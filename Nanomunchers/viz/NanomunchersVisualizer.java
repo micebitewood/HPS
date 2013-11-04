@@ -124,7 +124,8 @@ public class NanomunchersVisualizer extends JApplet {
         teamNames = new String[2];
         scores = new int[2];
         vizUpdate = new ArrayList<VizData>();
-        int port = PORT;
+        String arg = this.getParameter("port");
+        int port = (arg == null) ? PORT : Integer.parseInt(arg);
         boolean isDone = false;
         while (!isDone) {
             try {
