@@ -208,13 +208,13 @@ public class NanomunchersSocketServer {
                                    + dir1 + ", " + dir2);
                 if (isLarger(dir1, dir2)) {
                     vizUpdate.remove("1," + id + "," + dir2);
-                    vizUpdate.put("1," + id + ",c", "x");
+                    vizUpdate.put("1," + id + "," + dir2, "x");
                     System.out.println("       " + player1.teamName + "'s muncher wins and lives on");
                     player2.idToMunchers.remove(id);
                     player2.score--;
                 } else {
                     vizUpdate.remove("0," + id + "," + dir1);
-                    vizUpdate.put("0," + id + ",c", "x");
+                    vizUpdate.put("0," + id + "," + dir1, "x");
                     System.out.println("       " + player2.teamName + "'s muncher wins and lives on");
                     player1.idToMunchers.remove(id);
                     player1.score--;
@@ -411,6 +411,7 @@ class Player extends Thread {
                                 break;
                             } else {
                                 game.vizUpdate.remove(playerid + "," + id + "," + prevDirection);
+                                game.vizUpdate.put(playerid + "," + id + "," + prevDirection, "x");
                                 System.out.println("       Confliction detected at " + id + ", this muncher lives on");
                                 score--;
                             }
@@ -725,6 +726,7 @@ class Nanomuncher {
     }
 }
 
+
 class Move extends Thread {
     Player player;
     public Map<Integer, String> moves;
@@ -785,3 +787,4 @@ class Move extends Thread {
         moves = new HashMap<Integer, String>();
     }
 }
+
