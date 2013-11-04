@@ -296,7 +296,7 @@ public class NanomunchersVisualizer extends JApplet {
         }
         
         for (VizData update : vizUpdate) {
-            if (update.dir == 'c' || update.dir != 'x' && update.nextDir == 'x') continue;
+            if (update.dir == 'c') continue;
             if (scene / 2 == 0 && update.dir != 'n' || scene / 2 == 1 && update.dir == 'n') continue;
             
             if (update.nextDir != 'x') {
@@ -340,23 +340,66 @@ public class NanomunchersVisualizer extends JApplet {
                     g.setColor(PLAYER_COLOR[update.player]);
                     g.fillOval(x * CELL_SIZE + 13, y * CELL_SIZE + 13, 13, 13);
                 }
+            } else if (update.dir != 'c') {
+                int loc = locs.get(update.node);
+                int x = loc / SIZE_Y;
+                int y = loc % SIZE_Y;
+                x -= (update.dir == 'l' ? -1 : update.dir == 'r' ? 1 : 0);
+                y -= (update.dir == 'u' ? -1 : update.dir == 'd' ? 1 : 0);
+                
+                if (scene % 2 == 0) {
+                    g.setColor(PLAYER_COLOR[update.player]);
+                    g.fillOval(x * CELL_SIZE + 10, y * CELL_SIZE + 10, 19, 19);
+                } else {
+                    g.setColor(Color.BLACK);
+                    g.fillOval(x * CELL_SIZE + 10, y * CELL_SIZE + 10, 19, 19);
+                    g.setColor(PLAYER_COLOR[update.player]);
+                    g.fillOval(x * CELL_SIZE + 13, y * CELL_SIZE + 13, 13, 13);
+                }
             }
         }
         
-        updateText();
+        updateText(scene);
         
         m_canvas.repaint();
     }
     
-    private void updateText() {
+    private void updateText(int scene) {
         Graphics g = m_canvas.getOffscreenGraphics();
         
         g.setColor(Color.LIGHT_GRAY);
         g.fillRect(BOARD_WIDTH, 0, TEXT_WIDTH, BOARD_HEIGHT);
         
-        String str = String.format("[SCORES]\n\n%s: %d\n%s: %d", teamNames[0], scores[0], teamNames[1], scores[1]);
+        String str = String.format("[SCORES]\n\n%s: %d\n%s: %d\n\n\n", teamNames[0], scores[0], teamNames[1], scores[1]);
+        if (scene < 2) {
+            str += "New munchers are landing\n\n\n";
+        } else {
+            str += "Munchers are munching on\n\n\n";
+        }
+        
+        int[] numNewMunchers = getNumNewMunchers(scene);
+        str += String.format("%s:\n%d new munchers\n%d live munchers\n\n\n", teamNames[0], numNewMunchers[0], numNewMunchers[2]);
+        str += String.format("%s:\n%d new munchers\n%d live munchers\n\n\n", teamNames[1], numNewMunchers[1], numNewMunchers[3]);
+        
         g.setColor(Color.BLACK);
         drawMultilineText(g, str, BOARD_WIDTH + 10, 20);
+    }
+    
+    private int[] getNumNewMunchers(int scene) {
+        int[] numNewMunchers = new int[4];
+        for (VizData update : vizUpdate) {
+            if (update.dir == 'n') {
+                numNewMunchers[update.player]++;
+            }
+            if (scene < 2) {
+                if (update.dir != 'n')
+                    numNewMunchers[update.player+2]++;
+            } else {
+                if (update.dir != 'n' && update.nextDir != 'x')
+                    numNewMunchers[update.player+2]++;
+            }
+        }
+        return numNewMunchers;
     }
     
     private void drawMultilineText(Graphics g, String str, int x, int y) {
