@@ -474,7 +474,7 @@ class Player extends Thread {
         return sb.toString();
     }
     
-    public void getNextMove() {
+    public void getNextMove() throws IOException {
         if (isDone) {
             send(new ArrayList<String>());
             return;
@@ -493,6 +493,7 @@ class Player extends Thread {
         timeRemaining -= System.currentTimeMillis() - startTime;
         if (timeRemaining <= 0) {
             isDone = true;
+            close();
             System.out.println("  ** " + teamName + " timed out");
             return;
         }
@@ -726,7 +727,6 @@ class Nanomuncher {
     }
 }
 
-
 class Move extends Thread {
     Player player;
     public Map<Integer, String> moves;
@@ -779,6 +779,9 @@ class Move extends Thread {
         } catch (IOException e) {
             moves = null;
             System.out.println("************ INVALID FORMAT! ************");
+        } catch (NumberFormatException e) {
+            moves = null;
+            System.out.println("************ INVALID FORMAT! ************");
         }
     }
     
@@ -787,4 +790,3 @@ class Move extends Thread {
         moves = new HashMap<Integer, String>();
     }
 }
-
