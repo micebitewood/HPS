@@ -6,6 +6,7 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -181,8 +182,7 @@ public class NanomunchersSocketServer {
             if (hasViz)
                 viz.update();
             count++;
-            if ((newlyMunched.isEmpty() && player2.totalMunchers != 0)
-                || (player1.totalMunchers == player1.currMuncherNum && newlyMunched.isEmpty() && player2.totalMunchers == 0)) {
+            if (newlyMunched.isEmpty()) {
                 isOver = true;
                 if (!player1.isDone)
                     player1.close();
@@ -473,7 +473,7 @@ class Player extends Thread {
         return sb.toString();
     }
     
-    public void getNextMove() {
+    public void getNextMove() throws IOException {
         if (isDone) {
             send(new ArrayList<String>());
             return;
@@ -492,6 +492,7 @@ class Player extends Thread {
         timeRemaining -= System.currentTimeMillis() - startTime;
         if (timeRemaining <= 0) {
             isDone = true;
+            close();
             System.out.println("  ** " + teamName + " timed out");
             return;
         }
@@ -738,12 +739,34 @@ class Move extends Thread {
             if (num > 0) {
                 String[] moveStrs = specs[1].split(",");
                 if (num != moveStrs.length) {
-                    System.out.println("invalid number");
+                    System.out.println("************ INVALID NUMBER! ************");
                     moves = null;
                 } else {
                     for (int i = 0; i < num; i++) {
                         String[] idAndProgram = moveStrs[i].split("/");
+                        boolean[] chars = new boolean[4];
+                        Arrays.fill(chars, false);
+                        for (char c : idAndProgram[1].toCharArray()) {
+                            if (c == 'l' && !chars[0])
+                                chars[0] = true;
+                            else if (c == 'u' && !chars[1])
+                                chars[1] = true;
+                            else if (c == 'r' && !chars[2])
+                                chars[2] = true;
+                            else if (c == 'd' && !chars[3])
+                                chars[3] = true;
+                            else {
+                                System.out.println("************ INVALID PROGRAM! ************");
+                                moves = null;
+                                return;
+                            }
+                        }
                         int id = Integer.parseInt(idAndProgram[0]);
+                        if (id < 0 || id >= player.game.locations.size()) {
+                            System.out.println("************ INVALID POSITION! **********");
+                            moves = null;
+                            return;
+                        }
                         if (moves.containsKey(id)) {
                             moves = null;
                             return;
@@ -753,7 +776,11 @@ class Move extends Thread {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            moves = null;
+            System.out.println("************ INVALID FORMAT! ************");
+        } catch (NumberFormatException e) {
+            moves = null;
+            System.out.println("************ INVALID FORMAT! ************");
         }
     }
     
