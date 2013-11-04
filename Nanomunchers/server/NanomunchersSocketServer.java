@@ -182,8 +182,7 @@ public class NanomunchersSocketServer {
             if (hasViz)
                 viz.update();
             count++;
-            if ((newlyMunched.isEmpty() && player2.totalMunchers != 0)
-                || (player1.totalMunchers == player1.currMuncherNum && newlyMunched.isEmpty() && player2.totalMunchers == 0)) {
+            if (newlyMunched.isEmpty()) {
                 isOver = true;
                 if (!player1.isDone)
                     player1.close();
