@@ -132,8 +132,9 @@ public class NanomunchersVisualizer extends JApplet {
                 client = new Socket("127.0.0.1", port);
                 out = new PrintWriter(client.getOutputStream(), true);
                 in = new BufferedReader(new InputStreamReader(client.getInputStream()));
+                parseData(receive());
                 isDone = true;
-            } catch (IOException e) {
+            } catch (IOException | InterruptedException | NullPointerException e) {
                 System.out.println("port is unavailable, waiting 5 seconds");
                 try {
                     Thread.sleep(5000);
@@ -163,11 +164,8 @@ public class NanomunchersVisualizer extends JApplet {
     
     public void start() {
         while (true) {
-            try {
-                parseData(receive());
-                send("DONE");
-            } catch (IOException e) {
-            }
+            // Let the server know we are ready
+            send("DONE");
             
             // Create layout
             setLayout(null);
@@ -208,7 +206,7 @@ public class NanomunchersVisualizer extends JApplet {
         }
     }
     
-    public String receive() throws IOException {
+    public String receive() throws IOException, InterruptedException, NullPointerException {
         StringBuffer sb = new StringBuffer();
         String temp;
         
