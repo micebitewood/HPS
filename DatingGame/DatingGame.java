@@ -162,12 +162,12 @@ class Person {
 }
 
 class Matchmaker {
-    Candidate[] candidates;
+    List<Candidate> candidates;
     double[] lastFeatures;
     int numFeatures;
     
     public Matchmaker(String[] initString, int numFeatures) {
-        candidates = new Candidate[40];
+        candidates = new ArrayList<Candidate>();
         lastFeatures = new double[numFeatures];
         this.numFeatures = numFeatures;
         for (int i = 0; i < 20; i++) {
@@ -177,7 +177,7 @@ class Matchmaker {
                 features[j] = Double.parseDouble(candidatesAndScores[j]);
             }
             double score = Double.parseDouble(candidatesAndScores[numFeatures]);
-            candidates[i] = new Candidate(score, features);
+            candidates.add(new Candidate(score, features));
         }
     }
     
@@ -206,8 +206,8 @@ class Matchmaker {
         int lastInd = lines.length - 1;
         String[] candidatesAndScores = lines[lastInd].split("\\s+");
         double score = Double.parseDouble(candidatesAndScores[numFeatures]);
-        candidates[lastInd] = new Candidate(score, lastFeatures);
-        System.out.println("last candidates: " + candidates[lastInd].toString());
+        candidates.add(new Candidate(score, lastFeatures));
+        System.out.println("last candidates: " + candidates.get(candidates.size() - 1).toString());
         return readData;
     }
 }
