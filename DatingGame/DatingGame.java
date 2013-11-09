@@ -165,10 +165,12 @@ class Matchmaker {
     List<Candidate> candidates;
     double[] lastFeatures;
     int numFeatures;
+    Random random;
     
     public Matchmaker(String[] initString, int numFeatures) {
         candidates = new ArrayList<Candidate>();
         lastFeatures = new double[numFeatures];
+        random = new Random(System.currentTimeMillis());
         this.numFeatures = numFeatures;
         for (int i = 0; i < 20; i++) {
             String[] candidatesAndScores = initString[i + 1].split("\\s+");
@@ -179,7 +181,6 @@ class Matchmaker {
             double score = Double.parseDouble(candidatesAndScores[numFeatures]);
             candidates.add(new Candidate(score, features));
         }
-        Collections.sort(candidates);
     }
     
     public String getNextCandidates() {
@@ -194,6 +195,8 @@ class Matchmaker {
     }
     
     private void naiveStrategy() {
+        Collections.sort(candidates);
+        Candidate bestCandidate = candidates.get(candidates.size() - 1);
         for (int i = 0; i < numFeatures; i++) {
             double firstPart = 0;
             double secondPart = 0;
@@ -206,9 +209,15 @@ class Matchmaker {
             }
             System.out.println(i + ": " + firstPart + " " + secondPart);
             if (firstPart < secondPart) {
-                lastFeatures[i] = 1;
+                if (random.nextBoolean() || random.nextBoolean() || random.nextBoolean())
+                    lastFeatures[i] = 1;
+                else
+                    lastFeatures[i] = bestCandidate.features[i];
             } else {
-                lastFeatures[i] = 0;
+                if (random.nextBoolean())
+                    lastFeatures[i] = random.nextDouble();
+                else
+                    lastFeatures[i] = 0;
             }
         }
     }
@@ -230,7 +239,6 @@ class Matchmaker {
         double score = Double.parseDouble(candidatesAndScores[numFeatures]);
         candidates.add(new Candidate(score, lastFeatures));
         System.out.println("last candidates: " + candidates.get(candidates.size() - 1).toString());
-        Collections.sort(candidates);
         return readData;
     }
 }
