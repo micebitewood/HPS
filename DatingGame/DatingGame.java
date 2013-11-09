@@ -179,16 +179,38 @@ class Matchmaker {
             double score = Double.parseDouble(candidatesAndScores[numFeatures]);
             candidates.add(new Candidate(score, features));
         }
+        Collections.sort(candidates);
     }
     
     public String getNextCandidates() {
         StringBuilder sb = new StringBuilder();
         // TODO implement other strategy
-        getRandomCandidates();
+        // getRandomCandidates();
+        naiveStrategy();
         for (int i = 0; i < numFeatures; i++) {
             sb.append(lastFeatures[i] + " ");
         }
         return sb.toString().trim();
+    }
+    
+    private void naiveStrategy() {
+        for (int i = 0; i < numFeatures; i++) {
+            double firstPart = 0;
+            double secondPart = 0;
+            for (int j = 0; j < candidates.size(); j++) {
+                Candidate candidate = candidates.get(j);
+                if (j < candidates.size() / 2 + 1)
+                    firstPart += candidate.features[i];
+                else
+                    secondPart += candidate.features[i];
+            }
+            System.out.println(i + ": " + firstPart + " " + secondPart);
+            if (firstPart < secondPart) {
+                lastFeatures[i] = 1;
+            } else {
+                lastFeatures[i] = 0;
+            }
+        }
     }
     
     private void getRandomCandidates() {
@@ -208,11 +230,12 @@ class Matchmaker {
         double score = Double.parseDouble(candidatesAndScores[numFeatures]);
         candidates.add(new Candidate(score, lastFeatures));
         System.out.println("last candidates: " + candidates.get(candidates.size() - 1).toString());
+        Collections.sort(candidates);
         return readData;
     }
 }
 
-class Candidate {
+class Candidate implements Comparable<Candidate> {
     double score;
     double[] features;
     
@@ -228,5 +251,14 @@ class Candidate {
         }
         sb.append(score);
         return sb.toString();
+    }
+    
+    @Override
+    public int compareTo(Candidate candidate) {
+        if (score - candidate.score > 0)
+            return 1;
+        else if (score - candidate.score == 0)
+            return 0;
+        return -1;
     }
 }
