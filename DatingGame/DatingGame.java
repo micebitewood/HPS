@@ -162,38 +162,71 @@ class Person {
 }
 
 class Matchmaker {
-    double[][] candidates;
-    double[] scores;
+    Candidate[] candidates;
+    double[] lastFeatures;
     int numFeatures;
     
     public Matchmaker(String[] initString, int numFeatures) {
-        candidates = new double[40][numFeatures];
-        scores = new double[40];
+        candidates = new Candidate[40];
+        lastFeatures = new double[numFeatures];
         this.numFeatures = numFeatures;
         for (int i = 0; i < 20; i++) {
             String[] candidatesAndScores = initString[i + 1].split("\\s+");
+            double[] features = new double[numFeatures];
             for (int j = 0; j < numFeatures; j++) {
-                candidates[i][j] = Double.parseDouble(candidatesAndScores[j]);
+                features[j] = Double.parseDouble(candidatesAndScores[j]);
             }
-            scores[i] = Double.parseDouble(candidatesAndScores[numFeatures]);
+            double score = Double.parseDouble(candidatesAndScores[numFeatures]);
+            candidates[i] = new Candidate(score, features);
         }
     }
     
     public String getNextCandidates() {
         StringBuilder sb = new StringBuilder();
-        Random random = new Random(System.currentTimeMillis());
+        // TODO implement other strategy
+        getRandomCandidates();
         for (int i = 0; i < numFeatures; i++) {
-            sb.append(random.nextDouble() + " ");
+            sb.append(lastFeatures[i] + " ");
         }
         return sb.toString().trim();
     }
     
+    private void getRandomCandidates() {
+        Random random = new Random(System.currentTimeMillis());
+        for (int i = 0; i < numFeatures; i++) {
+            lastFeatures[i] = random.nextDouble();
+        }
+    }
+    
     public String getData(String readData) {
+        if (readData.equals("end")) {
+            return readData;
+        }
         String[] lines = readData.split("\n");
         int lastInd = lines.length - 1;
         String[] candidatesAndScores = lines[lastInd].split("\\s+");
-        scores[lastInd] = Double.parseDouble(candidatesAndScores[numFeatures]);
-        System.out.println("last score: " + scores[lastInd]);
+        double score = Double.parseDouble(candidatesAndScores[numFeatures]);
+        candidates[lastInd] = new Candidate(score, lastFeatures);
+        System.out.println("last candidates: " + candidates[lastInd].toString());
         return readData;
+    }
+}
+
+class Candidate {
+    double score;
+    double[] features;
+    
+    public Candidate(double score, double[] features) {
+        this.score = score;
+        this.features = features;
+    }
+    
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < features.length; i++) {
+            sb.append(features[i] + " ");
+        }
+        sb.append(score);
+        return sb.toString();
     }
 }
