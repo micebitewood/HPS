@@ -83,7 +83,6 @@ public class DatingGame {
     
     private static void sendSocket(PrintWriter out, String msg) {
         msg += EOM;
-        System.out.println("send: " + msg);
         out.println(msg);
         out.flush();
     }
@@ -166,6 +165,7 @@ class Matchmaker {
     double[] lastFeatures;
     int numFeatures;
     Random random;
+    int round;
     
     public Matchmaker(String[] initString, int numFeatures) {
         candidates = new ArrayList<Candidate>();
@@ -184,14 +184,58 @@ class Matchmaker {
     }
     
     public String getNextCandidates() {
+        if (round == 20)
+            return "";
         StringBuilder sb = new StringBuilder();
         // TODO implement other strategy
         // getRandomCandidates();
-        naiveStrategy();
+        // naiveStrategy();
+        // if (round < 19)
+        // naiveStrategy();
+        // else {
+        if (round < numFeatures) {
+            lastFeatures = new double[numFeatures];
+            lastFeatures[round] = 1;
+        } else
+            correlationCoefficient();
+        // }
+        round++;
         for (int i = 0; i < numFeatures; i++) {
             sb.append(lastFeatures[i] + " ");
         }
         return sb.toString().trim();
+    }
+    
+    private void correlationCoefficient() {
+        double sum = 0;
+        for (Candidate candidate : candidates) {
+            System.out.println(candidate.toString());
+            sum += candidate.score;
+        }
+        sum /= candidates.size();
+        System.out.println("mean Y: " + sum);
+        for (int i = 0; i < numFeatures; i++) {
+            double sumX = 0;
+            System.out.println("feature " + i + ": ");
+            for (Candidate candidate : candidates) {
+                System.out.println(" " + candidate.features[i]);
+                sumX += candidate.features[i];
+            }
+            sumX /= candidates.size();
+            System.out.println("mean: " + sumX);
+            double cov = 0;
+            for (Candidate candidate : candidates) {
+                cov += (candidate.features[i]) * (candidate.score);
+            }
+            System.out.println("feature * score sum: " + cov);
+            System.out.println("n: " + candidates.size() + " meanX: " + sumX + " meanY: " + sum);
+            cov -= candidates.size() * sumX * sum;
+            System.out.println(cov > 0);
+            if (cov > 0)
+                lastFeatures[i] = 1;
+            else
+                lastFeatures[i] = 0;
+        }
     }
     
     private void naiveStrategy() {
@@ -207,7 +251,6 @@ class Matchmaker {
                 else
                     secondPart += candidate.features[i];
             }
-            System.out.println(i + ": " + firstPart + " " + secondPart);
             if (firstPart < secondPart) {
                 if (random.nextBoolean() || random.nextBoolean() || random.nextBoolean())
                     lastFeatures[i] = 1;
@@ -238,7 +281,6 @@ class Matchmaker {
         String[] candidatesAndScores = lines[lastInd].split("\\s+");
         double score = Double.parseDouble(candidatesAndScores[numFeatures]);
         candidates.add(new Candidate(score, lastFeatures));
-        System.out.println("last candidates: " + candidates.get(candidates.size() - 1).toString());
         return readData;
     }
 }
