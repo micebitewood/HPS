@@ -175,7 +175,6 @@ class Matchmaker {
         lastFeatures = new double[numFeatures];
         random = new Random(System.currentTimeMillis());
         this.numFeatures = numFeatures;
-        maxInGroup = -1;
         for (int i = 0; i < 20; i++) {
             String[] candidatesAndScores = initString[i + 1].split("\\s+");
             double[] features = new double[numFeatures];
@@ -198,9 +197,14 @@ class Matchmaker {
         // else {
         Arrays.fill(lastFeatures, 0);
         if (round == 0) {
+            for (Candidate candidate : candidates)
+                System.out.println(candidate.toString());
+            group = new ArrayList<Integer>();
+            initGroup();
             // naiveStrategy();
             Arrays.fill(lastFeatures, 1);
-            sortAndPickNeg();
+            pickNeg();
+            // addPosToGroup();
             correlationCoefficient();
         }
         groupStrategy();
@@ -212,13 +216,34 @@ class Matchmaker {
         return sb.toString().trim();
     }
     
-    private void sortAndPickNeg() {
+    private void initGroup() {
+        for (int i = 0; i < numFeatures; i++) {
+            group.add(-1);
+        }
+    }
+    
+    private void addPosToGroup() {
+        for (Candidate candidate : candidates) {
+            if (candidate.score > 0) {
+                for (int i = 0; i < candidate.features.length; i++) {
+                    double feature = candidate.features[i];
+                    if (feature > 0.9) {
+                        group.set(i, 0);
+                    }
+                }
+            }
+        }
+        
+    }
+    
+    private void pickNeg() {
         for (Candidate candidate : candidates) {
             if (candidate.score < 0) {
                 for (int i = 0; i < candidate.features.length; i++) {
                     double feature = candidate.features[i];
                     if (feature > 0.85) {
                         lastFeatures[i] = 0;
+                        group.set(i, -1);
                     }
                 }
             }
@@ -228,17 +253,14 @@ class Matchmaker {
     private void groupStrategy() {
         if (round == 0) {
             // Init
-            group = new ArrayList<Integer>();
             for (int i = 0; i < numFeatures; ++i) {
-                if (lastFeatures[i] == 1)
-                    group.add(++maxInGroup % 19);
-                else
-                    group.add(-i * 19 / numFeatures);
+                if (lastFeatures[i] == 1 && group.get(i) == -1)
+                    group.set(i, ++maxInGroup % 18 + 1);
             }
             // Collections.shuffle(group, random);
             
             for (int i = 0; i < group.size(); i++) {
-                System.out.println(group.get(i));
+                System.out.println(i + ": " + group.get(i));
             }
         }
         
@@ -251,40 +273,28 @@ class Matchmaker {
         } else {
             // Test each group
             int curGroup = candidates.size() - 20;
-            if (curGroup <= maxInGroup)
-                for (int i = 0; i < numFeatures; ++i)
-                    lastFeatures[i] = (group.get(i) == curGroup) ? 1 : 0;
-            else
-                for (int i = 0; i < numFeatures; ++i)
-                    lastFeatures[i] = (group.get(i) == -curGroup) ? 1 : 0;
+            for (int i = 0; i < numFeatures; ++i)
+                lastFeatures[i] = (group.get(i) == curGroup) ? 1 : 0;
         }
     }
     
     private void correlationCoefficient() {
         double sum = 0;
         for (Candidate candidate : candidates) {
-            System.out.println(candidate.toString());
             sum += candidate.score;
         }
         sum /= candidates.size();
-        System.out.println("mean Y: " + sum);
         for (int i = 0; i < numFeatures; i++) {
             double sumX = 0;
-            System.out.println("feature " + i + ": ");
             for (Candidate candidate : candidates) {
-                System.out.println(" " + candidate.features[i]);
                 sumX += candidate.features[i];
             }
             sumX /= candidates.size();
-            System.out.println("mean: " + sumX);
             double cov = 0;
             for (Candidate candidate : candidates) {
                 cov += (candidate.features[i]) * (candidate.score);
             }
-            System.out.println("feature * score sum: " + cov);
-            System.out.println("n: " + candidates.size() + " meanX: " + sumX + " meanY: " + sum);
             cov -= candidates.size() * sumX * sum;
-            System.out.println(cov > 0);
             if (cov > 0)
                 lastFeatures[i] = 1;
         }
