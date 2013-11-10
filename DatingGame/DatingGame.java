@@ -4,6 +4,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -166,12 +167,15 @@ class Matchmaker {
     int numFeatures;
     Random random;
     int round;
+    List<Integer> group;
+    int maxInGroup;
     
     public Matchmaker(String[] initString, int numFeatures) {
         candidates = new ArrayList<Candidate>();
         lastFeatures = new double[numFeatures];
         random = new Random(System.currentTimeMillis());
         this.numFeatures = numFeatures;
+        maxInGroup = -1;
         for (int i = 0; i < 20; i++) {
             String[] candidatesAndScores = initString[i + 1].split("\\s+");
             double[] features = new double[numFeatures];
@@ -189,21 +193,56 @@ class Matchmaker {
         StringBuilder sb = new StringBuilder();
         // TODO implement other strategy
         // getRandomCandidates();
-        // naiveStrategy();
         // if (round < 19)
         // naiveStrategy();
         // else {
-        if (round < numFeatures) {
-            lastFeatures = new double[numFeatures];
-            lastFeatures[round] = 1;
-        } else
+        Arrays.fill(lastFeatures, 0);
+        if (round == 0) {
+            // naiveStrategy();
             correlationCoefficient();
+        }
+        groupStrategy();
         // }
         round++;
         for (int i = 0; i < numFeatures; i++) {
             sb.append(lastFeatures[i] + " ");
         }
         return sb.toString().trim();
+    }
+    
+    private void groupStrategy() {
+        if (round == 0) {
+            // Init
+            group = new ArrayList<Integer>();
+            for (int i = 0; i < numFeatures; ++i) {
+                if (lastFeatures[i] == 1)
+                    group.add(++maxInGroup % 19);
+                else
+                    group.add(-i * 19 / numFeatures);
+            }
+            // Collections.shuffle(group, random);
+            
+            for (int i = 0; i < group.size(); i++) {
+                System.out.println(group.get(i));
+            }
+        }
+        
+        if (round == 19) {
+            // Final call
+            for (int i = 0; i < numFeatures; ++i) {
+                if (group.get(i) >= 0)
+                    lastFeatures[i] = (candidates.get(20 + group.get(i)).score > 0) ? 1 : 0;
+            }
+        } else {
+            // Test each group
+            int curGroup = candidates.size() - 20;
+            if (curGroup <= maxInGroup)
+                for (int i = 0; i < numFeatures; ++i)
+                    lastFeatures[i] = (group.get(i) == curGroup) ? 1 : 0;
+            else
+                for (int i = 0; i < numFeatures; ++i)
+                    lastFeatures[i] = (group.get(i) == -curGroup) ? 1 : 0;
+        }
     }
     
     private void correlationCoefficient() {
