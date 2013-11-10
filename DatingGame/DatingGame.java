@@ -4,6 +4,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
@@ -83,7 +84,6 @@ public class DatingGame {
     
     private static void sendSocket(PrintWriter out, String msg) {
         msg += EOM;
-        System.out.println("send: " + msg);
         out.println(msg);
         out.flush();
     }
@@ -166,9 +166,9 @@ class Matchmaker {
     double[] lastFeatures;
     int numFeatures;
     Random random;
-    
-    // Group strategy
+    int round;
     List<Integer> group;
+    int maxInGroup;
     
     public Matchmaker(String[] initString, int numFeatures) {
         candidates = new ArrayList<Candidate>();
@@ -187,15 +187,140 @@ class Matchmaker {
     }
     
     public String getNextCandidates() {
+        if (round == 20)
+            return "";
         StringBuilder sb = new StringBuilder();
         // TODO implement other strategy
         // getRandomCandidates();
+        // if (round < 19)
         // naiveStrategy();
+        // else {
+        Arrays.fill(lastFeatures, 0);
+        if (round == 0) {
+            for (Candidate candidate : candidates)
+                System.out.println(candidate.toString());
+            group = new ArrayList<Integer>();
+            initGroup();
+            // naiveStrategy();
+//            Arrays.fill(lastFeatures, 1);
+//            pickNeg();
+            // addPosToGroup();
+//            correlationCoefficient();
+        }
         groupStrategy();
+        // }
+        round++;
         for (int i = 0; i < numFeatures; i++) {
             sb.append(lastFeatures[i] + " ");
         }
         return sb.toString().trim();
+    }
+    
+    private void initGroup() {
+        for (int i = 0; i < numFeatures; i++) {
+            group.add(-1);
+        }
+    }
+    
+    private void addPosToGroup() {
+        for (Candidate candidate : candidates) {
+            if (candidate.score > 0) {
+                for (int i = 0; i < candidate.features.length; i++) {
+                    double feature = candidate.features[i];
+                    if (feature > 0.9) {
+                        group.set(i, 0);
+                    }
+                }
+            }
+        }
+        
+    }
+    
+    private void pickNeg() {
+        for (Candidate candidate : candidates) {
+            if (candidate.score < 0) {
+                for (int i = 0; i < candidate.features.length; i++) {
+                    double feature = candidate.features[i];
+                    if (feature > 0.85) {
+                        lastFeatures[i] = 0;
+                        group.set(i, -1);
+                    }
+                }
+            }
+        }
+    }
+    
+    private void groupStrategy() {
+        if (round == 0) {
+            // Init
+            getGroup();
+//             for (int i = 0; i < numFeatures; ++i) {
+//                 if (lastFeatures[i] == 1 && group.get(i) == -1)
+//                     group.set(i, ++maxInGroup % 18 + 1);
+//             }
+            // Collections.shuffle(group, random);
+            
+            for (int i = 0; i < group.size(); i++) {
+                System.out.println(i + ": " + group.get(i));
+            }
+        }
+        
+        if (round == 19) {
+            // Final call
+            for (int i = 0; i < numFeatures; ++i) {
+                if (group.get(i) >= 0)
+                    lastFeatures[i] = (candidates.get(20 + group.get(i)).score > 0) ? 1 : 0;
+            }
+        } else {
+            // Test each group
+            int curGroup = candidates.size() - 20;
+            for (int i = 0; i < numFeatures; ++i)
+                lastFeatures[i] = (group.get(i) == curGroup) ? 1 : 0;
+        }
+    }
+    
+    private void getGroup() {
+        double[] corr = new double[numFeatures];
+        int[] rank = new int[numFeatures];
+        for (int i = 0; i < numFeatures; ++i) {
+            corr[i] = 0.0;
+            double sum = 0.0;
+            for (Candidate candidate : candidates) {
+                corr[i] += candidate.features[i] * candidate.score;
+                sum += candidate.features[i];
+            }
+            corr[i] /= sum;
+        }
+        for (int i = 0; i < numFeatures; ++i) {
+            rank[i] = 0;
+            for (int j = 0; j < numFeatures; ++j)
+                if (corr[i] < corr[j] || corr[i] == corr[j] && i > j)
+                    ++rank[i];
+        }
+        for (int i = 0; i < numFeatures; ++i)
+            group.set(i, rank[i] * 19 / numFeatures);
+    }
+    
+    private void correlationCoefficient() {
+        double sum = 0;
+        for (Candidate candidate : candidates) {
+            sum += candidate.score;
+        }
+        sum /= candidates.size();
+        for (int i = 0; i < numFeatures; i++) {
+            double sumX = 0;
+            for (Candidate candidate : candidates) {
+                sumX += candidate.features[i];
+            }
+            sumX /= candidates.size();
+            double cov = 0;
+            for (Candidate candidate : candidates) {
+                cov += (candidate.features[i]) * (candidate.score);
+            }
+            cov -= candidates.size() * sumX * sum;
+            if (cov > 0)
+                lastFeatures[i] = 1;
+        }
     }
     
     private void naiveStrategy() {
@@ -211,7 +336,6 @@ class Matchmaker {
                 else
                     secondPart += candidate.features[i];
             }
-            System.out.println(i + ": " + firstPart + " " + secondPart);
             if (firstPart < secondPart) {
                 if (random.nextBoolean() || random.nextBoolean() || random.nextBoolean())
                     lastFeatures[i] = 1;
@@ -223,27 +347,6 @@ class Matchmaker {
                 else
                     lastFeatures[i] = 0;
             }
-        }
-    }
-    
-    private void groupStrategy() {
-        if (candidates.size() == 20) {
-            // Init
-            group = new ArrayList<Integer>();
-            for (int i=0; i<numFeatures; ++i)
-                group.add(i*19/numFeatures);
-            Collections.shuffle(group, random);
-        }
-        
-        if (candidates.size() == 39) {
-            // Final call
-            for (int i=0; i<numFeatures; ++i)
-                lastFeatures[i] = (candidates.get(20+group.get(i)).score > 0) ? 1 : 0;
-        } else {
-            // Test each group
-            int curGroup = candidates.size()-20;
-            for (int i=0; i<numFeatures; ++i)
-                lastFeatures[i] = (group.get(i) == curGroup) ? 1 : 0;
         }
     }
     
@@ -263,7 +366,6 @@ class Matchmaker {
         String[] candidatesAndScores = lines[lastInd].split("\\s+");
         double score = Double.parseDouble(candidatesAndScores[numFeatures]);
         candidates.add(new Candidate(score, lastFeatures));
-        System.out.println("last candidates: " + candidates.get(candidates.size() - 1).toString());
         return readData;
     }
 }
