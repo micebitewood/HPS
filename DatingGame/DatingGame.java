@@ -199,6 +199,8 @@ class Matchmaker {
         Arrays.fill(lastFeatures, 0);
         if (round == 0) {
             // naiveStrategy();
+            Arrays.fill(lastFeatures, 1);
+            sortAndPickNeg();
             correlationCoefficient();
         }
         groupStrategy();
@@ -208,6 +210,19 @@ class Matchmaker {
             sb.append(lastFeatures[i] + " ");
         }
         return sb.toString().trim();
+    }
+    
+    private void sortAndPickNeg() {
+        for (Candidate candidate : candidates) {
+            if (candidate.score < 0) {
+                for (int i = 0; i < candidate.features.length; i++) {
+                    double feature = candidate.features[i];
+                    if (feature > 0.85) {
+                        lastFeatures[i] = 0;
+                    }
+                }
+            }
+        }
     }
     
     private void groupStrategy() {
@@ -272,8 +287,6 @@ class Matchmaker {
             System.out.println(cov > 0);
             if (cov > 0)
                 lastFeatures[i] = 1;
-            else
-                lastFeatures[i] = 0;
         }
     }
     
