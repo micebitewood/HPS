@@ -268,8 +268,10 @@ class Matchmaker {
         if (round == 19) {
             // Final call
             for (int i = 0; i < numFeatures; ++i) {
-                if (group.get(i) >= 0)
+                if (group.get(i) >= 0 && group.get(i) < 19)
                     lastFeatures[i] = (candidates.get(20 + group.get(i)).score > 0) ? 1 : 0;
+                else if (group.get(i) == -1)
+                    lastFeatures[i] = 1;
             }
         } else {
             // Test each group
@@ -297,8 +299,10 @@ class Matchmaker {
                 if (corr[i] < corr[j] || corr[i] == corr[j] && i > j)
                     ++rank[i];
         }
+        // Group from -1 to 19, where -1 means it's positive and doesn't need to be tested,
+        // 19 means it's negative and doesn't need to be tested.
         for (int i = 0; i < numFeatures; ++i)
-            group.set(i, rank[i] * 19 / numFeatures);
+            group.set(i, rank[i] * 21 / numFeatures - 1);
     }
     
     private void correlationCoefficient() {
