@@ -95,9 +95,81 @@ class Person {
     List<Integer> weights;
     int numFeatures;
     
-    public String genWeights(int numFeatures) {
-        weights = new ArrayList<Integer>();
-        this.numFeatures = numFeatures;
+    private void moreEqual() {
+        int posMax = 0;
+        int posMin = 100;
+        int posMaxPosition = 0;
+        int posMinPosition = 0;
+        int negMax = -100;
+        int negMin = 0;
+        int negMaxPosition = 0;
+        int negMinPosition = 0;
+        for (int i = 0; i < numFeatures; i++) {
+            int feature = weights.get(i);
+            if (feature > posMax) {
+                posMax = feature;
+                posMaxPosition = i;
+            } else if (feature > 0 && feature < posMin) {
+                posMin = feature;
+                posMinPosition = i;
+            } else if (feature < negMin) {
+                negMin = feature;
+                negMinPosition = i;
+            } else if (feature < 0 && feature > negMax) {
+                negMax = feature;
+                negMaxPosition = i;
+            }
+        }
+        if (numFeatures >= 80) {
+            int modification = (int) Math.floor(-negMax * 0.2);
+            System.out.println("modificationNeg: " + modification);
+            weights.set(negMaxPosition, negMax - modification);
+            weights.set(negMinPosition, negMin + modification);
+        }
+        if (numFeatures >= 40) {
+            int modification = (int) Math.floor(posMin * 0.2);
+            System.out.println("modificationPos: " + modification);
+            weights.set(posMaxPosition, posMax - modification);
+            weights.set(posMinPosition, posMin + modification);
+        }
+    }
+    
+    private void randomAverageWeights() {
+        Random random = new Random(System.currentTimeMillis());
+        int posNum = numFeatures / 2;
+        int averagePos = 100 / posNum;
+        int remainingPos = 100 - averagePos * (posNum - 1);
+        System.out.println(averagePos + " * " + (posNum - 1) + " " + remainingPos);
+        for (int i = 0; i < posNum - 1; i++) {
+            if (remainingPos > averagePos) {
+                weights.add(averagePos + 1);
+                remainingPos--;
+            }
+            else
+                weights.add(averagePos);
+            System.out.println("pos: " + i + " sum: " + weights.get(weights.size() - 1));
+        }
+        weights.add(remainingPos);
+        System.out.println("pos: " + (posNum - 1) + " sum: " + weights.get(weights.size() - 1));
+        int averageNeg = -100 / (numFeatures - posNum);
+        int remainingNeg = -100 - averageNeg * (numFeatures - posNum - 1);
+        System.out.println(averageNeg + " * " + (numFeatures - posNum - 1) + " " + remainingNeg);
+        for (int i = posNum; i < numFeatures - 1; i++) {
+            if (remainingNeg < averageNeg) {
+                weights.add(averageNeg - 1);
+                remainingNeg++;
+            } else
+                weights.add(averageNeg);
+            System.out.println("pos: " + i + " sum: " + weights.get(weights.size() - 1));
+        }
+        if (posNum != numFeatures) {
+            weights.add(remainingNeg);
+            System.out.println("pos: " + (numFeatures - 1) + " sum: " + weights.get(weights.size() - 1));
+        }
+        Collections.shuffle(weights);
+    }
+    
+    private void randomWeights() {
         Random random = new Random(System.currentTimeMillis());
         int posNum = random.nextInt(numFeatures + 1);
         int sum = 0;
@@ -121,6 +193,13 @@ class Person {
             weights.add(sum - 100);
         }
         Collections.shuffle(weights);
+    }
+    
+    public String genWeights(int numFeatures) {
+        weights = new ArrayList<Integer>();
+        this.numFeatures = numFeatures;
+        // randomWeights();
+        randomAverageWeights();
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < numFeatures; i++) {
             if (weights.get(i) >= 0) {
@@ -142,6 +221,7 @@ class Person {
     
     public String fixWeights() {
         StringBuilder sb = new StringBuilder();
+        moreEqual();
         for (int i = 0; i < numFeatures; i++) {
             if (weights.get(i) >= 0) {
                 if (weights.get(i) == 100)
@@ -202,10 +282,10 @@ class Matchmaker {
             group = new ArrayList<Integer>();
             initGroup();
             // naiveStrategy();
-            Arrays.fill(lastFeatures, 1);
-            pickNeg();
+            // Arrays.fill(lastFeatures, 1);
+            // pickNeg();
             // addPosToGroup();
-            correlationCoefficient();
+            // correlationCoefficient();
         }
         groupStrategy();
         // }
@@ -253,10 +333,11 @@ class Matchmaker {
     private void groupStrategy() {
         if (round == 0) {
             // Init
-            for (int i = 0; i < numFeatures; ++i) {
-                if (lastFeatures[i] == 1 && group.get(i) == -1)
-                    group.set(i, ++maxInGroup % 18 + 1);
-            }
+            getGroup();
+            // for (int i = 0; i < numFeatures; ++i) {
+            // if (lastFeatures[i] == 1 && group.get(i) == -1)
+            // group.set(i, ++maxInGroup % 18 + 1);
+            // }
             // Collections.shuffle(group, random);
             
             for (int i = 0; i < group.size(); i++) {
@@ -267,8 +348,10 @@ class Matchmaker {
         if (round == 19) {
             // Final call
             for (int i = 0; i < numFeatures; ++i) {
-                if (group.get(i) >= 0)
+                if (group.get(i) >= 0 && group.get(i) < 19)
                     lastFeatures[i] = (candidates.get(20 + group.get(i)).score > 0) ? 1 : 0;
+                else if (group.get(i) == -1)
+                    lastFeatures[i] = 1;
             }
         } else {
             // Test each group
@@ -276,6 +359,30 @@ class Matchmaker {
             for (int i = 0; i < numFeatures; ++i)
                 lastFeatures[i] = (group.get(i) == curGroup) ? 1 : 0;
         }
+    }
+    
+    private void getGroup() {
+        double[] corr = new double[numFeatures];
+        int[] rank = new int[numFeatures];
+        for (int i = 0; i < numFeatures; ++i) {
+            corr[i] = 0.0;
+            double sum = 0.0;
+            for (Candidate candidate : candidates) {
+                corr[i] += candidate.features[i] * candidate.score;
+                sum += candidate.features[i];
+            }
+            corr[i] /= sum;
+        }
+        for (int i = 0; i < numFeatures; ++i) {
+            rank[i] = 0;
+            for (int j = 0; j < numFeatures; ++j)
+                if (corr[i] < corr[j] || corr[i] == corr[j] && i > j)
+                    ++rank[i];
+        }
+        // Group from -1 to 19, where -1 means it's positive and doesn't need to be tested,
+        // 19 means it's negative and doesn't need to be tested.
+        for (int i = 0; i < numFeatures; ++i)
+            group.set(i, rank[i] * 21 / numFeatures - 1);
     }
     
     private void correlationCoefficient() {
