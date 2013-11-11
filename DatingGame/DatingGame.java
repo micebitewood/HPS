@@ -249,6 +249,7 @@ class Matchmaker {
     int round;
     List<Integer> group;
     int maxInGroup;
+    boolean repeat = false;
     
     public Matchmaker(String[] initString, int numFeatures) {
         candidates = new ArrayList<Candidate>();
@@ -270,25 +271,21 @@ class Matchmaker {
         if (round == 20)
             return "";
         StringBuilder sb = new StringBuilder();
-        // TODO implement other strategy
-        // getRandomCandidates();
-        // if (round < 19)
-        // naiveStrategy();
-        // else {
-        Arrays.fill(lastFeatures, 0);
-        if (round == 0) {
-            for (Candidate candidate : candidates)
-                System.out.println(candidate.toString());
-            group = new ArrayList<Integer>();
-            initGroup();
-            // naiveStrategy();
-            // Arrays.fill(lastFeatures, 1);
-            // pickNeg();
-            // addPosToGroup();
-            // correlationCoefficient();
+        if (!repeat) {
+            lastFeatures = new double[numFeatures];
+            if (numFeatures < 40) {
+                
+                solveEquation();
+            } else {
+                if (round == 0) {
+                    for (Candidate candidate : candidates)
+                        System.out.println(candidate.toString());
+                    group = new ArrayList<Integer>();
+                    initGroup();
+                }
+                groupStrategy();
+            }
         }
-        groupStrategy();
-        // }
         round++;
         for (int i = 0; i < numFeatures; i++) {
             sb.append(lastFeatures[i] + " ");
@@ -314,6 +311,76 @@ class Matchmaker {
             }
         }
         
+    }
+    
+    private void solveEquation() {
+        if (round == 0) {
+            candidates = gaussianElimination();
+            System.out.println(" **after elimination**");
+            for (Candidate candidate : candidates)
+                System.out.println(candidate.toString());
+        }
+        if (round + 20 < numFeatures) {
+            lastFeatures[round + 20] = 1;
+        } else {
+            double[] weights = new double[numFeatures];
+            for (int i = round + 20; i >= 0; i--) {
+                if (i >= candidates.size())
+                    continue;
+                Candidate candidate = candidates.get(i);
+                if (i >= 20) {
+                    weights[i] = candidate.score;
+                } else {
+                    double score = candidate.score;
+                    for (int j = numFeatures - 1; j > i; j--) {
+                        score -= candidate.features[j] * weights[j];
+                    }
+                    if (candidate.features[i] != 0)
+                        weights[i] = score / candidate.features[i];
+                }
+                if (weights[i] > 0)
+                    lastFeatures[i] = 1;
+            }
+            repeat = true;
+        }
+    }
+    
+    private List<Candidate> gaussianElimination() {
+        List<Candidate> eliminatedCandidates = new ArrayList<Candidate>();
+        double[][] features = new double[20][numFeatures];
+        double[] scores = new double[20];
+        for (int i = 0; i < 20; i++) {
+            Candidate candidate = candidates.get(i);
+            features[i] = Arrays.copyOf(candidate.features, numFeatures);
+            scores[i] = candidate.score;
+            System.out.println(candidate.toString());
+        }
+        eliminatedCandidates.add(new Candidate(scores[0], features[0]));
+        for (int i = 0; i < Math.min(19, numFeatures - 1); i++) {
+            if (Math.abs(features[i][i]) < 0.001) {
+                for (int j = i + 1; j < Math.min(20, numFeatures); j++) {
+                    if (Math.abs(features[j][i]) >= 0.001) {
+                        double[] temp = Arrays.copyOf(features[j], numFeatures);
+                        features[j] = features[i];
+                        features[i] = temp;
+                        break;
+                    }
+                }
+            }
+            if (Math.abs(features[i][i]) < 0.00000000000001) {
+                continue;
+            }
+            for (int j = i + 1; j < Math.min(20, numFeatures); j++) {
+                double factor = features[j][i] / features[i][i];
+                features[j][i] = 0;
+                for (int k = i + 1; k < numFeatures; k++) {
+                    features[j][k] -= features[i][k] * factor;
+                }
+                scores[j] -= scores[i] * factor;
+            }
+            eliminatedCandidates.add(new Candidate(scores[i + 1], features[i + 1]));
+        }
+        return eliminatedCandidates;
     }
     
     private void pickNeg() {
@@ -450,6 +517,7 @@ class Matchmaker {
         String[] candidatesAndScores = lines[lastInd].split("\\s+");
         double score = Double.parseDouble(candidatesAndScores[numFeatures]);
         candidates.add(new Candidate(score, lastFeatures));
+        System.out.println(candidates.get(candidates.size() - 1).toString());
         return readData;
     }
 }
