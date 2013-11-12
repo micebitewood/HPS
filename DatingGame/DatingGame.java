@@ -95,9 +95,84 @@ class Person {
     List<Integer> weights;
     int numFeatures;
     
-    public String genWeights(int numFeatures) {
-        weights = new ArrayList<Integer>();
-        this.numFeatures = numFeatures;
+    private void moreEqual() {
+        int posMax = 0;
+        int posMin = 100;
+        int posMaxPosition = 0;
+        int posMinPosition = 0;
+        int negMax = -100;
+        int negMin = 0;
+        int negMaxPosition = 0;
+        int negMinPosition = 0;
+        for (int i = 0; i < numFeatures; i++) {
+            int feature = weights.get(i);
+            if (feature > posMax) {
+                posMax = feature;
+                posMaxPosition = i;
+            }
+            if (feature > 0 && feature < posMin) {
+                posMin = feature;
+                posMinPosition = i;
+            }
+            if (feature < negMin) {
+                negMin = feature;
+                negMinPosition = i;
+            }
+            if (feature < 0 && feature > negMax) {
+                negMax = feature;
+                negMaxPosition = i;
+            }
+        }
+        if (numFeatures >= 80) {
+            int modification = (int) Math.floor(-negMax * 0.2);
+            System.out.println("modificationNeg: " + modification);
+            weights.set(negMaxPosition, negMax - modification);
+            weights.set(negMinPosition, negMin + modification);
+        }
+        if (numFeatures >= 40) {
+            int modification = (int) Math.floor(posMin * 0.2);
+            System.out.println("modificationPos: " + modification);
+            weights.set(posMaxPosition, posMax - modification);
+            weights.set(posMinPosition, posMin + modification);
+        }
+    }
+    
+    private void randomAverageWeights() {
+        Random random = new Random(System.currentTimeMillis());
+        int posNum = numFeatures / 2;
+        int averagePos = 100 / posNum;
+        int remainingPos = 100 - averagePos * (posNum - 1);
+        System.out.println(averagePos + " * " + (posNum - 1) + " " + remainingPos);
+        for (int i = 0; i < posNum - 1; i++) {
+            if (remainingPos > averagePos) {
+                weights.add(averagePos + 1);
+                remainingPos--;
+            }
+            else
+                weights.add(averagePos);
+            System.out.println("pos: " + i + " sum: " + weights.get(weights.size() - 1));
+        }
+        weights.add(remainingPos);
+        System.out.println("pos: " + (posNum - 1) + " sum: " + weights.get(weights.size() - 1));
+        int averageNeg = -100 / (numFeatures - posNum);
+        int remainingNeg = -100 - averageNeg * (numFeatures - posNum - 1);
+        System.out.println(averageNeg + " * " + (numFeatures - posNum - 1) + " " + remainingNeg);
+        for (int i = posNum; i < numFeatures - 1; i++) {
+            if (remainingNeg < averageNeg) {
+                weights.add(averageNeg - 1);
+                remainingNeg++;
+            } else
+                weights.add(averageNeg);
+            System.out.println("pos: " + i + " sum: " + weights.get(weights.size() - 1));
+        }
+        if (posNum != numFeatures) {
+            weights.add(remainingNeg);
+            System.out.println("pos: " + (numFeatures - 1) + " sum: " + weights.get(weights.size() - 1));
+        }
+        Collections.shuffle(weights);
+    }
+    
+    private void randomWeights() {
         Random random = new Random(System.currentTimeMillis());
         int posNum = random.nextInt(numFeatures + 1);
         int sum = 0;
@@ -121,6 +196,13 @@ class Person {
             weights.add(sum - 100);
         }
         Collections.shuffle(weights);
+    }
+    
+    public String genWeights(int numFeatures) {
+        weights = new ArrayList<Integer>();
+        this.numFeatures = numFeatures;
+        // randomWeights();
+        randomAverageWeights();
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < numFeatures; i++) {
             if (weights.get(i) >= 0) {
@@ -142,6 +224,7 @@ class Person {
     
     public String fixWeights() {
         StringBuilder sb = new StringBuilder();
+        moreEqual();
         for (int i = 0; i < numFeatures; i++) {
             if (weights.get(i) >= 0) {
                 if (weights.get(i) == 100)
@@ -169,6 +252,7 @@ class Matchmaker {
     int round;
     List<Integer> group;
     int maxInGroup;
+    boolean repeat = false;
     
     public Matchmaker(String[] initString, int numFeatures) {
         candidates = new ArrayList<Candidate>();
@@ -190,25 +274,21 @@ class Matchmaker {
         if (round == 20)
             return "";
         StringBuilder sb = new StringBuilder();
-        // TODO implement other strategy
-        // getRandomCandidates();
-        // if (round < 19)
-        // naiveStrategy();
-        // else {
-        Arrays.fill(lastFeatures, 0);
-        if (round == 0) {
-            for (Candidate candidate : candidates)
-                System.out.println(candidate.toString());
-            group = new ArrayList<Integer>();
-            initGroup();
-            // naiveStrategy();
-//            Arrays.fill(lastFeatures, 1);
-//            pickNeg();
-            // addPosToGroup();
-//            correlationCoefficient();
+        if (!repeat) {
+            lastFeatures = new double[numFeatures];
+            if (numFeatures < 40) {
+                
+                solveEquation();
+            } else {
+                if (round == 0) {
+                    for (Candidate candidate : candidates)
+                        System.out.println(candidate.toString());
+                    group = new ArrayList<Integer>();
+                    initGroup();
+                }
+                groupStrategy();
+            }
         }
-        groupStrategy();
-        // }
         round++;
         for (int i = 0; i < numFeatures; i++) {
             sb.append(lastFeatures[i] + " ");
@@ -236,6 +316,76 @@ class Matchmaker {
         
     }
     
+    private void solveEquation() {
+        if (round == 0) {
+            candidates = gaussianElimination();
+            System.out.println(" **after elimination**");
+            for (Candidate candidate : candidates)
+                System.out.println(candidate.toString());
+        }
+        if (round + 20 < numFeatures) {
+            lastFeatures[round + 20] = 1;
+        } else {
+            double[] weights = new double[numFeatures];
+            for (int i = round + 20; i >= 0; i--) {
+                if (i >= candidates.size())
+                    continue;
+                Candidate candidate = candidates.get(i);
+                if (i >= 20) {
+                    weights[i] = candidate.score;
+                } else {
+                    double score = candidate.score;
+                    for (int j = numFeatures - 1; j > i; j--) {
+                        score -= candidate.features[j] * weights[j];
+                    }
+                    if (candidate.features[i] != 0)
+                        weights[i] = score / candidate.features[i];
+                }
+                if (weights[i] > 0)
+                    lastFeatures[i] = 1;
+            }
+            repeat = true;
+        }
+    }
+    
+    private List<Candidate> gaussianElimination() {
+        List<Candidate> eliminatedCandidates = new ArrayList<Candidate>();
+        double[][] features = new double[20][numFeatures];
+        double[] scores = new double[20];
+        for (int i = 0; i < 20; i++) {
+            Candidate candidate = candidates.get(i);
+            features[i] = Arrays.copyOf(candidate.features, numFeatures);
+            scores[i] = candidate.score;
+            System.out.println(candidate.toString());
+        }
+        eliminatedCandidates.add(new Candidate(scores[0], features[0]));
+        for (int i = 0; i < Math.min(19, numFeatures - 1); i++) {
+            if (Math.abs(features[i][i]) < 0.001) {
+                for (int j = i + 1; j < Math.min(20, numFeatures); j++) {
+                    if (Math.abs(features[j][i]) >= 0.001) {
+                        double[] temp = Arrays.copyOf(features[j], numFeatures);
+                        features[j] = features[i];
+                        features[i] = temp;
+                        break;
+                    }
+                }
+            }
+            if (Math.abs(features[i][i]) < 0.00000000000001) {
+                continue;
+            }
+            for (int j = i + 1; j < Math.min(20, numFeatures); j++) {
+                double factor = features[j][i] / features[i][i];
+                features[j][i] = 0;
+                for (int k = i + 1; k < numFeatures; k++) {
+                    features[j][k] -= features[i][k] * factor;
+                }
+                scores[j] -= scores[i] * factor;
+            }
+            eliminatedCandidates.add(new Candidate(scores[i + 1], features[i + 1]));
+        }
+        return eliminatedCandidates;
+    }
+    
     private void pickNeg() {
         for (Candidate candidate : candidates) {
             if (candidate.score < 0) {
@@ -254,10 +404,10 @@ class Matchmaker {
         if (round == 0) {
             // Init
             getGroup();
-//             for (int i = 0; i < numFeatures; ++i) {
-//                 if (lastFeatures[i] == 1 && group.get(i) == -1)
-//                     group.set(i, ++maxInGroup % 18 + 1);
-//             }
+            // for (int i = 0; i < numFeatures; ++i) {
+            // if (lastFeatures[i] == 1 && group.get(i) == -1)
+            // group.set(i, ++maxInGroup % 18 + 1);
+            // }
             // Collections.shuffle(group, random);
             
             for (int i = 0; i < group.size(); i++) {
@@ -370,6 +520,7 @@ class Matchmaker {
         String[] candidatesAndScores = lines[lastInd].split("\\s+");
         double score = Double.parseDouble(candidatesAndScores[numFeatures]);
         candidates.add(new Candidate(score, lastFeatures));
+        System.out.println(candidates.get(candidates.size() - 1).toString());
         return readData;
     }
 }
