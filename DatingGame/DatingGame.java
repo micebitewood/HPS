@@ -95,6 +95,88 @@ class Person {
     List<Integer> weights;
     int numFeatures;
     
+    // 40
+    Random random;
+    int numPosWeights;
+    int numNegWeights;
+    int avgPosWeight;
+    int avgNegWeight;
+    List<Integer> weightMap;
+    
+    private void randomAverageWeights40() {
+        random = new Random(System.currentTimeMillis());
+        if (numFeatures >= 40) {
+            numPosWeights = numNegWeights = 20;
+            avgPosWeight = avgNegWeight = 5;
+        } else {
+            numPosWeights = numFeatures / 2;
+            numNegWeights = numFeatures - numPosWeights;
+            avgPosWeight = 100 / numPosWeights;
+            avgNegWeight = 100 / numNegWeights;
+        }
+        weightMap = new ArrayList<Integer>();
+        for (int i = 0; i < numFeatures; ++i)
+            weightMap.add(i);
+        Collections.shuffle(weightMap);
+        for (int i = 0; i < numFeatures; ++i)
+            weights.add(0);
+        int remainingPos = 100 - numPosWeights * avgPosWeight;
+        for (int i = 0; i < numPosWeights; ++i)
+            if (i < remainingPos)
+                weights.set(weightMap.get(i), avgPosWeight+1);
+            else
+                weights.set(weightMap.get(i), avgPosWeight);
+        int remainingNeg = 100 - numNegWeights * avgNegWeight;
+        for (int i = 0; i < numNegWeights; ++i)
+            if (i < remainingNeg)
+                weights.set(weightMap.get(numPosWeights+i), -avgNegWeight-1);
+            else
+                weights.set(weightMap.get(numPosWeights+i), -avgNegWeight);
+    }
+    
+    private void perturb40() {
+        if (numFeatures < 40) return;
+        // Recover original weights
+        int remainingPos = 100 - numPosWeights * avgPosWeight;
+        for (int i = 0; i < numPosWeights; ++i)
+            if (i < remainingPos)
+                weights.set(weightMap.get(i), avgPosWeight+1);
+            else
+                weights.set(weightMap.get(i), avgPosWeight);
+        int remainingNeg = 100 - numNegWeights * avgNegWeight;
+        for (int i = 0; i < numNegWeights; ++i)
+            if (i < remainingNeg)
+                weights.set(weightMap.get(numPosWeights+i), -avgNegWeight-1);
+            else
+                weights.set(weightMap.get(numPosWeights+i), -avgNegWeight);
+        // Perturb
+        int numMods = numFeatures/40;
+        int numPosMods = random.nextInt(numMods+1);
+        int numNegMods = numMods - numPosMods;
+        if (numPosMods > 0) {
+            List<Integer> perturbPos = new ArrayList<Integer>();
+            for (int i = 0; i < numPosWeights; ++i)
+                perturbPos.add(i);
+            Collections.shuffle(perturbPos);
+            int modPos = avgPosWeight / 5;
+            for (int i = 0; i < numPosMods; ++i) {
+                weights.set(weightMap.get(perturbPos.get(i)), weights.get(weightMap.get(perturbPos.get(i)))+modPos);
+                weights.set(weightMap.get(perturbPos.get(numPosWeights-i-1)), weights.get(weightMap.get(perturbPos.get(numPosWeights-i-1)))-modPos);
+            }
+        }
+        if (numNegMods > 0) {
+            List<Integer> perturbNeg = new ArrayList<Integer>();
+            for (int i = 0; i < numNegWeights; ++i)
+                perturbNeg.add(i);
+            Collections.shuffle(perturbNeg);
+            int modNeg = avgNegWeight / 5;
+            for (int i = 0; i < numNegMods; ++i) {
+                weights.set(weightMap.get(numPosWeights+perturbNeg.get(i)), weights.get(weightMap.get(numPosWeights+perturbNeg.get(i)))+modNeg);
+                weights.set(weightMap.get(numPosWeights+perturbNeg.get(numNegWeights-i-1)), weights.get(weightMap.get(numPosWeights+perturbNeg.get(numNegWeights-i-1)))-modNeg);
+            }
+        }
+    }
+    
     private void moreEqual() {
         int posMax = 0;
         int posMin = 100;
@@ -203,6 +285,7 @@ class Person {
         this.numFeatures = numFeatures;
         // randomWeights();
         randomAverageWeights();
+        // randomAverageWeights40();
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < numFeatures; i++) {
             if (weights.get(i) >= 0) {
@@ -225,6 +308,7 @@ class Person {
     public String fixWeights() {
         StringBuilder sb = new StringBuilder();
         moreEqual();
+        // perturb40();
         for (int i = 0; i < numFeatures; i++) {
             if (weights.get(i) >= 0) {
                 if (weights.get(i) == 100)
