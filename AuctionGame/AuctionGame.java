@@ -33,6 +33,7 @@ class Game {
     private Random random;
     
     public Game(int port) throws UnknownHostException, IOException {
+        
         client = new Socket("127.0.0.1", port);
         out = new PrintWriter(client.getOutputStream(), true);
         in = new BufferedReader(new InputStreamReader(client.getInputStream()));
@@ -83,22 +84,24 @@ class Game {
     
     private String receive() throws IOException {
         StringBuilder sb = new StringBuilder();
-        String temp;
+        char[] cbuf = new char[1];
+        System.out.print("receive: ");
         while (true) {
-            temp = in.readLine();
-            System.out.println(temp);
-            sb.append(temp);
-            if (temp.contains("<EOM>")) {
+            in.read(cbuf);
+            System.out.print(cbuf[0]);
+            sb.append(cbuf[0]);
+            if (sb.toString().contains("<EOM>")) {
                 break;
             }
         }
         String res = sb.toString().substring(0, sb.length() - 5);
-        System.out.println("received: " + res);
+        System.out.println();
         return res;
     }
     
     private void send(String str) {
-        out.print(str);
+        System.out.println("send: " + str);
+        out.println(str);
     }
 }
 
