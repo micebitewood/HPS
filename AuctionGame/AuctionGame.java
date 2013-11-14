@@ -34,7 +34,7 @@ class Game {
     
     public Game(int port) throws UnknownHostException, IOException {
         client = new Socket("127.0.0.1", port);
-        out = new PrintWriter(client.getOutputStream());
+        out = new PrintWriter(client.getOutputStream(), true);
         in = new BufferedReader(new InputStreamReader(client.getInputStream()));
         System.out.println("connected");
         receive();
