@@ -5,8 +5,13 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
+import java.util.Set;
 
 public class AuctionGame {
     public static void main(String[] args) throws UnknownHostException, IOException {
@@ -28,9 +33,11 @@ class Game {
     private int itemTypes;
     private int winningNum;
     private List<Item> items;
+    private List<List<Integer>> positions;
     private List<Player> players;
     private int round;
     private Random random;
+    private Set<Integer> possibleTypes;
     
     public Game(int port) throws UnknownHostException, IOException {
         
@@ -45,10 +52,40 @@ class Game {
     }
     
     public void bid() throws IOException {
-        int bid = randomBid();
+        // int bid = randomBid();
+        int bid = patientBid();
         send(bid + "");
         parseLastBid(receive());
         round++;
+    }
+    
+    private int patientBid() {
+        int type = items.get(round).num;
+        if (possibleTypes.contains(type)) {
+            Map<Player, Integer> count = new HashMap<Player, Integer>();
+            for (int i = 0; i < round; i++) {
+                Item item = items.get(i);
+                if (item.num == type) {
+                    Player player = item.winner;
+                    if (!count.containsKey(player)) {
+                        count.put(player, 0);
+                    }
+                    count.put(player, count.get(player) + 1);
+                }
+            }
+            int maxBudget = 0;
+            for (Entry<Player, Integer> entry : count.entrySet()) {
+                if (entry.getValue() == winningNum - 1) {
+                    if (entry.getKey().budget > maxBudget) {
+                        maxBudget = entry.getKey().budget;
+                    }
+                }
+            }
+            if (maxBudget != 0)
+                return maxBudget + 1;
+            return 100 / winningNum;
+        }
+        return 0;
     }
     
     private int randomBid() {
@@ -61,7 +98,7 @@ class Game {
         int winnerId = Integer.parseInt(details[0]);
         int bestBid = Integer.parseInt(details[1]);
         lastItem.setBid(bestBid);
-        int budget = Integer.parseInt(details[2]);
+        lastItem.setPlayer(players.get(winnerId));
         players.get(winnerId).addItem(lastItem);
     }
     
@@ -69,17 +106,45 @@ class Game {
         String[] specs = str.split(" ");
         myId = Integer.parseInt(specs[0]);
         totalPlayers = Integer.parseInt(specs[1]);
-        players = new ArrayList<Player>();
-        for (int i = 0; i < totalPlayers; i++) {
-            players.add(new Player());
-        }
         itemTypes = Integer.parseInt(specs[2]);
         winningNum = Integer.parseInt(specs[3]);
+        players = new ArrayList<Player>();
+        for (int i = 0; i < totalPlayers; i++) {
+            players.add(new Player(winningNum));
+        }
         items = new ArrayList<Item>();
+        positions = new ArrayList<List<Integer>>();
+        for (int i = 0; i < itemTypes; i++) {
+            positions.add(new ArrayList<Integer>());
+        }
         for (int i = 4; i < specs.length; i++) {
             int num = Integer.parseInt(specs[i]);
             items.add(new Item(num));
+            positions.get(num).add(i - 4);
         }
+        int[] winningCounts = firstAnalyze();
+        possibleTypes = new HashSet<Integer>();
+        for (int i = 0; i < winningCounts.length; i++) {
+            int winningCount = winningCounts[i];
+            if (winningCount >= winningNum) {
+                possibleTypes.add(i);
+            }
+        }
+    }
+    
+    private int[] firstAnalyze() {
+        int[] counts = new int[itemTypes];
+        int winningCount = 0;
+        for (Item item : items) {
+            counts[item.num]++;
+            if (counts[item.num] == winningNum) {
+                winningCount++;
+                if (winningCount == Math.min(totalPlayers, itemTypes)) {
+                    return counts;
+                }
+            }
+        }
+        return counts;
     }
     
     private String receive() throws IOException {
@@ -108,10 +173,27 @@ class Game {
 class Player {
     List<Item> items;
     int budget;
+    int winningNum;
     
-    public Player() {
+    public Player(int winningNum) {
         items = new ArrayList<Item>();
         budget = 100;
+        this.winningNum = winningNum;
+    }
+    
+    public boolean isDangerous() {
+        if (items.size() < winningNum - 1)
+            return false;
+        Map<Integer, Integer> map = new HashMap<Integer, Integer>();
+        for (Item item : items) {
+            if (!map.containsKey(item.num)) {
+                map.put(item.num, 0);
+            }
+            map.put(item.num, map.get(item.num) + 1);
+            if (map.get(item.num) == winningNum - 1)
+                return true;
+        }
+        return false;
     }
     
     public void addItem(Item item) {
@@ -123,6 +205,7 @@ class Player {
 class Item {
     int bid;
     int num;
+    Player winner;
     
     public Item(int num) {
         this.num = num;
@@ -130,5 +213,9 @@ class Item {
     
     public void setBid(int bid) {
         this.bid = bid;
+    }
+    
+    public void setPlayer(Player player) {
+        this.winner = player;
     }
 }

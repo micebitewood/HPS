@@ -31,6 +31,7 @@ public class DatingGame {
         in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
         
         String question = readData(in);
+        System.out.println(question);
         if (!question.equals("Team Name?")) {
             System.err.println("Server not following convention.");
             System.exit(0);
