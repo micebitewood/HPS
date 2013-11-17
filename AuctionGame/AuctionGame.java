@@ -127,7 +127,7 @@ class Game {
                 return maxPrice + 1;
             }
         }
-        return 0;
+        return 1;
     }
     
     private boolean isStillEmpty() {
