@@ -5,8 +5,8 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -38,6 +38,7 @@ class Game {
     private int round;
     private Random random;
     private Set<Integer> possibleTypes;
+    private int[] passedCounts;
     
     public Game(int port) throws UnknownHostException, IOException {
         
@@ -56,36 +57,81 @@ class Game {
         int bid = patientBid();
         send(bid + "");
         parseLastBid(receive());
+        passedCounts[items.get(round).num]++;
         round++;
+    }
+    
+    private int getWinningPosition(Player player, int currType) {
+        Map<Integer, Integer> counts = player.counts;
+        int minPosition = items.size();
+        int minType = -1;
+        for (Entry<Integer, Integer> entry : counts.entrySet()) {
+            int type = entry.getKey();
+            int position = positions.get(type).get(passedCounts[type] + winningNum - entry.getValue() - 1);
+            if (position < minPosition) {
+                System.out.println("  I'll win in position " + position + " with " + type + ", passedCount "
+                                   + passedCounts[type]);
+                minPosition = position;
+                minType = type;
+            }
+        }
+        if (minType == currType) {
+            return 0;
+        }
+        return minPosition;
     }
     
     private int patientBid() {
         int type = items.get(round).num;
-        if (possibleTypes.contains(type)) {
-            Map<Player, Integer> count = new HashMap<Player, Integer>();
-            for (int i = 0; i < round; i++) {
-                Item item = items.get(i);
-                if (item.num == type) {
-                    Player player = item.winner;
-                    if (!count.containsKey(player)) {
-                        count.put(player, 0);
-                    }
-                    count.put(player, count.get(player) + 1);
+        System.out.println(" next item: " + type);
+        if (isStillEmpty()) {
+            int[] order = new int[itemTypes];
+            System.out.println("orders: ");
+            for (int i = 0; i < itemTypes; i++) {
+                order[i] = positions.get(i).get(passedCounts[i] + winningNum - 1);
+                System.out.print(" " + order[i]);
+            }
+            System.out.println();
+            Arrays.sort(order);
+            for (int i = 0; i < totalPlayers; i++) {
+                if (items.get(order[i]).num == type) {
+                    return 100 / winningNum;
                 }
             }
-            int maxBudget = 0;
-            for (Entry<Player, Integer> entry : count.entrySet()) {
-                if (entry.getValue() == winningNum - 1) {
-                    if (entry.getKey().budget > maxBudget) {
-                        maxBudget = entry.getKey().budget;
+            if (items.get(order[totalPlayers]).num == type) {
+                return 1;
+            }
+        } else {
+            int myWinningPosition = getWinningPosition(players.get(myId), type);
+            if (myWinningPosition == 0) {
+                return players.get(myId).budget / (winningNum - players.get(myId).counts.get(type));
+            }
+            int maxPrice = 0;
+            for (Player player : players) {
+                if (player.id != myId) {
+                    if (player.counts.containsKey(type)) {
+                        int count = player.counts.get(type);
+                        int winningPosition = positions.get(type).get(passedCounts[type] + winningNum - count - 1);
+                        if (winningPosition < myWinningPosition) {
+                            System.out.println(player.id + " is gonna win before me! " + winningPosition);
+                            int estimatePrice = player.budget / (winningNum - count);
+                            System.out.println(" estimate price is: " + estimatePrice);
+                            if (estimatePrice > maxPrice) {
+                                maxPrice = estimatePrice;
+                            }
+                        }
                     }
                 }
             }
-            if (maxBudget != 0)
-                return maxBudget + 1;
-            return 100 / winningNum;
+            if (maxPrice != 0) {
+                return maxPrice + 1;
+            }
         }
         return 0;
+    }
+    
+    private boolean isStillEmpty() {
+        return players.get(myId).budget == 100;
     }
     
     private int randomBid() {
@@ -96,22 +142,28 @@ class Game {
         Item lastItem = items.get(round);
         String[] details = str.split(" ");
         int winnerId = Integer.parseInt(details[0]);
+        Player winner = players.get(winnerId);
         int bestBid = Integer.parseInt(details[1]);
         lastItem.setBid(bestBid);
-        lastItem.setPlayer(players.get(winnerId));
-        players.get(winnerId).addItem(lastItem);
+        lastItem.setPlayer(winner);
+        winner.addItem(lastItem);
+        System.out.println("My budget is: " + players.get(myId).budget);
     }
     
     private void init(String str) {
         String[] specs = str.split(" ");
         myId = Integer.parseInt(specs[0]);
+        System.out.println(" ** my id " + myId + " **");
         totalPlayers = Integer.parseInt(specs[1]);
         itemTypes = Integer.parseInt(specs[2]);
         winningNum = Integer.parseInt(specs[3]);
+        passedCounts = new int[itemTypes];
+        
         players = new ArrayList<Player>();
         for (int i = 0; i < totalPlayers; i++) {
-            players.add(new Player(winningNum));
+            players.add(new Player(i, winningNum));
         }
+        
         items = new ArrayList<Item>();
         positions = new ArrayList<List<Integer>>();
         for (int i = 0; i < itemTypes; i++) {
@@ -122,29 +174,6 @@ class Game {
             items.add(new Item(num));
             positions.get(num).add(i - 4);
         }
-        int[] winningCounts = firstAnalyze();
-        possibleTypes = new HashSet<Integer>();
-        for (int i = 0; i < winningCounts.length; i++) {
-            int winningCount = winningCounts[i];
-            if (winningCount >= winningNum) {
-                possibleTypes.add(i);
-            }
-        }
-    }
-    
-    private int[] firstAnalyze() {
-        int[] counts = new int[itemTypes];
-        int winningCount = 0;
-        for (Item item : items) {
-            counts[item.num]++;
-            if (counts[item.num] == winningNum) {
-                winningCount++;
-                if (winningCount == Math.min(totalPlayers, itemTypes)) {
-                    return counts;
-                }
-            }
-        }
-        return counts;
     }
     
     private String receive() throws IOException {
@@ -171,33 +200,31 @@ class Game {
 }
 
 class Player {
-    List<Item> items;
+    int id;
+    Map<Integer, Integer> counts;
     int budget;
     int winningNum;
     
-    public Player(int winningNum) {
-        items = new ArrayList<Item>();
+    public Player(int id, int winningNum) {
+        this.id = id;
+        counts = new HashMap<Integer, Integer>();
         budget = 100;
         this.winningNum = winningNum;
     }
     
-    public boolean isDangerous() {
-        if (items.size() < winningNum - 1)
+    public boolean isDangerous(int type) {
+        if (!counts.containsKey(type)) {
             return false;
-        Map<Integer, Integer> map = new HashMap<Integer, Integer>();
-        for (Item item : items) {
-            if (!map.containsKey(item.num)) {
-                map.put(item.num, 0);
-            }
-            map.put(item.num, map.get(item.num) + 1);
-            if (map.get(item.num) == winningNum - 1)
-                return true;
         }
-        return false;
+        return counts.get(type) == winningNum - 1;
     }
     
     public void addItem(Item item) {
-        items.add(item);
+        int type = item.num;
+        if (!counts.containsKey(type)) {
+            counts.put(type, 0);
+        }
+        counts.put(type, counts.get(type) + 1);
         budget -= item.bid;
     }
 }
