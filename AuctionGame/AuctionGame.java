@@ -165,16 +165,24 @@ class Game {
         System.out.println(" next item: " + type);
         if (isStillEmpty()) {
             int[] order = new int[itemTypes];
-            System.out.println("orders: ");
+            System.out.println("the orders of No. " + winningNum + ": ");
             for (int i = 0; i < itemTypes; i++) {
                 order[i] = positions.get(i).get(passedCounts[i] + winningNum - 1);
                 System.out.print(" " + order[i]);
             }
             System.out.println();
             Arrays.sort(order);
-            for (int i = 0; i < totalPlayers; i++) {
-                if (items.get(order[i]).num == type) {
-                    return 50 / winningNum;
+            int[] secondOrder = new int[itemTypes];
+            System.out.println("the orders of No. " + (winningNum + totalPlayers) + ": ");
+            for (int i = 0; i < itemTypes; i++) {
+                secondOrder[i] = positions.get(i).get(passedCounts[i] + winningNum + totalPlayers - 1);
+                System.out.print(" " + secondOrder[i]);
+            }
+            System.out.println();
+            Arrays.sort(secondOrder);
+            for (int i = 0; i < 2; i++) {
+                if (items.get(order[i]).num == type || items.get(secondOrder[i]).num == type) {
+                    return 100 / winningNum;
                 }
             }
             if (items.get(order[totalPlayers]).num == type) {
