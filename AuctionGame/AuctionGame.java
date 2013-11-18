@@ -16,9 +16,10 @@ import java.util.Set;
 public class AuctionGame {
     public static void main(String[] args) throws UnknownHostException, IOException {
         int port = Integer.parseInt(args[0]);
-        Game game = new Game(port);
+        String identity = (args.length > 1) ? args[1] : "";
+        Game game = new Game(port, identity);
         while (true) {
-            game.bid();
+            game.bid(identity);
         }
     }
 }
@@ -39,26 +40,104 @@ class Game {
     private Random random;
     private Set<Integer> possibleTypes;
     private int[] passedCounts;
+    private int[] maxBid; // Max bid amount for each item
     
-    public Game(int port) throws UnknownHostException, IOException {
+    public Game(int port, String identity) throws UnknownHostException, IOException {
         
         client = new Socket("127.0.0.1", port);
         out = new PrintWriter(client.getOutputStream(), true);
         in = new BufferedReader(new InputStreamReader(client.getInputStream()));
         System.out.println("connected");
         receive();
-        send("JJ");
+        send("JJ" + identity);
         init(receive());
         random = new Random(System.currentTimeMillis());
     }
     
-    public void bid() throws IOException {
+    public void bid(String identity) throws IOException {
         // int bid = randomBid();
-        int bid = patientBid();
+        int bid = 0;
+        if (identity.equals("r"))
+            bid = randomBid();
+        else if (identity.equals("p"))
+            bid = patientBid();
+        else if (identity.equals("c"))
+            bid = cheapBid();
+        else
+            bid = patientBid();
         send(bid + "");
         parseLastBid(receive());
         passedCounts[items.get(round).num]++;
         round++;
+    }
+    
+    private int cheapBid() {
+        // The goal of cheap bidder is collecting 3 (or so) types of items that he can get
+        // as cheap as possible, so that he has as much money as possible at the endgame
+        // when he wants to finish off the game or intercepts the opponent's final bid.
+        final int maxNumTypes = 2; // Number of item types that we will be collecting
+        int type = items.get(round).num;
+        for (Entry<Integer, Integer> entry : players.get(myId).counts.entrySet()) {
+            System.out.println("I have " + entry.getValue() + " of item " + entry.getKey());
+        }
+        System.out.println(" next item: " + type);
+        for (Player player : players) {
+            // See if anyone can finish the game and bid more than they can afford
+            // If it's me, bid all I have
+            if (player.isDangerous(type)) {
+                if (player.id == myId) {
+                    System.out.println("I'm about to win with item " + type);
+                    return player.budget;
+                } else {
+                    // Consider letting someone else do it
+                    System.out.println("Player " + player.id + " is about to win with item " + type
+                                       + ", so I'm bidding");
+                    return player.budget + 1;
+                }
+            }
+        }
+        if (players.get(myId).counts.keySet().size() < maxNumTypes) {
+            // In case we are still sampling different types of items
+            int[] rank = new int[itemTypes];
+            for (int i = 0; i < itemTypes; ++i)
+                for (int j = 0; j < itemTypes; ++j)
+                    if (maxBid[i] > maxBid[j])
+                        ++rank[i];
+            // Bid only if no one has ever won this item with expensive bid
+            if (rank[type] < maxNumTypes) {
+                System.out.println("Item " + type + " seems cheap (" + maxBid[type] + "), so I'm bidding");
+                return maxBid[type] + 1;
+            } else {
+                System.out.println("Item " + type + " seems expensive (" + maxBid[type] + "), so I'm not bidding");
+            }
+        } else {
+            // In case we already have maxNumTypes types of items
+            // If we are not collecting this type, let it go
+            if (!players.get(myId).counts.containsKey(type))
+                return 0;
+            int[] rank = new int[itemTypes];
+            for (int i = 0; i < itemTypes; ++i)
+                for (int j = 0; j < itemTypes; ++j)
+                    if (maxBid[i] > maxBid[j])
+                        ++rank[i];
+                    else if (maxBid[i] == maxBid[j] && i != j) {
+                        int ci = players.get(myId).counts.containsKey(i) ? players.get(myId).counts.get(i) : 0;
+                        int cj = players.get(myId).counts.containsKey(j) ? players.get(myId).counts.get(j) : 0;
+                        if (ci < cj)
+                            ++rank[i];
+                    }
+            // Still make sure that this is not something that someone is eagerly looking for
+            if (rank[type] < maxNumTypes) {// || rank[type] < itemTypes-totalPlayers+1) {
+                System.out.println("Item " + type + " is in my collections and is still cheap (" + maxBid[type]
+                                   + "), so I'm bidding");
+                return maxBid[type] + 1;
+            } else {
+                System.out.println("Item " + type + " is in my collections but is too expensive (" + maxBid[type]
+                                   + "), so I'm not bidding");
+            }
+        }
+        // We are not interested in this item
+        return 0;
     }
     
     private int getWinningPosition(Player player, int currType) {
