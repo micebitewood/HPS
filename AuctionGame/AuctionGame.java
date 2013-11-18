@@ -107,6 +107,7 @@ class Game {
                 return players.get(myId).budget / (winningNum - players.get(myId).counts.get(type));
             }
             int maxPrice = 0;
+            int minWinningPosition = 0;
             for (Player player : players) {
                 if (player.id != myId) {
                     if (player.counts.containsKey(type)) {
@@ -119,15 +120,27 @@ class Game {
                             if (estimatePrice > maxPrice) {
                                 maxPrice = estimatePrice;
                             }
+                            if (winningPosition < minWinningPosition) {
+                                minWinningPosition = winningPosition;
+                            }
                         }
                     }
                 }
             }
             if (maxPrice != 0) {
-                return maxPrice + 1;
+                if (players.get(myId).budget > 2 * (maxPrice + 1))
+                    return maxPrice + 1;
+                if (minWinningPosition <= round + 1) {
+                    Player myPlayer = players.get(myId);
+                    return Math.max(0, Math.min(maxPrice + 1,
+                                                myPlayer.budget - myPlayer.counts.get(items.get(myWinningPosition).num)));
+                }
             }
         }
-        return 1;
+        if (winningNum < 5)
+            return players.get(myId).budget > 0 ? 1 : 0;
+        else
+            return 0;
     }
     
     private boolean isStillEmpty() {
