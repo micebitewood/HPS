@@ -106,7 +106,9 @@ class Game {
             // Bid only if no one has ever won this item with expensive bid
             if (rank[type] < maxNumTypes) {
                 System.out.println("Item " + type + " seems cheap (" + maxBid[type] + "), so I'm bidding");
-                return maxBid[type] + 1;
+                // TODO john did this
+                return maxBid[type] + random.nextInt(2) + 1;
+                // return maxBid[type] + 1;
             } else {
                 System.out.println("Item " + type + " seems expensive (" + maxBid[type] + "), so I'm not bidding");
             }
@@ -231,11 +233,13 @@ class Game {
                     return maxPrice;
             }
         }
-        if (players.get(myId).counts.containsKey(type)) {
+        if (players.get(myId).counts.containsKey(type) && players.get(myId).budget > 100 / winningNum + 15) {
             return 1;
         }
         // if (winningNum < 5)
-        return players.get(myId).budget > 0 ? 1 : 0;
+        if (players.get(myId).budget > 30)
+            return players.get(myId).budget > 0 ? 1 : 0;
+        return 0;
         // else
         // return 0;
     }
