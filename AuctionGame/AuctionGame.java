@@ -116,6 +116,8 @@ class Game {
                         if (winningPosition < myWinningPosition) {
                             System.out.println(player.id + " is gonna win before me! " + winningPosition);
                             int estimatePrice = player.budget / (winningNum - count);
+                            if (winningNum - count == 1)
+                                estimatePrice++;
                             System.out.println(" estimate price is: " + estimatePrice);
                             if (estimatePrice > maxPrice) {
                                 maxPrice = estimatePrice;
@@ -132,7 +134,7 @@ class Game {
                     return maxPrice + 1;
                 if (minWinningPosition <= round + 1) {
                     Player myPlayer = players.get(myId);
-                    return Math.max(0, Math.min(maxPrice + 1,
+                    return Math.max(0, Math.min(maxPrice,
                                                 myPlayer.budget - myPlayer.counts.get(items.get(myWinningPosition).num)));
                 }
             }
