@@ -130,14 +130,17 @@ class Game {
                 }
             }
             if (maxPrice != 0) {
-                if (players.get(myId).budget > 2 * (maxPrice + 1))
-                    return maxPrice + 1;
                 if (minWinningPosition <= round + 1) {
                     Player myPlayer = players.get(myId);
                     return Math.max(0, Math.min(maxPrice,
                                                 myPlayer.budget - myPlayer.counts.get(items.get(myWinningPosition).num)));
                 }
+                if (players.get(myId).budget > 2 * (maxPrice + 1))
+                    return maxPrice;
             }
+        }
+        if (players.get(myId).counts.containsKey(type)) {
+            return 1;
         }
         if (winningNum < 5)
             return players.get(myId).budget > 0 ? 1 : 0;
