@@ -57,12 +57,17 @@ class Game {
     public void bid(String identity) throws IOException {
         // int bid = randomBid();
         int bid = 0;
+        System.out.println("********** round " + round + " **********");
+        System.out.println("My ID is: " + myId);
+        System.out.println("My budget is: " + players.get(myId).budget);
         if (identity.equals("r"))
             bid = randomBid();
         else if (identity.equals("p"))
             bid = patientBid();
         else if (identity.equals("c"))
             bid = cheapBid();
+        else if (identity.equals("a"))
+            bid = ambitiousBid();
         else
             bid = patientBid();
         send(bid + "");
@@ -145,7 +150,6 @@ class Game {
     private int getWinningPosition(Player player, int currType) {
         Map<Integer, Integer> counts = player.counts;
         int minPosition = items.size();
-        int minType = -1;
         for (Entry<Integer, Integer> entry : counts.entrySet()) {
             int type = entry.getKey();
             System.out.println(" *** I have " + entry.getValue() + " of " + type + " ***");
@@ -153,11 +157,7 @@ class Game {
             if (position < minPosition) {
                 System.out.println("  I'll win in position " + position + " with " + type);
                 minPosition = position;
-                minType = type;
             }
-        }
-        if (minType == currType) {
-            return 0;
         }
         return minPosition;
     }
@@ -193,10 +193,86 @@ class Game {
         } else {
             Player myPlayer = players.get(myId);
             int myWinningPosition = getWinningPosition(myPlayer, type);
-            if (myWinningPosition == 0) {
+            int maxPrice = 0;
+            int minWinningPosition = 0;
+            for (Player player : players) {
+                if (player.id != myId) {
+                    if (player.counts.containsKey(type)) {
+                        int count = player.counts.get(type);
+                        System.out.println("!! Player " + player.id + " has " + count + " of " + type + " !!");
+                        int winningPosition = positions.get(type).get(passedCounts[type] + winningNum - count - 1);
+                        if (winningPosition < myWinningPosition) {
+                            System.out.println(player.id + " is gonna win before me! " + winningPosition);
+                            int estimatePrice = player.budget / (winningNum - count) / 2 + 1;
+                            if (winningNum - count == 2)
+                                estimatePrice = player.budget / (winningNum - count);
+                            if (winningNum - count == 1)
+                                estimatePrice = player.budget / (winningNum - count) + 1;
+                            System.out.println(" estimate price is: " + estimatePrice);
+                            if (estimatePrice > maxPrice) {
+                                maxPrice = estimatePrice;
+                            }
+                            if (winningPosition < minWinningPosition) {
+                                minWinningPosition = winningPosition;
+                            }
+                        }
+                    }
+                }
+            }
+            if (type == items.get(myWinningPosition).num && maxPrice == 0) {
                 int average = myPlayer.budget / Math.max(1, (winningNum - myPlayer.counts.get(type)));
                 if (myPlayer.counts.get(type) < winningNum - 1)
                     return random.nextInt(3) + 3;
+                return average;
+            }
+            if (maxPrice != 0) {
+                if (minWinningPosition <= round + 1) {
+                    return Math.max(0, Math.min(maxPrice,
+                                                myPlayer.budget - myPlayer.counts.get(items.get(myWinningPosition).num)));
+                }
+                if (players.get(myId).budget > 2 * (maxPrice + 1))
+                    return maxPrice;
+            }
+        }
+        if (players.get(myId).counts.containsKey(type) && players.get(myId).budget > 100 / winningNum + 15) {
+            return 1;
+        }
+        // if (winningNum < 5)
+        if (players.get(myId).budget > 30)
+            return players.get(myId).budget > 0 ? 1 : 0;
+        return 0;
+        // else
+        // return 0;
+    }
+    
+    private int ambitiousBid() {
+        int type = items.get(round).num;
+        System.out.println(" next item: " + type);
+        if (isStillEmpty()) {
+            int[] order = new int[itemTypes];
+            System.out.println("the orders of No. " + winningNum + ": ");
+            for (int i = 0; i < itemTypes; i++) {
+                order[i] = positions.get(i).get(passedCounts[i] + winningNum - 1);
+                System.out.print(" " + order[i]);
+            }
+            System.out.println();
+            Arrays.sort(order);
+            int[] secondOrder = new int[itemTypes];
+            System.out.println("the orders of No. " + (winningNum + totalPlayers) + ": ");
+            for (int i = 0; i < itemTypes; i++) {
+                secondOrder[i] = positions.get(i).get(passedCounts[i] + winningNum + totalPlayers - 1);
+                System.out.print(" " + secondOrder[i]);
+            }
+            System.out.println();
+            Arrays.sort(secondOrder);
+            if (items.get(order[0]).num == type || items.get(secondOrder[0]).num == type) {
+                return 100 / winningNum;
+            }
+        } else {
+            Player myPlayer = players.get(myId);
+            int myWinningPosition = getWinningPosition(myPlayer, type);
+            if (myWinningPosition == 0) {
+                int average = myPlayer.budget / Math.max(1, (winningNum - myPlayer.counts.get(type)));
                 return average;
             }
             int maxPrice = 0;
@@ -205,6 +281,7 @@ class Game {
                 if (player.id != myId) {
                     if (player.counts.containsKey(type)) {
                         int count = player.counts.get(type);
+                        System.out.println("!! Player " + player.id + " has " + count + " of " + type + " !!");
                         int winningPosition = positions.get(type).get(passedCounts[type] + winningNum - count - 1);
                         if (winningPosition < myWinningPosition) {
                             System.out.println(player.id + " is gonna win before me! " + winningPosition);
@@ -233,15 +310,7 @@ class Game {
                     return maxPrice;
             }
         }
-        if (players.get(myId).counts.containsKey(type) && players.get(myId).budget > 100 / winningNum + 15) {
-            return 1;
-        }
-        // if (winningNum < 5)
-        if (players.get(myId).budget > 30)
-            return players.get(myId).budget > 0 ? 1 : 0;
         return 0;
-        // else
-        // return 0;
     }
     
     private boolean isStillEmpty() {
@@ -261,7 +330,6 @@ class Game {
         lastItem.setBid(bestBid);
         lastItem.setPlayer(winner);
         winner.addItem(lastItem);
-        System.out.println("My budget is: " + players.get(myId).budget);
     }
     
     private void init(String str) {
@@ -296,14 +364,13 @@ class Game {
         System.out.print("receive: ");
         while (true) {
             in.read(cbuf);
-            System.out.print(cbuf[0]);
             sb.append(cbuf[0]);
             if (sb.toString().contains("<EOM>")) {
                 break;
             }
         }
         String res = sb.toString().substring(0, sb.length() - 5);
-        System.out.println();
+        System.out.println(res + '\n');
         return res;
     }
     
