@@ -203,7 +203,7 @@ class Game {
                         int winningPosition = positions.get(type).get(passedCounts[type] + winningNum - count - 1);
                         if (winningPosition < myWinningPosition) {
                             System.out.println(player.id + " is gonna win before me! " + winningPosition);
-                            int estimatePrice = player.budget / (winningNum - count) / 2 + 1;
+                            int estimatePrice = player.budget / Math.max(1, (winningNum - count)) / 2 + 1;
                             if (winningNum - count == 2)
                                 estimatePrice = player.budget / (winningNum - count);
                             if (winningNum - count == 1)
@@ -271,7 +271,7 @@ class Game {
         } else {
             Player myPlayer = players.get(myId);
             int myWinningPosition = getWinningPosition(myPlayer, type);
-            if (myWinningPosition == 0) {
+            if (type == items.get(myWinningPosition).num) {
                 int average = myPlayer.budget / Math.max(1, (winningNum - myPlayer.counts.get(type)));
                 return average;
             }
@@ -285,7 +285,7 @@ class Game {
                         int winningPosition = positions.get(type).get(passedCounts[type] + winningNum - count - 1);
                         if (winningPosition < myWinningPosition) {
                             System.out.println(player.id + " is gonna win before me! " + winningPosition);
-                            int estimatePrice = player.budget / (winningNum - count) / 2 + 1;
+                            int estimatePrice = player.budget / Math.max(1, (winningNum - count)) / 2 + 1;
                             if (winningNum - count == 2)
                                 estimatePrice = player.budget / (winningNum - count);
                             if (winningNum - count == 1)
