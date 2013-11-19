@@ -405,7 +405,7 @@ class Player extends Thread {
                                                + game.locations.get(id)[0] + ", " + game.locations.get(id)[1] + ")");
                             char prevDirection = moves.get(id).program.charAt(moves.get(id).programCounter);
                             if (game.isLarger(prevDirection, direction)) {
-                                game.vizUpdate.put(playerid + "," + id + "," + direction, "x");
+                                game.vizUpdate.put(playerid + "," + muncher.position + "," + direction, "x");
                                 System.out.println("       Confliction detected at " + id + ", this muncher dies");
                                 break;
                             } else {
