@@ -150,16 +150,34 @@ class Game {
     private int getWinningPosition(Player player, int currType) {
         Map<Integer, Integer> counts = player.counts;
         int minPosition = items.size();
+        int maxNum = 0;
         for (Entry<Integer, Integer> entry : counts.entrySet()) {
             int type = entry.getKey();
             System.out.println(" *** I have " + entry.getValue() + " of " + type + " ***");
             int position = positions.get(type).get(passedCounts[type] + winningNum - entry.getValue() - 1);
-            if (position < minPosition) {
+            if (position <= minPosition && (entry.getValue() >= maxNum || entry.getValue() <= winningNum - 2)) {
                 System.out.println("  I'll win in position " + position + " with " + type);
                 minPosition = position;
+                maxNum = entry.getValue();
             }
         }
         return minPosition;
+    }
+    
+    private int getAverageBid(Player player, int type) {
+        int bids = 0;
+        int count = 0;
+        for (Item item : items) {
+            if (item.winner == null)
+                break;
+            if (item.winner.id == player.id && item.num == type) {
+                bids += item.bid;
+                count++;
+            }
+        }
+        if (count == 0)
+            return 0;
+        return bids / count;
     }
     
     private int patientBid() {
@@ -182,10 +200,9 @@ class Game {
             }
             System.out.println();
             Arrays.sort(secondOrder);
-            for (int i = 0; i < 2; i++) {
-                if (items.get(order[i]).num == type || items.get(secondOrder[i]).num == type) {
-                    return 100 / winningNum;
-                }
+            if (items.get(order[0]).num == type || items.get(secondOrder[0]).num == type
+                || items.get(secondOrder[1]).num == type) {
+                return 100 / winningNum + 2;
             }
             if (items.get(order[totalPlayers]).num == type) {
                 return 1;
@@ -193,22 +210,40 @@ class Game {
         } else {
             Player myPlayer = players.get(myId);
             int myWinningPosition = getWinningPosition(myPlayer, type);
+            System.out.println("   * my winning position " + myWinningPosition + " with item "
+                               + items.get(myWinningPosition).num);
             int maxPrice = 0;
             int minWinningPosition = 0;
             for (Player player : players) {
                 if (player.id != myId) {
                     if (player.counts.containsKey(type)) {
                         int count = player.counts.get(type);
-                        System.out.println("!! Player " + player.id + " has " + count + " of " + type + " !!");
+                        System.out.println("    !! Player " + player.id + " has " + count + " of " + type + " !!");
                         int winningPosition = positions.get(type).get(passedCounts[type] + winningNum - count - 1);
+                        System.out.println("    !! Winning position is: " + winningPosition + " !!");
                         if (winningPosition < myWinningPosition) {
-                            System.out.println(player.id + " is gonna win before me! " + winningPosition);
-                            int estimatePrice = player.budget / Math.max(1, (winningNum - count)) / 2 + 1;
-                            if (winningNum - count == 2)
-                                estimatePrice = player.budget / (winningNum - count);
-                            if (winningNum - count == 1)
-                                estimatePrice = player.budget / (winningNum - count) + 1;
-                            System.out.println(" estimate price is: " + estimatePrice);
+                            System.out.println("    " + player.id + " is gonna win before me! " + winningPosition);
+                            int estimatePrice =
+                            Math.min(player.budget / Math.max(1, (winningNum - count)) / 2 + 1,
+                                     getAverageBid(player, type) + 1);
+                            // if (winningNum - count == 2) {
+                            // estimatePrice = player.budget / (winningNum - count);
+                            // System.out.println("    $ player " + player.id + " is dangerous $");
+                            // }
+                            // else
+                            if (winningNum - count == 1) {
+                                for (Player otherPlayer : players) {
+                                    if (otherPlayer.id != myId && otherPlayer.budget > player.budget) {
+                                        estimatePrice = 0;
+                                        break;
+                                    }
+                                }
+                                if (estimatePrice != 0) {
+                                    estimatePrice = player.budget / (winningNum - count) + 1;
+                                    System.out.println("    $ player " + player.id + " is very dangerous $");
+                                }
+                            }
+                            System.out.println("    estimate price is: " + estimatePrice);
                             if (estimatePrice > maxPrice) {
                                 maxPrice = estimatePrice;
                             }
@@ -219,6 +254,7 @@ class Game {
                     }
                 }
             }
+            System.out.println("  max price is " + maxPrice);
             if (type == items.get(myWinningPosition).num && maxPrice == 0) {
                 int average = myPlayer.budget / Math.max(1, (winningNum - myPlayer.counts.get(type)));
                 if (myPlayer.counts.get(type) < winningNum - 1)
@@ -227,11 +263,15 @@ class Game {
             }
             if (maxPrice != 0) {
                 if (minWinningPosition <= round + 1) {
+                    System.out.println("  the max price is " + maxPrice + ", and I need "
+                                       + (winningNum - myPlayer.counts.get(items.get(myWinningPosition).num)) + " more items");
                     return Math.max(0, Math.min(maxPrice,
-                                                myPlayer.budget - myPlayer.counts.get(items.get(myWinningPosition).num)));
+                                                myPlayer.budget - (winningNum - myPlayer.counts.get(items.get(myWinningPosition).num))));
                 }
-                if (players.get(myId).budget > 2 * (maxPrice + 1))
+                if (players.get(myId).budget > 2 * (maxPrice + 1)) {
+                    System.out.println("  I have enough budget");
                     return maxPrice;
+                }
             }
         }
         if (players.get(myId).counts.containsKey(type) && players.get(myId).budget > 100 / winningNum + 15) {
@@ -398,6 +438,14 @@ class Player {
             return false;
         }
         return counts.get(type) == winningNum - 1;
+    }
+    
+    public int getEntireCount() {
+        int count = 0;
+        for (Entry<Integer, Integer> entry : counts.entrySet()) {
+            count += entry.getValue();
+        }
+        return count;
     }
     
     public void addItem(Item item) {
