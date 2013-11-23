@@ -7,6 +7,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -38,7 +39,7 @@ class Game {
     private List<Player> players;
     private int round;
     private Random random;
-    private Set<Integer> possibleTypes;
+    private Set<Integer> impossibleTypes;
     private int[] passedCounts;
     private int[] maxBid; // Max bid amount for each item
     
@@ -200,6 +201,11 @@ class Game {
             }
             System.out.println();
             Arrays.sort(secondOrder);
+            for (int i = 0; i < itemTypes; i++) {
+                if (secondOrder[i] > 100) {
+                    impossibleTypes.add(items.get(secondOrder[i]).num);
+                }
+            }
             if (items.get(order[0]).num == type || items.get(secondOrder[0]).num == type
                 || items.get(secondOrder[1]).num == type) {
                 return 100 / winningNum + 2;
@@ -223,24 +229,29 @@ class Game {
                         System.out.println("    !! Winning position is: " + winningPosition + " !!");
                         if (winningPosition < myWinningPosition) {
                             System.out.println("    " + player.id + " is gonna win before me! " + winningPosition);
-                            int estimatePrice =
-                            Math.min(player.budget / Math.max(1, (winningNum - count)) / 2 + 1,
-                                     getAverageBid(player, type) + 1);
+                            int estimatePrice = 3;
+                            // Math.min(player.budget / Math.max(1, (winningNum - count)) / 2 + 1,
+                            // getAverageBid(player, type) + 1);
                             // if (winningNum - count == 2) {
                             // estimatePrice = player.budget / (winningNum - count);
                             // System.out.println("    $ player " + player.id + " is dangerous $");
                             // }
                             // else
                             if (winningNum - count == 1) {
-                                for (Player otherPlayer : players) {
-                                    if (otherPlayer.id != myId && otherPlayer.budget > player.budget) {
-                                        estimatePrice = 0;
-                                        break;
-                                    }
-                                }
-                                if (estimatePrice != 0) {
+                                if (player.budget * 4 < myPlayer.budget) {
                                     estimatePrice = player.budget / (winningNum - count) + 1;
                                     System.out.println("    $ player " + player.id + " is very dangerous $");
+                                } else {
+                                    for (Player otherPlayer : players) {
+                                        if (otherPlayer.id != myId && otherPlayer.budget > player.budget) {
+                                            estimatePrice = 0;
+                                            break;
+                                        }
+                                    }
+                                    if (estimatePrice > 0) {
+                                        estimatePrice = player.budget / (winningNum - count) + 1;
+                                        System.out.println("    $ player " + player.id + " is very dangerous $");
+                                    }
                                 }
                             }
                             System.out.println("    estimate price is: " + estimatePrice);
@@ -273,13 +284,16 @@ class Game {
                     return maxPrice;
                 }
             }
+            if (impossibleTypes.contains(type)) {
+                return 0;
+            }
         }
         if (players.get(myId).counts.containsKey(type) && players.get(myId).budget > 100 / winningNum + 15) {
             return 1;
         }
         // if (winningNum < 5)
         if (players.get(myId).budget > 30)
-            return players.get(myId).budget > 0 ? 1 : 0;
+            return 1;
         return 0;
         // else
         // return 0;
@@ -382,6 +396,7 @@ class Game {
         passedCounts = new int[itemTypes];
         maxBid = new int[itemTypes]; // Cheap bid
         players = new ArrayList<Player>();
+        impossibleTypes = new HashSet<Integer>();
         for (int i = 0; i < totalPlayers; i++) {
             players.add(new Player(i, winningNum));
         }
