@@ -114,6 +114,8 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
     private Button storyMode;
     private Label labGame;
     private Label labSeekerModes;
+    private Label srcColor;
+    private Label dstColor;
     
     public void init() {
         started = false;
@@ -167,6 +169,8 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
         tfScore.setEditable(false);
         butShoot = new Button("Shoot");
         butRestart = new Button("Restart");
+        srcColor = new Label("Source: Yello");
+        dstColor = new Label("Target: White");
         
         createUI();
     }
@@ -292,15 +296,17 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
         panelSeeker.add(p);
         panelSeeker.add(butShoot);
         panelSeeker.add(butRestart);
+        panelSeeker.add(srcColor);
+        panelSeeker.add(dstColor);
         butShoot.addActionListener(this);
         butRestart.addActionListener(this);
     }
     
     private double getDist(int source, int destination) {
-        int x1 = source / (SIZE_Y + 1);
-        int y1 = source % (SIZE_Y + 1);
-        int x2 = destination / (SIZE_Y + 1);
-        int y2 = destination % (SIZE_Y + 1);
+        int x1 = getX(source);
+        int y1 = getY(source);
+        int x2 = getX(destination);
+        int y2 = getY(destination);
         return Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
     }
     
@@ -342,7 +348,6 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
     // checked
     private void initGame() {
         // TODO: Randomize source and destination locations
-        // John: Can I do like this?
         source = getLoc(random.nextInt(SIZE_X), random.nextInt(SIZE_Y));
         do {
             destination = getLoc(random.nextInt(SIZE_X), random.nextInt(SIZE_Y));
@@ -383,9 +388,9 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
     
     private void placePlanets() {
         // TODO: Make these random
-        locations[0] = getLoc(10, 50);
-        locations[1] = getLoc(60, 30);
-        weights[0] = 650;
+        locations[0] = getLoc(random.nextInt(SIZE_X), random.nextInt(SIZE_Y));
+        locations[1] = getLoc(random.nextInt(SIZE_X), random.nextInt(SIZE_Y));
+        weights[0] = random.nextInt(SUM_PLANET_WEIGHTS);
         weights[1] = SUM_PLANET_WEIGHTS - weights[0];
     }
     
@@ -633,6 +638,7 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
         tfWeight2.setText("" + weights[1]);
     }
     
+    // TODO John: I think we should show the positions of planets at last
     private void onClickSeeker() {
         System.out.println("Seeker clicked");
         
@@ -646,7 +652,6 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
     }
     
     private void onClickManual() {
-        
         // Switch the panel
         gameModes.setVisible(false);
         seekerModes.setVisible(false);
