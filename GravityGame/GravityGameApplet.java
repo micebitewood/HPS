@@ -70,7 +70,8 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
     int sumVelocities; // Sum of velocities so far
     double bestScore; // Best score so far
     boolean shooting; // Are we shooting now?
-    boolean isEndless;
+    boolean isEndless; // For seeker mode
+    boolean showPlanets; // For seeker mode
     
     // Extra stuffs
     Random random;
@@ -116,6 +117,7 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
     private Label labSeekerModes;
     private Label srcColor;
     private Label dstColor;
+    private Button changePlanets;
     
     public void init() {
         started = false;
@@ -126,13 +128,13 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
         canvas = new GravityGameCanvas(BOARD_WIDTH, BOARD_HEIGHT);
         canvas.setBackground(Color.BLACK);
         
-        // John:
+        // John
         gameModes = new Panel();
         labGame = new Label("Welcom to the gravity game!");
         seekerMode = new Button("Seeker Mode");
         manualMode = new Button("Manual Mode");
         
-        // John:
+        // John
         seekerModes = new Panel();
         labSeekerModes = new Label("There are only 5 trials in Story mode");
         endlessMode = new Button("Endless");
@@ -140,7 +142,7 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
         
         panelHider = new Panel();
         labHider = new Label("Place your planets");
-        // John: cbMode = new Checkbox("Manually place planets");
+        // John cbMode = new Checkbox("Manually place planets");
         labLocX1 = new Label("Planet 1 X:");
         labLocY1 = new Label("Planet 1 Y:");
         labWeight1 = new Label("Planet 1 Weight:");
@@ -169,6 +171,7 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
         tfScore.setEditable(false);
         butShoot = new Button("Shoot");
         butRestart = new Button("Restart");
+        changePlanets = new Button("Show/Hide Planets");
         srcColor = new Label("Source: Yello");
         dstColor = new Label("Target: White");
         
@@ -195,7 +198,7 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
         
         // Init game
         // finishGame();
-        preInitGame();
+        initGame();
     }
     
     // Checked
@@ -203,7 +206,7 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
         // Temporary panel
         Panel p;
         
-        // John:
+        // John
         System.out.println("gameModes initialized");
         gameModes.setLayout(new GridLayout(10, 1));
         gameModes.setSize(EXTRA_WIDTH, BOARD_HEIGHT);
@@ -213,7 +216,7 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
         seekerMode.addActionListener(this);
         manualMode.addActionListener(this);
         
-        // John:
+        // John
         System.out.println("seekerModes initialized");
         seekerModes.setLayout(new GridLayout(10, 1));
         seekerModes.setSize(EXTRA_WIDTH, BOARD_HEIGHT);
@@ -228,7 +231,7 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
         panelHider.setLayout(new GridLayout(10, 1));
         panelHider.setSize(EXTRA_WIDTH, BOARD_HEIGHT);
         panelHider.add(labHider);
-        // John: panelHider.add(cbMode);
+        // John panelHider.add(cbMode);
         p = new Panel();
         p.setLayout(new GridLayout(1, 2));
         p.add(labLocX1);
@@ -296,10 +299,12 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
         panelSeeker.add(p);
         panelSeeker.add(butShoot);
         panelSeeker.add(butRestart);
+        panelSeeker.add(changePlanets);
         panelSeeker.add(srcColor);
         panelSeeker.add(dstColor);
         butShoot.addActionListener(this);
         butRestart.addActionListener(this);
+        changePlanets.addActionListener(this);
     }
     
     private double getDist(int source, int destination) {
@@ -332,21 +337,15 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
     }
     
     // checked
-    private void preInitGame() {
-        // TODO choose game modes
+    private void initGame() {
         started = false;
+        showPlanets = false;
         
         // Switch the panel
         gameModes.setVisible(true);
         seekerModes.setVisible(false);
         panelSeeker.setVisible(false);
         panelHider.setVisible(false);
-        initGame();
-        initCanvasSeeker();
-    }
-    
-    // checked
-    private void initGame() {
         // TODO: Randomize source and destination locations
         source = getLoc(random.nextInt(SIZE_X), random.nextInt(SIZE_Y));
         do {
@@ -366,6 +365,29 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
         sumVelocities = 0;
         bestScore = SIZE_X + SIZE_Y; // Something larger than the max distance in the board
         shooting = false;
+        
+        initCanvasSeeker();
+    }
+    
+    private void initCanvasSeeker() {
+        // TODO The centers seem not to be at the right positions. Can you please double check that?
+        Graphics g = canvas.getOffscreenGraphics();
+        
+        g.setColor(Color.BLACK);
+        g.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
+        
+        g.setColor(COLOR_SOURCE);
+        g.fillOval((int) (getX(source) * SCALER), (int) (getY(source) * SCALER), DOT_SIZE, DOT_SIZE);
+        g.setColor(COLOR_DESTINATION);
+        g.fillOval((int) (getX(destination) * SCALER), (int) (getY(destination) * SCALER), DOT_SIZE, DOT_SIZE);
+        
+        // John
+        /*
+         * if (showPlanets) { g.setColor(COLOR_PLANETS); for (int i = 0; i < NUM_PLANETS; ++i) g.fillOval((int)
+         * (getX(locations[i]) * SCALER), (int) (getY(locations[i]) * SCALER), DOT_SIZE, DOT_SIZE); }
+         */
+        
+        canvas.repaint();
     }
     
     private void initCanvasHider() {
@@ -440,26 +462,6 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
         tfLocX2.setText("" + getX(locations[1]));
         tfLocY2.setText("" + getY(locations[1]));
         tfWeight2.setText("" + weights[1]);
-    }
-    
-    private void initCanvasSeeker() {
-        Graphics g = canvas.getOffscreenGraphics();
-        
-        g.setColor(Color.BLACK);
-        g.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
-        
-        g.setColor(COLOR_SOURCE);
-        g.fillOval((int) (getX(source) * SCALER), (int) (getY(source) * SCALER), DOT_SIZE, DOT_SIZE);
-        g.setColor(COLOR_DESTINATION);
-        g.fillOval((int) (getX(destination) * SCALER), (int) (getY(destination) * SCALER), DOT_SIZE, DOT_SIZE);
-        
-        // John:
-        /*
-         * if (showPlanets) { g.setColor(COLOR_PLANETS); for (int i = 0; i < NUM_PLANETS; ++i) g.fillOval((int)
-         * (getX(locations[i]) * SCALER), (int) (getY(locations[i]) * SCALER), DOT_SIZE, DOT_SIZE); }
-         */
-        
-        canvas.repaint();
     }
     
     private void shootProjectile(double velX, double velY) {
@@ -549,11 +551,11 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
     }
     
     private void onClickRestart() {
-        preInitGame();
-        // John: finishGame();
+        initGame();
+        // John finishGame();
     }
     
-    // John:
+    // John
     /*
      * private void onClickMode() { // JL: For some reason, this appears to be the opposite. Maybe UI hasn't been
      * updated yet? boolean mode = !cbMode.getState();
@@ -672,6 +674,23 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
         startGame();
     }
     
+    private void onClickPlanets() {
+        // TODO Auto-generated method stub
+        Graphics g = canvas.getOffscreenGraphics();
+        
+        showPlanets = !showPlanets;
+        if (showPlanets) {
+            g.setColor(COLOR_PLANETS);
+            for (int i = 0; i < NUM_PLANETS; ++i)
+                g.fillOval((int) (getX(locations[i]) * SCALER), (int) (getY(locations[i]) * SCALER), DOT_SIZE, DOT_SIZE);
+        } else {
+            g.setColor(Color.BLACK);
+            for (int i = 0; i < NUM_PLANETS; ++i)
+                g.fillOval((int) (getX(locations[i]) * SCALER), (int) (getY(locations[i]) * SCALER), DOT_SIZE, DOT_SIZE);
+        }
+        canvas.repaint();
+    }
+    
     public void actionPerformed(ActionEvent e) {
         Object obj = e.getSource();
         
@@ -701,6 +720,8 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
             onClickEndless();
         else if (obj == storyMode)
             onClickStory();
+        else if (obj == changePlanets)
+            onClickPlanets();
     }
     
     public void mouseReleased(MouseEvent e) {
