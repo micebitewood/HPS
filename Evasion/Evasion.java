@@ -342,6 +342,8 @@ class Hunter {
     int[] direction;
     int[] position;
     int[] bounds = {0, 0, 499, 499 };
+    int[] pBounds = {-1, -1 };
+    boolean vFirst = false;
     int wallToDestroy = 0;
     Evasion game;
     
@@ -359,8 +361,24 @@ class Hunter {
         boolean buildWall = false;
         int destroyWall = 0;
         int[] wall = null;
+        boolean destroyFirst = false;
         
-        if (wallTimer == 0 && wallCount < game.maxNumWalls) {
+        // Check if we are about to hit the partial walls
+        if (pBounds[0] != -1 && position[0] + direction[0] == pBounds[0] && (!vFirst || pBounds[1] == -1)) {
+            for (int i = 0; i < wallCount; ++i)
+                if (walls[i][0] == pBounds[0] && walls[i][2] == pBounds[0])
+                    wallToDestroy = i + 1;
+            pBounds[0] = -1;
+            destroyFirst = true;
+        } else if (pBounds[1] != -1 && position[1] + direction[1] == pBounds[1] && (vFirst || pBounds[0] == -1)) {
+            for (int i = 0; i < wallCount; ++i)
+                if (walls[i][1] == pBounds[1] && walls[i][3] == pBounds[1])
+                    wallToDestroy = i + 1;
+            pBounds[1] = -1;
+            destroyFirst = true;
+        }
+        
+        if (wallTimer == 0 && wallCount < game.maxNumWalls && !destroyFirst) {
             // If we are allowed to build a wall
             
             // Turn these on, in case we want to build a wall
@@ -369,23 +387,73 @@ class Hunter {
             
             int[] dist = new int[] {Math.abs(preyPosition[0] - position[0]), Math.abs(preyPosition[1] - position[1]) };
             int minDist = (dist[0] < dist[1]) ? dist[0] : dist[1];
-            int safetyDist = 3 * game.wallTime + WALL_CONST;
             
-            if (direction[0] == 1 && preyPosition[0] - position[0] > count % 2) {
-                if (dist[0] <= WALL_CONST || game.maxNumWalls > 4 && minDist >= safetyDist && dist[1] == minDist)
+            if (direction[0] == 1 && preyPosition[0] - position[0] > 0) {
+                if (dist[0] <= WALL_CONST)
                     vWall = true;
-            } else if (direction[0] == -1 && position[0] - preyPosition[0] > count % 2) {
-                if (dist[0] <= WALL_CONST || game.maxNumWalls > 4 && minDist >= safetyDist && dist[1] == minDist)
+            } else if (direction[0] == -1 && position[0] - preyPosition[0] > 0) {
+                if (dist[0] <= WALL_CONST)
                     vWall = true;
             }
             
-            if (direction[1] == 1 && preyPosition[1] - position[1] > count % 2) {
-                if (dist[1] <= WALL_CONST || game.maxNumWalls > 4 && minDist >= safetyDist && dist[0] == minDist)
+            if (direction[1] == 1 && preyPosition[1] - position[1] > 0) {
+                if (dist[1] <= WALL_CONST)
                     hWall = true;
-            } else if (direction[1] == -1 && position[1] - preyPosition[1] > count % 2) {
-                if (dist[1] <= WALL_CONST || game.maxNumWalls > 4 && minDist >= safetyDist && dist[0] == minDist)
+            } else if (direction[1] == -1 && position[1] - preyPosition[1] > 0) {
+                if (dist[1] <= WALL_CONST)
                     hWall = true;
             }
+            
+            // Partial wall
+            if ((direction[0] == 1 && preyPosition[0] < position[0]
+                 || direction[0] == -1 && preyPosition[0] > position[0])
+                && (direction[1] == 1 && preyPosition[1] < position[1]
+                    || direction[1] == -1 && preyPosition[1] > position[1])) {
+                    // We are moving away from the prey
+                    
+                    int width = 9999;
+                    int height = 9999;
+                    if (pBounds[0] == -1)
+                        width = (direction[0] == 1) ? position[0] - bounds[0] : bounds[2] - position[0];
+                    if (pBounds[1] == -1)
+                        height = (direction[1] == 1) ? position[1] - bounds[1] : bounds[3] - position[1];
+                    
+                    if (width <= height && width < 9999) {
+                        if (pBounds[1] == -1) {
+                            vFirst = true;
+                            if (direction[1] == 1)
+                                wall = new int[] {position[0], bounds[1], position[0], position[1] + game.wallTime };
+                            else
+                                wall = new int[] {position[0], position[1] - game.wallTime, position[0], bounds[3] };
+                        } else {
+                            if (direction[1] == 1)
+                                wall = new int[] {position[0], bounds[1], position[0], position[1] };
+                            else
+                                wall = new int[] {position[0], position[1], position[0], bounds[3] };
+                        }
+                        pBounds[0] = position[0];
+                        buildWall = true;
+                    } else if (height < width) {
+                        if (pBounds[0] == -1) {
+                            vFirst = false;
+                            if (direction[0] == 1)
+                                wall = new int[] {bounds[0], position[1], position[0] + game.wallTime, position[1] };
+                            else
+                                wall = new int[] {position[0] - game.wallTime, position[1], bounds[2], position[1] };
+                        } else {
+                            if (direction[0] == 1)
+                                wall = new int[] {bounds[0], position[1], position[0], position[1] };
+                            else
+                                wall = new int[] {position[0], position[1], bounds[2], position[1] };
+                        }
+                        pBounds[1] = position[1];
+                        buildWall = true;
+                    }
+                    
+                    if (buildWall) {
+                        return new HunterMove(direction, buildWall, destroyWall, wall);
+                    }
+                }
             
             // Don't bother if our bounds are tight enough
             if (vWall && bounds[2] - bounds[0] <= 5)
@@ -611,6 +679,7 @@ class Prey {
         }
         System.out.println("diffX: " + (maxX - minX) + " minX: " + minX + " maxX: " + maxX);
         System.out.println("diffY: " + (maxY - minY) + " minY: " + minY + " maxY: " + maxY);
+        // diffY is larger than diffX
         if (maxX - minX < 50)
             return 1;
         if (maxY - minY < 50)
@@ -622,16 +691,114 @@ class Prey {
         int status;
         if ((status = atFinalStage()) > 0) {
             System.out.println("warning!!");
+            boolean isOutside = false;
+            this.direction[0] = 0;
+            this.direction[1] = 0;
             if (status == 1) {
-                if (position[1] > this.position[1])
-                    this.direction[1] = -1;
-                else
-                    this.direction[1] = 1;
+                if (position[0] < this.position[0]) {
+                    for (int i = position[0]; i < this.position[0]; i++) {
+                        if (verticalWalls.containsKey(i)) {
+                            isOutside = true;
+                            this.direction[0] = -1;
+                            break;
+                        }
+                    }
+                    if (game.wallTime < 5)
+                        this.direction[0] = 1;
+                } else {
+                    for (int i = this.position[0]; i < position[0]; i++) {
+                        if (verticalWalls.containsKey(i)) {
+                            isOutside = true;
+                            this.direction[0] = 1;
+                            break;
+                        }
+                    }
+                    if (game.wallTime < 5)
+                        this.direction[0] = -1;
+                }
+                if (isOutside) {
+                    isOutside = false;
+                    if (position[1] < this.position[1]) {
+                        for (int i = position[1]; i < this.position[1]; i++) {
+                            if (horizontalWalls.containsKey(i)) {
+                                isOutside = true;
+                                this.direction[1] = -1;
+                                break;
+                            }
+                        }
+                        if (!isOutside) {
+                            this.direction[1] = 1;
+                            if (position[1] >= this.position[1] - 2)
+                                this.direction[1] = -1;
+                        }
+                    } else if (position[1] > this.position[1]) {
+                        for (int i = this.position[1]; i < position[1]; i++) {
+                            if (horizontalWalls.containsKey(i)) {
+                                isOutside = true;
+                                this.direction[1] = 1;
+                                break;
+                            }
+                        }
+                        if (!isOutside) {
+                            this.direction[1] = -1;
+                            if (position[1] <= this.position[1] + 2)
+                                this.direction[1] = 1;
+                        }
+                    }
+                } else {
+                    if (position[1] > this.position[1])
+                        this.direction[1] = -1;
+                    else
+                        this.direction[1] = 1;
+                }
+                
             } else {
-                if (position[0] > this.position[0])
-                    this.direction[0] = -1;
-                else
-                    this.direction[0] = 1;
+                if (position[1] < this.position[1]) {
+                    for (int i = position[1]; i < this.position[1]; i++) {
+                        if (horizontalWalls.containsKey(i)) {
+                            isOutside = true;
+                            this.direction[1] = -1;
+                            break;
+                        }
+                    }
+                } else {
+                    for (int i = this.position[1]; i < position[1]; i++) {
+                        if (horizontalWalls.containsKey(i)) {
+                            isOutside = true;
+                            this.direction[1] = 1;
+                            break;
+                        }
+                    }
+                }
+                if (isOutside) {
+                    isOutside = false;
+                    if (position[0] < this.position[0]) {
+                        for (int i = position[0]; i < this.position[0]; i++) {
+                            if (verticalWalls.containsKey(i)) {
+                                isOutside = true;
+                                this.direction[0] = -1;
+                                break;
+                            }
+                        }
+                        if (!isOutside)
+                            this.direction[0] = 1;
+                    } else if (position[0] > this.position[0]) {
+                        for (int i = this.position[0]; i < position[0]; i++) {
+                            if (verticalWalls.containsKey(i)) {
+                                isOutside = true;
+                                this.direction[0] = 1;
+                                break;
+                            }
+                        }
+                        if (!isOutside)
+                            this.direction[0] = -1;
+                    }
+                } else {
+                    if (position[0] > this.position[0])
+                        this.direction[0] = -1;
+                    else
+                        this.direction[0] = 1;
+                }
             }
             return;
         }
