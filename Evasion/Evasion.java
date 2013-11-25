@@ -728,6 +728,8 @@ class Prey {
                         }
                         if (!isOutside) {
                             this.direction[1] = 1;
+                            if (position[1] >= this.position[1] - 2)
+                                this.direction[1] = -1;
                         }
                     } else if (position[1] > this.position[1]) {
                         for (int i = this.position[1]; i < position[1]; i++) {
@@ -739,6 +741,8 @@ class Prey {
                         }
                         if (!isOutside) {
                             this.direction[1] = -1;
+                            if (position[1] <= this.position[1] + 2)
+                                this.direction[1] = 1;
                         }
                     }
                 } else {
