@@ -728,8 +728,6 @@ class Prey {
                         }
                         if (!isOutside) {
                             this.direction[1] = 1;
-                            if (position[1] >= this.position[1] - 2)
-                                this.direction[1] = -1;
                         }
                     } else if (position[1] > this.position[1]) {
                         for (int i = this.position[1]; i < position[1]; i++) {
@@ -741,8 +739,6 @@ class Prey {
                         }
                         if (!isOutside) {
                             this.direction[1] = -1;
-                            if (position[1] <= this.position[1] + 2)
-                                this.direction[1] = 1;
                         }
                     }
                 } else {
@@ -761,6 +757,8 @@ class Prey {
                             break;
                         }
                     }
+                    if (game.wallTime < 5)
+                        this.direction[1] = 1;
                 } else {
                     for (int i = this.position[1]; i < position[1]; i++) {
                         if (horizontalWalls.containsKey(i)) {
@@ -769,6 +767,8 @@ class Prey {
                             break;
                         }
                     }
+                    if (game.wallTime < 5)
+                        this.direction[1] = -1;
                 }
                 if (isOutside) {
                     isOutside = false;
@@ -780,8 +780,11 @@ class Prey {
                                 break;
                             }
                         }
-                        if (!isOutside)
+                        if (!isOutside) {
                             this.direction[0] = 1;
+                            if (position[0] >= this.position[0] - 2)
+                                this.direction[0] = -1;
+                        }
                     } else if (position[0] > this.position[0]) {
                         for (int i = this.position[0]; i < position[0]; i++) {
                             if (verticalWalls.containsKey(i)) {
@@ -790,8 +793,11 @@ class Prey {
                                 break;
                             }
                         }
-                        if (!isOutside)
+                        if (!isOutside) {
                             this.direction[0] = -1;
+                            if (position[0] <= this.position[0] + 2)
+                                this.direction[0] = 1;
+                        }
                     }
                 } else {
                     if (position[0] > this.position[0])
