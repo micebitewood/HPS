@@ -5,9 +5,8 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
+import java.util.Map.Entry;
 
 public class Evasion {
     
@@ -23,8 +22,8 @@ public class Evasion {
     public static Socket socket;
     public static PrintWriter out;
     public static BufferedReader in;
+    public static boolean gameOver;
     
-    private final static double MIN_DIST = 4;
     private boolean isHunter;
     private Hunter hunter;
     private Prey prey;
@@ -35,7 +34,6 @@ public class Evasion {
     int wallCount;
     int wallTimer;
     int minDuration = 10;
-    Map<Integer, WallPair> wallNums;
     Map<Integer, Integer[]> verticalWalls;
     Map<Integer, Integer[]> horizontalWalls;
     
@@ -45,17 +43,39 @@ public class Evasion {
         this.maxNumWalls = maxNumWalls;
         wallNum = 1;
         walls = new int[maxNumWalls][4];
-        wallNums = new HashMap<Integer, WallPair>();
         verticalWalls = new HashMap<Integer, Integer[]>();
         horizontalWalls = new HashMap<Integer, Integer[]>();
         this.hunter = new Hunter(this);
         this.prey = new Prey(this);
+        gameOver = false;
+    }
+    
+    private void printWalls() {
+        for (Entry<Integer, Integer[]> vertical : verticalWalls.entrySet()) {
+            System.out.print("vertical: " + vertical.getKey() + " (");
+            for (int y : vertical.getValue()) {
+                System.out.print(y + ", ");
+            }
+            System.out.println(")");
+        }
+        for (Entry<Integer, Integer[]> horizontal : horizontalWalls.entrySet()) {
+            System.out.print("horizontal: " + horizontal.getKey() + " (");
+            for (int y : horizontal.getValue()) {
+                System.out.print(y + ", ");
+            }
+            System.out.println(")");
+        }
     }
     
     private void parseSpec(String str) {
+        if (str.contains("You") || str.contains("Timed") || str.equals("")) {
+            gameOver = true;
+            return;
+        }
         String[] specs = str.split("\n");
         wallCount = Integer.parseInt(specs[1]);
-        Set<Integer> existingWallNums = new HashSet<Integer>();
+        verticalWalls.clear();
+        horizontalWalls.clear();
         for (int i = 0; i < wallCount; i++) {
             String[] wallSpecs = specs[i + 2].split(" ");
             int wallNum = Integer.parseInt(wallSpecs[0]);
@@ -67,29 +87,38 @@ public class Evasion {
                         walls[wallNum - 1][k++] = Integer.parseInt(coord[j]);
                 }
             }
-            existingWallNums.add(wallNum);
-            if (!wallNums.containsKey(wallNum)) {
-                String[] coord = wallSpecs[1].split("[,()]");
-                int[] wall =
-                {Integer.parseInt(coord[1]), Integer.parseInt(coord[2]), Integer.parseInt(coord[5]),
-                    Integer.parseInt(coord[6]) };
-                if (wall[0] == wall[2]) {
+            String[] coord = wallSpecs[1].split("[,()]");
+            int[] wall =
+            {Integer.parseInt(coord[1]), Integer.parseInt(coord[2]), Integer.parseInt(coord[5]),
+                Integer.parseInt(coord[6]) };
+            if (wall[0] == wall[2]) {
+                if (!verticalWalls.containsKey(wall[0]))
                     verticalWalls.put(wall[0], new Integer[] {wall[1], wall[3] });
-                    wallNums.put(wallNum, new WallPair(wall[0], verticalWalls));
-                }
                 else {
+                    Integer[] range = verticalWalls.get(wall[0]);
+                    Integer[] yy = new Integer[range.length + 2];
+                    for (int j = 0; j < range.length; j++)
+                        yy[j] = range[j];
+                    yy[yy.length - 2] = wall[1];
+                    yy[yy.length - 1] = wall[3];
+                    verticalWalls.put(wall[0], yy);
+                }
+            }
+            else {
+                if (!horizontalWalls.containsKey(wall[1]))
                     horizontalWalls.put(wall[1], new Integer[] {wall[0], wall[2] });
-                    wallNums.put(wallNum, new WallPair(wall[1], horizontalWalls));
+                else {
+                    Integer[] range = horizontalWalls.get(wall[1]);
+                    Integer[] xx = new Integer[range.length + 2];
+                    for (int j = 0; j < range.length; j++)
+                        xx[j] = range[j];
+                    xx[xx.length - 2] = wall[0];
+                    xx[xx.length - 1] = wall[2];
+                    horizontalWalls.put(wall[1], xx);
                 }
             }
         }
-        for (int wallNum : wallNums.keySet()) {
-            if (!existingWallNums.contains(wallNum)) {
-                WallPair pair = wallNums.get(wallNum);
-                pair.map.remove(pair.val);
-                wallNums.remove(wallNum);
-            }
-        }
+        printWalls();
         wallTimer = Integer.parseInt(specs[3 + wallCount]);
         String[] hunterSpecs = specs[4 + wallCount].split(" ");
         if (hunterSpecs[1].equalsIgnoreCase("NE")) {
@@ -108,15 +137,9 @@ public class Evasion {
         prey.setPos(Integer.parseInt(preyPos[1]), Integer.parseInt(preyPos[2]));
     }
     
-    private double getDist() {
-        double dist = Math.sqrt(Math.pow(hunter.position[0] - prey.position[0], 2)
-                                + Math.pow(hunter.position[1] - prey.position[1], 2));
-        return dist;
-    }
-    
     public void start() throws IOException {
         int count = 0;
-        while (getDist() > MIN_DIST) {
+        while (!gameOver) {
             parseSpec(read());
             if (isHunter) {
                 HunterMove hunterMove = hunter.play(count, prey.position, wallTimer, wallCount, walls);
@@ -134,16 +157,12 @@ public class Evasion {
                     System.out.println(String.format("Time %d: Destroy wall %d", count, hunterMove.destroyWall));
                 }
                 sendHunterMove(hunterMove);
-                System.out.println("position of hunter: " + hunter.position[0] + ", " + hunter.position[1]);
-                System.out.println("direction of hunter: " + hunter.direction[0] + ", " + hunter.direction[1]);
             } else {
                 if (!prey.hasTarget()) {
                     prey.getTarget(hunter.position, hunter.direction);
                 }
                 prey.moveTowardsTarget(hunter.direction);
                 sendPreyMove();
-                System.out.println("position of prey: " + prey.position[0] + ", " + prey.position[1]);
-                System.out.println("direction of prey: " + prey.direction[0] + ", " + prey.direction[1]);
             }
             count++;
         }
@@ -229,6 +248,8 @@ public class Evasion {
         StringBuffer sb = new StringBuffer();
         String temp;
         temp = in.readLine();
+        if (temp == null)
+            return "";
         if (temp.equalsIgnoreCase("Walls")) {
             sb.append(temp + '\n');
             temp = in.readLine();
@@ -242,13 +263,21 @@ public class Evasion {
                 temp = in.readLine();
                 sb.append(temp + '\n');
             }
+            System.out.println("read: " + sb.toString());
+            return sb.toString();
+        } else if (temp.contains("You")) {
+            sb.append(temp + '\n');
+            temp = in.readLine();
+            sb.append(temp + 'n');
             return sb.toString();
         } else {
+            System.out.println("read: " + temp);
             return temp;
         }
     }
     
     public static void send(String str) {
+        System.out.println("sent: " + str);
         out.println(str);
     }
     
@@ -264,7 +293,7 @@ public class Evasion {
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             
-            String q = read();
+            read();
             send("JJ");
             String wallsSpec = read();
             String[] timeAndNum = wallsSpec.split(" ");
@@ -313,16 +342,16 @@ class Hunter {
     int[] direction;
     int[] position;
     int[] bounds = {0, 0, 499, 499 };
+    int[] pBounds = {-1, -1 };
+    boolean vFirst = false;
     int wallToDestroy = 0;
     Evasion game;
     
-    // TODO new function
     public void setPos(int x, int y) {
         this.position[0] = x;
         this.position[1] = y;
     }
     
-    // TODO new function
     public void setDir(int[] dir) {
         this.direction[0] = dir[0];
         this.direction[1] = dir[1];
@@ -332,8 +361,24 @@ class Hunter {
         boolean buildWall = false;
         int destroyWall = 0;
         int[] wall = null;
+        boolean destroyFirst = false;
         
-        if (wallTimer == 0 && wallCount < game.maxNumWalls) {
+        // Check if we are about to hit the partial walls
+        if (pBounds[0] != -1 && position[0] + direction[0] == pBounds[0] && (!vFirst || pBounds[1] == -1)) {
+            for (int i = 0; i < wallCount; ++i)
+                if (walls[i][0] == pBounds[0] && walls[i][2] == pBounds[0])
+                    wallToDestroy = i + 1;
+            pBounds[0] = -1;
+            destroyFirst = true;
+        } else if (pBounds[1] != -1 && position[1] + direction[1] == pBounds[1] && (vFirst || pBounds[0] == -1)) {
+            for (int i = 0; i < wallCount; ++i)
+                if (walls[i][1] == pBounds[1] && walls[i][3] == pBounds[1])
+                    wallToDestroy = i + 1;
+            pBounds[1] = -1;
+            destroyFirst = true;
+        }
+        
+        if (wallTimer == 0 && wallCount < game.maxNumWalls && !destroyFirst) {
             // If we are allowed to build a wall
             
             // Turn these on, in case we want to build a wall
@@ -342,23 +387,75 @@ class Hunter {
             
             int[] dist = new int[] {Math.abs(preyPosition[0] - position[0]), Math.abs(preyPosition[1] - position[1]) };
             int minDist = (dist[0] < dist[1]) ? dist[0] : dist[1];
-            int safetyDist = 3 * game.wallTime + WALL_CONST;
             
-            if (direction[0] == 1 && preyPosition[0] - position[0] > count % 2) {
-                if (dist[0] <= WALL_CONST || game.maxNumWalls > 4 && minDist >= safetyDist && dist[1] == minDist)
+            if (direction[0] == 1 && preyPosition[0] - position[0] > 0) {
+                if (dist[0] <= WALL_CONST)
                     vWall = true;
-            } else if (direction[0] == -1 && position[0] - preyPosition[0] > count % 2) {
-                if (dist[0] <= WALL_CONST || game.maxNumWalls > 4 && minDist >= safetyDist && dist[1] == minDist)
+            } else if (direction[0] == -1 && position[0] - preyPosition[0] > 0) {
+                if (dist[0] <= WALL_CONST)
                     vWall = true;
             }
             
-            if (direction[1] == 1 && preyPosition[1] - position[1] > count % 2) {
-                if (dist[1] <= WALL_CONST || game.maxNumWalls > 4 && minDist >= safetyDist && dist[0] == minDist)
+            if (direction[1] == 1 && preyPosition[1] - position[1] > 0) {
+                if (dist[1] <= WALL_CONST)
                     hWall = true;
-            } else if (direction[1] == -1 && position[1] - preyPosition[1] > count % 2) {
-                if (dist[1] <= WALL_CONST || game.maxNumWalls > 4 && minDist >= safetyDist && dist[0] == minDist)
+            } else if (direction[1] == -1 && position[1] - preyPosition[1] > 0) {
+                if (dist[1] <= WALL_CONST)
                     hWall = true;
             }
+            
+            // Partial wall
+            if ((direction[0] == 1 && preyPosition[0] < position[0]
+              || direction[0] == -1 && preyPosition[0] > position[0])
+              &&(direction[1] == 1 && preyPosition[1] < position[1]
+              || direction[1] == -1 && preyPosition[1] > position[1])) {
+                // We are moving away from the prey
+                
+                int width = 9999;
+                int height = 9999;
+                if (pBounds[0] == -1)
+                    width = (direction[0] == 1) ? position[0] - bounds[0] : bounds[2] - position[0];
+                if (pBounds[1] == -1)
+                    height = (direction[1] == 1) ? position[1] - bounds[1] : bounds[3] - position[1];
+                
+                if (width <= height && width < 9999) {
+                    if (pBounds[1] == -1) {
+                        vFirst = true;
+                        if (direction[1] == 1)
+                            wall = new int[] {position[0], bounds[1], position[0], position[1]+game.wallTime };
+                        else
+                            wall = new int[] {position[0], position[1]-game.wallTime, position[0], bounds[3] };
+                    } else {
+                        if (direction[1] == 1)
+                            wall = new int[] {position[0], bounds[1], position[0], position[1] };
+                        else
+                            wall = new int[] {position[0], position[1], position[0], bounds[3] };
+                    }
+                    pBounds[0] = position[0];
+                    buildWall = true;
+                } else if (height < width) {
+                    if (pBounds[0] == -1) {
+                        vFirst = false;
+                        if (direction[0] == 1)
+                            wall = new int[] {bounds[0], position[1], position[0]+game.wallTime, position[1] };
+                        else
+                            wall = new int[] {position[0]-game.wallTime, position[1], bounds[2], position[1] };
+                    } else {
+                        if (direction[0] == 1)
+                            wall = new int[] {bounds[0], position[1], position[0], position[1] };
+                        else
+                            wall = new int[] {position[0], position[1], bounds[2], position[1] };
+                    }
+                    pBounds[1] = position[1];
+                    buildWall = true;
+                }
+                
+                if (buildWall) {
+                    return new HunterMove(direction, buildWall, destroyWall, wall);
+                }
+            }
+            
+            
             
             // Don't bother if our bounds are tight enough
             if (vWall && bounds[2] - bounds[0] <= 5)
@@ -379,13 +476,13 @@ class Hunter {
                 if (direction[0] == 1) {
                     for (int i = 0; i < wallCount; ++i)
                         if (walls[i][0] < bounds[0] && walls[i][2] < bounds[0]) {
-                            wallToDestroy = i+1;
+                            wallToDestroy = i + 1;
                             break;
                         }
                 } else {
                     for (int i = 0; i < wallCount; ++i)
                         if (walls[i][0] > bounds[2] && walls[i][2] > bounds[2]) {
-                            wallToDestroy = i+1;
+                            wallToDestroy = i + 1;
                             break;
                         }
                 }
@@ -402,13 +499,13 @@ class Hunter {
                 if (direction[1] == 1) {
                     for (int i = 0; i < wallCount; ++i)
                         if (walls[i][1] < bounds[1] && walls[i][3] < bounds[1]) {
-                            wallToDestroy = i+1;
+                            wallToDestroy = i + 1;
                             break;
                         }
                 } else {
                     for (int i = 0; i < wallCount; ++i)
                         if (walls[i][1] > bounds[3] && walls[i][3] > bounds[3]) {
-                            wallToDestroy = i+1;
+                            wallToDestroy = i + 1;
                             break;
                         }
                 }
@@ -416,8 +513,8 @@ class Hunter {
             
             if (vWall || hWall) {
                 buildWall = true;
-//                ++wallCount;
-//                wallTimer = game.wallTime;
+                // ++wallCount;
+                // wallTimer = game.wallTime;
             }
         }
         
@@ -429,26 +526,26 @@ class Hunter {
             if (direction[0] == 1 && preyPosition[0] - position[0] > count % 2 + 1) {
                 for (int i = 0; i < wallCount; ++i)
                     if (walls[i][0] < position[0] && walls[i][2] < position[0] && dist[0] <= dist[1]) {
-                        wallToDestroy = i+1;
+                        wallToDestroy = i + 1;
                         break;
                     }
             } else if (direction[0] == -1 && position[0] - preyPosition[0] > count % 2 + 1) {
                 for (int i = 0; i < wallCount; ++i)
                     if (walls[i][0] > position[0] && walls[i][2] > position[0] && dist[0] <= dist[1]) {
-                        wallToDestroy = i+1;
+                        wallToDestroy = i + 1;
                         break;
                     }
             }
             if (direction[1] == 1 && preyPosition[1] - position[1] > count % 2 + 1) {
                 for (int i = 0; i < wallCount; ++i)
                     if (walls[i][1] < position[1] && walls[i][3] < position[1] && dist[0] > dist[1]) {
-                        wallToDestroy = i+1;
+                        wallToDestroy = i + 1;
                         break;
                     }
             } else if (direction[1] == -1 && position[1] - preyPosition[1] > count % 2 + 1) {
                 for (int i = 0; i < wallCount; ++i)
                     if (walls[i][1] > position[1] && walls[i][3] > position[1] && dist[0] > dist[1]) {
-                        wallToDestroy = i+1;
+                        wallToDestroy = i + 1;
                         break;
                     }
             }
@@ -461,11 +558,11 @@ class Hunter {
             
             destroyWall = wallToDestroy;
             wallToDestroy = 0;
-//            --wallCount;
+            // --wallCount;
         }
         
-//        if (wallTimer > 0)
-//            --wallTimer;
+        // if (wallTimer > 0)
+        // --wallTimer;
         return new HunterMove(direction, buildWall, destroyWall, wall);
     }
     
@@ -492,7 +589,6 @@ class Prey {
     
     public void setPos(int x, int y) {
         if (this.position[0] != x || this.position[1] != y) {
-            System.out.println("prey position unequal");
             this.position[0] = x;
             this.position[1] = y;
         }
@@ -531,14 +627,22 @@ class Prey {
         int yy = position[1] + direction[1];
         while (xx != x && xx >= 0 && xx <= 499 && yy >= 0 && yy <= 499) {
             if (verticalWalls.containsKey(xx)) {
-                Integer[] range = verticalWalls.get(x);
+                Integer[] range = verticalWalls.get(xx);
                 if (yy >= range[0] && yy <= range[1]) {
                     hasTarget = false;
                     return false;
                 }
+                if (range.length > 2 && yy >= range[2] && yy <= range[3]) {
+                    hasTarget = false;
+                    return false;
+                }
             } else if (horizontalWalls.containsKey(yy)) {
-                Integer[] range = horizontalWalls.get(y);
+                Integer[] range = horizontalWalls.get(yy);
                 if (xx >= range[0] && xx <= range[1]) {
+                    hasTarget = false;
+                    return false;
+                }
+                if (range.length > 2 && xx >= range[2] && xx <= range[3]) {
                     hasTarget = false;
                     return false;
                 }
@@ -550,19 +654,57 @@ class Prey {
             hasTarget = false;
             return false;
         }
-        if (x == position[0] && y == position[1]) {
-            hasTarget = false;
-            direction[0] = 0;
-            direction[1] = 0;
-            return false;
-        }
         target[0] = x;
         target[1] = y;
         this.hasTarget = true;
         return true;
     }
     
+    private int atFinalStage() {
+        int minX = 0;
+        int maxX = 499;
+        int minY = 0;
+        int maxY = 499;
+        for (Entry<Integer, Integer[]> entry : verticalWalls.entrySet()) {
+            int x = entry.getKey();
+            if (x < position[0] && x > minX)
+                minX = x;
+            if (x > position[0] && x < maxX)
+                maxX = x;
+        }
+        for (Entry<Integer, Integer[]> entry : horizontalWalls.entrySet()) {
+            int y = entry.getKey();
+            if (y < position[1] && y > minY)
+                minY = y;
+            if (y > position[1] && y < maxY)
+                maxY = y;
+        }
+        System.out.println("diffX: " + (maxX - minX) + " minX: " + minX + " maxX: " + maxX);
+        System.out.println("diffY: " + (maxY - minY) + " minY: " + minY + " maxY: " + maxY);
+        if (maxX - minX < 50)
+            return 1;
+        if (maxY - minY < 50)
+            return 2;
+        return 0;
+    }
+    
     public void getTarget(int[] position, int[] direction) {
+        int status;
+        if ((status = atFinalStage()) > 0) {
+            System.out.println("warning!!");
+            if (status == 1) {
+                if (position[1] > this.position[1])
+                    this.direction[1] = -1;
+                else
+                    this.direction[1] = 1;
+            } else {
+                if (position[0] > this.position[0])
+                    this.direction[0] = -1;
+                else
+                    this.direction[0] = 1;
+            }
+            return;
+        }
         int[] dist = {Math.abs(position[0] - this.position[0]), Math.abs(position[1] - this.position[1]) };
         if (Math.min(dist[0], dist[1]) < 12) {
             int[] hunterFuturePosition =
@@ -623,11 +765,31 @@ class Prey {
             }
         } else {
             if (isBehind(position, direction)) {
-                this.direction[0] = direction[0];
-                this.direction[1] = direction[1];
+                if (Math.abs(position[0] - this.position[0]) < 10)
+                    this.direction[0] = 0;
+                else
+                    this.direction[0] = direction[0];
+                if (Math.abs(position[1] - this.position[1]) < 10)
+                    this.direction[1] = 0;
+                else
+                    this.direction[1] = direction[1];
             } else {
-                this.direction[0] = -direction[0];
-                this.direction[1] = -direction[1];
+                if (Math.abs(position[0] - this.position[0]) < 10)
+                    this.direction[0] = 0;
+                else if (position[0] - this.position[0] > 10 && direction[0] > 0)
+                    this.direction[0] = direction[0];
+                else if (position[0] - this.position[0] < -10 && direction[0] < 0)
+                    this.direction[0] = direction[0];
+                else
+                    this.direction[0] = -direction[0];
+                if (Math.abs(position[1] - this.position[1]) < 10)
+                    this.direction[1] = 0;
+                else if (position[1] - this.position[1] > 10 && direction[1] > 0)
+                    this.direction[1] = direction[1];
+                else if (position[1] - this.position[1] < -10 && direction[1] < 0)
+                    this.direction[1] = direction[1];
+                else
+                    this.direction[1] = -direction[1];
             }
             int targetX = this.position[0] + this.direction[0];
             int targetY = this.position[1] + this.direction[1];
@@ -679,5 +841,6 @@ class Prey {
         this.game = game;
         this.verticalWalls = game.verticalWalls;
         this.horizontalWalls = game.horizontalWalls;
+        hasTarget = false;
     }
 }
