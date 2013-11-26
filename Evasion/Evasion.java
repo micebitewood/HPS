@@ -404,11 +404,21 @@ class Hunter {
                     hWall = true;
             }
             
+            if (pBounds[0] != -1 && position[0] + direction[0] * (game.wallTime+1) == pBounds[0])
+                vWall = true;
+            if (pBounds[1] != -1 && position[1] + direction[1] * (game.wallTime+1) == pBounds[1])
+                hWall = true;
+            
+            if (pBounds[0] != -1 && position[0] + direction[0] * (game.wallTime+1) * 2 == pBounds[0])
+                hWall = true;
+            if (pBounds[1] != -1 && position[1] + direction[1] * (game.wallTime+1) * 2 == pBounds[1])
+                vWall = true;
+            
             // Partial wall
-            if ((direction[0] == 1 && preyPosition[0] < position[0]
-                 || direction[0] == -1 && preyPosition[0] > position[0])
-                && (direction[1] == 1 && preyPosition[1] < position[1]
-                    || direction[1] == -1 && preyPosition[1] > position[1])) {
+            if ((direction[0] == 1 && preyPosition[0] < position[0] && bounds[2]-position[0] >= game.wallTime/2
+                 || direction[0] == -1 && preyPosition[0] > position[0] && position[0]-bounds[0] >= game.wallTime/2)
+                && (direction[1] == 1 && preyPosition[1] < position[1] && bounds[3]-position[1] >= game.wallTime/2
+                    || direction[1] == -1 && preyPosition[1] > position[1] && position[1]-bounds[1] >= game.wallTime/2)) {
                     // We are moving away from the prey
                     
                     int width = 9999;
@@ -703,7 +713,7 @@ class Prey {
                             break;
                         }
                     }
-                    if (game.wallTime < 5)
+                    if (game.wallTime < 7)
                         this.direction[0] = 1;
                 } else {
                     for (int i = this.position[0]; i < position[0]; i++) {
@@ -713,7 +723,7 @@ class Prey {
                             break;
                         }
                     }
-                    if (game.wallTime < 5)
+                    if (game.wallTime < 7)
                         this.direction[0] = -1;
                 }
                 if (isOutside) {
@@ -728,8 +738,6 @@ class Prey {
                         }
                         if (!isOutside) {
                             this.direction[1] = 1;
-                            if (position[1] >= this.position[1] - 2)
-                                this.direction[1] = -1;
                         }
                     } else if (position[1] > this.position[1]) {
                         for (int i = this.position[1]; i < position[1]; i++) {
@@ -741,8 +749,6 @@ class Prey {
                         }
                         if (!isOutside) {
                             this.direction[1] = -1;
-                            if (position[1] <= this.position[1] + 2)
-                                this.direction[1] = 1;
                         }
                     }
                 } else {
@@ -761,7 +767,7 @@ class Prey {
                             break;
                         }
                     }
-                    if (game.wallTime < 5)
+                    if (game.wallTime < 7)
                         this.direction[1] = 1;
                 } else {
                     for (int i = this.position[1]; i < position[1]; i++) {
@@ -771,7 +777,7 @@ class Prey {
                             break;
                         }
                     }
-                    if (game.wallTime < 5)
+                    if (game.wallTime < 7)
                         this.direction[1] = -1;
                 }
                 if (isOutside) {
