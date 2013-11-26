@@ -394,14 +394,14 @@ class Hunter {
                 System.out.println("DESTROY!");
                 for (int i = 0; i < wallCount; i++)
                     if (walls[i][1] == pBounds[1] && walls[i][3] == pBounds[1])
-                        wallToDestroy = i + 1;
+                        destroyWall = i + 1;
                 pBounds[1] = -1;
                 destroyFirst = true;
             } else if (preyPosition[0] == position[0] - 2) {
-                System.out.println("DESTROY!!");
                 for (int i = 0; i < wallCount; i++)
                     if (walls[i][1] == pBounds[1] && walls[i][3] == pBounds[1])
-                        wallToDestroy = i + 1;
+                        destroyWall = i + 1;
+                System.out.println("DESTROY!! " + destroyWall);
                 pBounds[1] = -1;
                 destroyFirst = true;
             }
@@ -409,7 +409,19 @@ class Hunter {
         }
         
         if (specialCase && pBounds[1] == -1) {
-            if (preyPosition[0] == position[0] - 1) {
+            System.out.println("SPECIAL!!");
+            if (position[0] == bounds[0] + 1) {
+                return new HunterMove(direction, false, destroyWall, wall);
+            }
+            if (position[0] == pBounds[0]) {
+                wall = new int[] {position[0], specialBounds[1] - 1, position[0], specialBounds[1] };
+                return new HunterMove(direction, true, destroyWall, wall);
+            }
+            if (preyPosition[0] == position[0] - 1 && direction[0] == -1) {
+                wall = new int[] {position[0], bounds[1], position[0], specialBounds[1] };
+                specialCase = false;
+                return new HunterMove(direction, true, destroyWall, wall);
+            } else if (preyPosition[0] == position[0] + 1 && direction[0] == 1) {
                 wall = new int[] {position[0], bounds[1], position[0], specialBounds[1] };
                 specialCase = false;
                 return new HunterMove(direction, true, destroyWall, wall);
@@ -767,94 +779,14 @@ class Prey {
             this.direction[0] = 0;
             this.direction[1] = 0;
             if (status == 1) {
-                // if (position[1] > this.position[1])
+                // if (position[1] > this.position[1]) {
                 // this.direction[1] = -1;
+                // this.direction[0] = 1;
+                // }
                 // else
                 // this.direction[1] = 1;
                 
-                if (position[0] < this.position[0]) {
-                    for (int i = position[0]; i < this.position[0]; i++) {
-                        if (verticalWalls.containsKey(i)) {
-                            isOutside = true;
-                            this.direction[0] = -1;
-                            break;
-                        }
-                    }
-                    if (game.wallTime < 7)
-                        this.direction[0] = 1;
-                } else {
-                    for (int i = this.position[0]; i < position[0]; i++) {
-                        if (verticalWalls.containsKey(i)) {
-                            isOutside = true;
-                            this.direction[0] = 1;
-                            break;
-                        }
-                    }
-                    if (game.wallTime < 7)
-                        this.direction[0] = -1;
-                }
-                if (isOutside) {
-                    isOutside = false;
-                    if (position[1] < this.position[1]) {
-                        for (int i = position[1]; i < this.position[1]; i++) {
-                            if (horizontalWalls.containsKey(i)) {
-                                isOutside = true;
-                                this.direction[1] = -1;
-                                break;
-                            }
-                        }
-                        if (!isOutside) {
-                            this.direction[1] = 1;
-                        }
-                    } else if (position[1] > this.position[1]) {
-                        for (int i =
-                             this.position[1]; i < position[1]; i++) {
-                            if (horizontalWalls.containsKey(i)) {
-                                isOutside = true;
-                                this.direction[1] = 1;
-                                break;
-                            }
-                        }
-                        if (!isOutside) {
-                            this.direction[1] = -1;
-                        }
-                    }
-                } else {
-                    if (position[1] > this.position[1])
-                        this.direction[1] = -1;
-                    else
-                        this.direction[1] = 1;
-                }
-                
-            } else {
-                // if (position[0] > this.position[0])
-                // this.direction[0] = -1;
-                // else
-                // this.direction[0] = 1;
-                
-                if (position[1] < this.position[1]) {
-                    for (int i = position[1]; i < this.position[1]; i++) {
-                        if (horizontalWalls.containsKey(i)) {
-                            isOutside = true;
-                            this.direction[1] = -1;
-                            break;
-                        }
-                    }
-                    if (game.wallTime < 7)
-                        this.direction[1] = 1;
-                } else {
-                    for (int i = this.position[1]; i < position[1]; i++) {
-                        if (horizontalWalls.containsKey(i)) {
-                            isOutside = true;
-                            this.direction[1] = 1;
-                            break;
-                        }
-                    }
-                    if (game.wallTime < 7)
-                        this.direction[1] = -1;
-                }
-                if (isOutside) {
-                    isOutside = false;
+                if (this.direction[1] == 0) {
                     if (position[0] < this.position[0]) {
                         for (int i = position[0]; i < this.position[0]; i++) {
                             if (verticalWalls.containsKey(i)) {
@@ -863,13 +795,9 @@ class Prey {
                                 break;
                             }
                         }
-                        if (!isOutside)
-                        {
+                        if (game.wallTime < 7)
                             this.direction[0] = 1;
-                            if (position[0] >= this.position[0] - 2)
-                                this.direction[0] = -1;
-                        }
-                    } else if (position[0] > this.position[0]) {
+                    } else {
                         for (int i = this.position[0]; i < position[0]; i++) {
                             if (verticalWalls.containsKey(i)) {
                                 isOutside = true;
@@ -877,21 +805,110 @@ class Prey {
                                 break;
                             }
                         }
-                        if (!isOutside)
-                        {
+                        if (game.wallTime < 7)
                             this.direction[0] = -1;
-                            if (position[0] <= this.position[0] + 2)
-                                this.direction[0] = 1;
-                        }
                     }
-                } else
-                {
-                    if (position[0] > this.position[0])
-                        this.direction[0] = -1;
-                    else
-                        this.direction[0] = 1;
+                    if (isOutside) {
+                        isOutside = false;
+                        if (position[1] < this.position[1]) {
+                            for (int i = position[1]; i < this.position[1]; i++) {
+                                if (horizontalWalls.containsKey(i)) {
+                                    isOutside = true;
+                                    this.direction[1] = -1;
+                                    break;
+                                }
+                            }
+                            if (!isOutside) {
+                                this.direction[1] = 1;
+                            }
+                        } else if (position[1] > this.position[1]) {
+                            for (int i =
+                                 this.position[1]; i < position[1]; i++) {
+                                if (horizontalWalls.containsKey(i)) {
+                                    isOutside = true;
+                                    this.direction[1] = 1;
+                                    break;
+                                }
+                            }
+                            if (!isOutside) {
+                                this.direction[1] = -1;
+                            }
+                        }
+                    } else {
+                        if (position[1] > this.position[1])
+                            this.direction[1] = -1;
+                        else
+                            this.direction[1] = 1;
+                    }
                 }
                 
+            } else {
+                if (position[0] > this.position[0])
+                    this.direction[0] = -1;
+                else
+                    this.direction[0] = 1;
+                
+                if (this.direction[0] == 0) {
+                    if (position[1] < this.position[1]) {
+                        for (int i = position[1]; i < this.position[1]; i++) {
+                            if (horizontalWalls.containsKey(i)) {
+                                isOutside = true;
+                                this.direction[1] = -1;
+                                break;
+                            }
+                        }
+                        if (game.wallTime < 7)
+                            this.direction[1] = 1;
+                    } else {
+                        for (int i = this.position[1]; i < position[1]; i++) {
+                            if (horizontalWalls.containsKey(i)) {
+                                isOutside = true;
+                                this.direction[1] = 1;
+                                break;
+                            }
+                        }
+                        if (game.wallTime < 7)
+                            this.direction[1] = -1;
+                    }
+                    if (isOutside) {
+                        isOutside = false;
+                        if (position[0] < this.position[0]) {
+                            for (int i = position[0]; i < this.position[0]; i++) {
+                                if (verticalWalls.containsKey(i)) {
+                                    isOutside = true;
+                                    this.direction[0] = -1;
+                                    break;
+                                }
+                            }
+                            if (!isOutside)
+                            {
+                                this.direction[0] = 1;
+                                if (position[0] >= this.position[0] - 2)
+                                    this.direction[0] = -1;
+                            }
+                        } else if (position[0] > this.position[0]) {
+                            for (int i = this.position[0]; i < position[0]; i++) {
+                                if (verticalWalls.containsKey(i)) {
+                                    isOutside = true;
+                                    this.direction[0] = 1;
+                                    break;
+                                }
+                            }
+                            if (!isOutside)
+                            {
+                                this.direction[0] = -1;
+                                if (position[0] <= this.position[0] + 2)
+                                    this.direction[0] = 1;
+                            }
+                        }
+                    } else
+                    {
+                        if (position[0] > this.position[0])
+                            this.direction[0] = -1;
+                        else
+                            this.direction[0] = 1;
+                    }
+                }
             }
             return;
         }
