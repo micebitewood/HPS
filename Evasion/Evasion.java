@@ -346,6 +346,8 @@ class Hunter {
     boolean vFirst = false;
     int wallToDestroy = 0;
     Evasion game;
+    boolean specialCase = false;
+    int[] specialBounds = {-1, -1 };
     
     public void setPos(int x, int y) {
         this.position[0] = x;
@@ -363,19 +365,74 @@ class Hunter {
         int[] wall = null;
         boolean destroyFirst = false;
         
+        if (game.maxNumWalls > 4) {
+            if (pBounds[0] != -1)
+                System.out.println("pBounds[0]: " + pBounds[0]);
+            if (pBounds[1] != -1)
+                System.out.println("pBounds[1]: " + pBounds[1]);
+        }
+        if (game.maxNumWalls > 4 && pBounds[0] != -1 && position[0] + 2 * direction[0] == pBounds[0]
+            && (!vFirst || pBounds[1] == -1)) {
+            System.out.println("BUILD!");
+            
+        } else if (game.maxNumWalls > 4 && pBounds[1] != -1 && position[1] + 2 * direction[1] == pBounds[1]
+                   && (vFirst || pBounds[0] == -1)) {
+            System.out.println("BUILD!!");
+            wall = new int[] {bounds[0], position[1], position[0], position[1] };
+            specialCase = true;
+            specialBounds[1] = position[1] + direction[1];
+            return new HunterMove(direction, true, destroyWall, wall);
+        }
+        
+        if (specialCase && pBounds[0] != -1 && position[0] + direction[0] == pBounds[0]
+            && (!vFirst || pBounds[1] == -1)) {
+            
+        } else if (specialCase && pBounds[1] != -1 && position[1] == pBounds[1] + 1 && direction[0] == -1
+                   && (vFirst || pBounds[0] == -1)) {
+            System.out.println("WARNING!");
+            if (position[0] == pBounds[0] + 1 && preyPosition[1] < position[1] - 3) {
+                System.out.println("DESTROY!");
+                for (int i = 0; i < wallCount; i++)
+                    if (walls[i][1] == pBounds[1] && walls[i][3] == pBounds[1])
+                        wallToDestroy = i + 1;
+                pBounds[1] = -1;
+                destroyFirst = true;
+            } else if (preyPosition[0] == position[0] - 2) {
+                System.out.println("DESTROY!!");
+                for (int i = 0; i < wallCount; i++)
+                    if (walls[i][1] == pBounds[1] && walls[i][3] == pBounds[1])
+                        wallToDestroy = i + 1;
+                pBounds[1] = -1;
+                destroyFirst = true;
+            }
+            return new HunterMove(direction, false, destroyWall, wall);
+        }
+        
+        if (specialCase && pBounds[1] == -1) {
+            if (preyPosition[0] == position[0] - 1) {
+                wall = new int[] {position[0], bounds[1], position[0], specialBounds[1] };
+                specialCase = false;
+                return new HunterMove(direction, true, destroyWall, wall);
+            }
+        }
         // Check if we are about to hit the partial walls
-        if (pBounds[0] != -1 && position[0] + direction[0] == pBounds[0] && (!vFirst || pBounds[1] == -1)) {
-            for (int i = 0; i < wallCount; ++i)
-                if (walls[i][0] == pBounds[0] && walls[i][2] == pBounds[0])
-                    wallToDestroy = i + 1;
-            pBounds[0] = -1;
-            destroyFirst = true;
-        } else if (pBounds[1] != -1 && position[1] + direction[1] == pBounds[1] && (vFirst || pBounds[0] == -1)) {
-            for (int i = 0; i < wallCount; ++i)
-                if (walls[i][1] == pBounds[1] && walls[i][3] == pBounds[1])
-                    wallToDestroy = i + 1;
-            pBounds[1] = -1;
-            destroyFirst = true;
+        
+        if (game.maxNumWalls < 5) {
+            if (pBounds[0] != -1 && position[0] + direction[0] == pBounds[0] && (!vFirst || pBounds[1] == -1)) {
+                for (int i = 0; i < wallCount; ++i)
+                    if (walls[i][0] == pBounds[0] && walls[i][2] == pBounds[0])
+                        wallToDestroy = i + 1;
+                pBounds[0] = -1;
+                destroyFirst = true;
+            } else if (pBounds[1] != -1 && position[1] + direction[1] == pBounds[1]
+                       && (vFirst || pBounds[0] == -1)) {
+                for (int i = 0; i < wallCount; ++i)
+                    if (walls[i][1] == pBounds[1] &&
+                        walls[i][3] == pBounds[1])
+                        wallToDestroy = i + 1;
+                pBounds[1] = -1;
+                destroyFirst = true;
+            }
         }
         
         if (wallTimer == 0 && wallCount < game.maxNumWalls && !destroyFirst) {
@@ -404,21 +461,26 @@ class Hunter {
                     hWall = true;
             }
             
-            if (pBounds[0] != -1 && position[0] + direction[0] * (game.wallTime+1) == pBounds[0])
-                vWall = true;
-            if (pBounds[1] != -1 && position[1] + direction[1] * (game.wallTime+1) == pBounds[1])
-                hWall = true;
-            
-            if (pBounds[0] != -1 && position[0] + direction[0] * (game.wallTime+1) * 2 == pBounds[0])
-                hWall = true;
-            if (pBounds[1] != -1 && position[1] + direction[1] * (game.wallTime+1) * 2 == pBounds[1])
-                vWall = true;
+            if (game.maxNumWalls < 5) {
+                if (pBounds[0] != -1 && position[0] + direction[0] * (game.wallTime + 1) == pBounds[0])
+                    vWall = true;
+                if (pBounds[1] != -1 && position[1] + direction[1] * (game.wallTime + 1) == pBounds[1])
+                    hWall = true;
+                
+                if (pBounds[0] != -1 && position[0] + direction[0] * (game.wallTime + 1) * 2 == pBounds[0])
+                    hWall = true;
+                if (pBounds[1] != -1 && position[1] + direction[1] * (game.wallTime + 1) * 2 == pBounds[1])
+                    vWall = true;
+            }
             
             // Partial wall
-            if ((direction[0] == 1 && preyPosition[0] < position[0] && bounds[2]-position[0] >= game.wallTime/2
-                 || direction[0] == -1 && preyPosition[0] > position[0] && position[0]-bounds[0] >= game.wallTime/2)
-                && (direction[1] == 1 && preyPosition[1] < position[1] && bounds[3]-position[1] >= game.wallTime/2
-                    || direction[1] == -1 && preyPosition[1] > position[1] && position[1]-bounds[1] >= game.wallTime/2)) {
+            if ((direction[0] == 1 && preyPosition[0] < position[0] && bounds[2] - position[0] >= game.wallTime / 2
+                 || direction[0] == -1 && preyPosition[0] > position[0]
+                 && position[0] - bounds[0] >= game.wallTime / 2)
+                && (direction[1] == 1 && preyPosition[1] < position[1]
+                    && bounds[3] - position[1] >= game.wallTime / 2
+                    || direction[1] == -1 && preyPosition[1] > position[1]
+                    && position[1] - bounds[1] >= game.wallTime / 2)) {
                     // We are moving away from the prey
                     
                     int width = 9999;
@@ -705,6 +767,11 @@ class Prey {
             this.direction[0] = 0;
             this.direction[1] = 0;
             if (status == 1) {
+                // if (position[1] > this.position[1])
+                // this.direction[1] = -1;
+                // else
+                // this.direction[1] = 1;
+                
                 if (position[0] < this.position[0]) {
                     for (int i = position[0]; i < this.position[0]; i++) {
                         if (verticalWalls.containsKey(i)) {
@@ -740,7 +807,8 @@ class Prey {
                             this.direction[1] = 1;
                         }
                     } else if (position[1] > this.position[1]) {
-                        for (int i = this.position[1]; i < position[1]; i++) {
+                        for (int i =
+                             this.position[1]; i < position[1]; i++) {
                             if (horizontalWalls.containsKey(i)) {
                                 isOutside = true;
                                 this.direction[1] = 1;
@@ -759,6 +827,11 @@ class Prey {
                 }
                 
             } else {
+                // if (position[0] > this.position[0])
+                // this.direction[0] = -1;
+                // else
+                // this.direction[0] = 1;
+                
                 if (position[1] < this.position[1]) {
                     for (int i = position[1]; i < this.position[1]; i++) {
                         if (horizontalWalls.containsKey(i)) {
@@ -790,7 +863,8 @@ class Prey {
                                 break;
                             }
                         }
-                        if (!isOutside) {
+                        if (!isOutside)
+                        {
                             this.direction[0] = 1;
                             if (position[0] >= this.position[0] - 2)
                                 this.direction[0] = -1;
@@ -803,18 +877,21 @@ class Prey {
                                 break;
                             }
                         }
-                        if (!isOutside) {
+                        if (!isOutside)
+                        {
                             this.direction[0] = -1;
                             if (position[0] <= this.position[0] + 2)
                                 this.direction[0] = 1;
                         }
                     }
-                } else {
+                } else
+                {
                     if (position[0] > this.position[0])
                         this.direction[0] = -1;
                     else
                         this.direction[0] = 1;
                 }
+                
             }
             return;
         }
