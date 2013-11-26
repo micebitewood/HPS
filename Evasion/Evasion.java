@@ -367,16 +367,18 @@ class Hunter {
         boolean destroyFirst = false;
         
         if (game.maxNumWalls > 4) {
+            if (pBounds[0] != -1 && pBounds[1] != -1)
+                specialCase = true;
             if (pBounds[0] != -1)
                 System.out.println("pBounds[0]: " + pBounds[0]);
             if (pBounds[1] != -1)
                 System.out.println("pBounds[1]: " + pBounds[1]);
         }
-        if (game.maxNumWalls > 4 && pBounds[0] != -1 && position[0] + 2 * direction[0] == pBounds[0]
+        if (specialCase && pBounds[0] != -1 && position[0] + 2 * direction[0] == pBounds[0]
             && (!vFirst || pBounds[1] == -1)) {
             System.out.println("BUILD!");
             
-        } else if (game.maxNumWalls > 4 && pBounds[1] != -1 && position[1] + 2 * direction[1] == pBounds[1]
+        } else if (specialCase && pBounds[1] != -1 && position[1] + 2 * direction[1] == pBounds[1]
                    && (vFirst || pBounds[0] == -1)) {
             System.out.println("BUILD!!");
             wall = new int[] {bounds[0], position[1], position[0], position[1] };
@@ -455,74 +457,70 @@ class Hunter {
             }
             return new HunterMove(direction, false, destroyWall, wall);
         }
-        // Check if we are about to hit the partial walls
         
-        if (game.maxNumWalls < 5) {
+        if (!specialCase) {
+            // Check if we are about to hit the partial walls
             if (pBounds[0] != -1 && position[0] + direction[0] == pBounds[0] && (!vFirst || pBounds[1] == -1)) {
                 for (int i = 0; i < wallCount; ++i)
                     if (walls[i][0] == pBounds[0] && walls[i][2] == pBounds[0])
                         wallToDestroy = i + 1;
                 pBounds[0] = -1;
                 destroyFirst = true;
-            } else if (pBounds[1] != -1 && position[1] + direction[1] == pBounds[1]
-                       && (vFirst || pBounds[0] == -1)) {
+            } else if (pBounds[1] != -1 && position[1] + direction[1] == pBounds[1] && (vFirst || pBounds[0] == -1)) {
                 for (int i = 0; i < wallCount; ++i)
-                    if (walls[i][1] == pBounds[1] &&
-                        walls[i][3] == pBounds[1])
+                    if (walls[i][1] == pBounds[1] && walls[i][3] == pBounds[1])
                         wallToDestroy = i + 1;
                 pBounds[1] = -1;
                 destroyFirst = true;
             }
-        }
-        
-        if (wallTimer == 0 && wallCount < game.maxNumWalls && !destroyFirst) {
-            // If we are allowed to build a wall
             
-            // Turn these on, in case we want to build a wall
-            boolean vWall = false;
-            boolean hWall = false;
-            
-            int[] dist = new int[] {Math.abs(preyPosition[0] - position[0]), Math.abs(preyPosition[1] - position[1]) };
-            int minDist = (dist[0] < dist[1]) ? dist[0] : dist[1];
-            
-            if (direction[0] == 1 && preyPosition[0] - position[0] > 0) {
-                if (dist[0] <= WALL_CONST)
-                    vWall = true;
-            } else if (direction[0] == -1 && position[0] - preyPosition[0] > 0) {
-                if (dist[0] <= WALL_CONST)
-                    vWall = true;
-            }
-            
-            if (direction[1] == 1 && preyPosition[1] - position[1] > 0) {
-                if (dist[1] <= WALL_CONST)
-                    hWall = true;
-            } else if (direction[1] == -1 && position[1] - preyPosition[1] > 0) {
-                if (dist[1] <= WALL_CONST)
-                    hWall = true;
-            }
-            
-            if (game.maxNumWalls < 5) {
-                if (pBounds[0] != -1 && position[0] + direction[0] * (game.wallTime + 1) == pBounds[0])
-                    vWall = true;
-                if (pBounds[1] != -1 && position[1] + direction[1] * (game.wallTime + 1) == pBounds[1])
-                    hWall = true;
+            if (wallTimer == 0 && wallCount < game.maxNumWalls && !destroyFirst) {
+                // If we are allowed to build a wall
                 
-                if (pBounds[0] != -1 && position[0] + direction[0] * (game.wallTime + 1) * 2 == pBounds[0])
-                    hWall = true;
-                if (pBounds[1] != -1 && position[1] + direction[1] * (game.wallTime + 1) * 2 == pBounds[1])
-                    vWall = true;
-            }
-            
-            // Partial wall
-            if ((direction[0] == 1 && preyPosition[0] < position[0] && bounds[2] - position[0] >= game.wallTime / 2
-                 || direction[0] == -1 && preyPosition[0] > position[0]
-                 && position[0] - bounds[0] >= game.wallTime / 2)
-                && (direction[1] == 1 && preyPosition[1] < position[1]
-                    && bounds[3] - position[1] >= game.wallTime / 2
-                    || direction[1] == -1 && preyPosition[1] > position[1]
-                    && position[1] - bounds[1] >= game.wallTime / 2)) {
+                // Turn these on, in case we want to build a wall
+                boolean vWall = false;
+                boolean hWall = false;
+                
+                int[] dist = new int[] {Math.abs(preyPosition[0] - position[0]), Math.abs(preyPosition[1] - position[1]) };
+                int minDist = (dist[0] < dist[1]) ? dist[0] : dist[1];
+                
+                if (direction[0] == 1 && preyPosition[0] - position[0] > 0) {
+                    if (dist[0] <= WALL_CONST)
+                        vWall = true;
+                } else if (direction[0] == -1 && position[0] - preyPosition[0] > 0) {
+                    if (dist[0] <= WALL_CONST)
+                        vWall = true;
+                }
+                
+                if (direction[1] == 1 && preyPosition[1] - position[1] > 0) {
+                    if (dist[1] <= WALL_CONST)
+                        hWall = true;
+                } else if (direction[1] == -1 && position[1] - preyPosition[1] > 0) {
+                    if (dist[1] <= WALL_CONST)
+                        hWall = true;
+                }
+                
+                if (game.maxNumWalls > 4) {
+                    if (pBounds[0] != -1 && position[0] + direction[0] * (game.wallTime+1) == pBounds[0])
+                        vWall = true;
+                    if (pBounds[1] != -1 && position[1] + direction[1] * (game.wallTime+1) == pBounds[1])
+                        hWall = true;
+                }
+                
+                if (game.maxNumWalls > 5) {
+                    if (pBounds[0] != -1 && position[0] + direction[0] * (game.wallTime+1) * 2 == pBounds[0])
+                        hWall = true;
+                    if (pBounds[1] != -1 && position[1] + direction[1] * (game.wallTime+1) * 2 == pBounds[1])
+                        vWall = true;
+                }
+                
+                // Partial wall
+                if ((direction[0] == 1 && preyPosition[0] < position[0] && bounds[2]-position[0] >= game.wallTime/2
+                     || direction[0] == -1 && preyPosition[0] > position[0] && position[0]-bounds[0] >= game.wallTime/2)
+                    && (direction[1] == 1 && preyPosition[1] < position[1] && bounds[3]-position[1] >= game.wallTime/2
+                        || direction[1] == -1 && preyPosition[1] > position[1] && position[1]-bounds[1] >= game.wallTime/2)
+                    && game.maxNumWalls > 4) {
                     // We are moving away from the prey
-                    
                     int width = 9999;
                     int height = 9999;
                     if (pBounds[0] == -1)
@@ -566,114 +564,334 @@ class Hunter {
                         return new HunterMove(direction, buildWall, destroyWall, wall);
                     }
                 }
-            
-            // Don't bother if our bounds are tight enough
-            if (vWall && bounds[2] - bounds[0] <= 5)
-                vWall = false;
-            if (hWall && bounds[3] - bounds[1] <= 5)
-                hWall = false;
-            
-            if (vWall) {
-                buildWall = true;
-                wall = new int[] {position[0], bounds[1], position[0], bounds[3] };
-                if (direction[0] == 1)
-                    bounds[0] = position[0] + 1;
-                else
-                    bounds[2] = position[0] - 1;
                 
-                // See if there's a wall that's out of bound and if there is,
-                // put it to wallToDestroy
-                if (direction[0] == 1) {
+                // Don't bother if our bounds are tight enough
+                if (vWall && bounds[2] - bounds[0] <= 5)
+                    vWall = false;
+                if (hWall && bounds[3] - bounds[1] <= 5)
+                    hWall = false;
+                
+                if (vWall) {
+                    buildWall = true;
+                    wall = new int[] {position[0], bounds[1], position[0], bounds[3] };
+                    if (direction[0] == 1)
+                        bounds[0] = position[0] + 1;
+                    else
+                        bounds[2] = position[0] - 1;
+                    
+                    // See if there's a wall that's out of bound and if there is,
+                    // put it to wallToDestroy
+                    if (direction[0] == 1) {
+                        for (int i = 0; i < wallCount; ++i)
+                            if (walls[i][0] < bounds[0] && walls[i][2] < bounds[0]) {
+                                wallToDestroy = i + 1;
+                                break;
+                            }
+                    } else {
+                        for (int i = 0; i < wallCount; ++i)
+                            if (walls[i][0] > bounds[2] && walls[i][2] > bounds[2]) {
+                                wallToDestroy = i + 1;
+                                break;
+                            }
+                    }
+                } else if (hWall) {
+                    buildWall = true;
+                    wall = new int[] {bounds[0], position[1], bounds[2], position[1] };
+                    if (direction[1] == 1)
+                        bounds[1] = position[1] + 1;
+                    else
+                        bounds[3] = position[1] - 1;
+                    
+                    // See if there's a wall that's out of bound and if there is,
+                    // put it to wallToDestroy
+                    if (direction[1] == 1) {
+                        for (int i = 0; i < wallCount; ++i)
+                            if (walls[i][1] < bounds[1] && walls[i][3] < bounds[1]) {
+                                wallToDestroy = i + 1;
+                                break;
+                            }
+                    } else {
+                        for (int i = 0; i < wallCount; ++i)
+                            if (walls[i][1] > bounds[3] && walls[i][3] > bounds[3]) {
+                                wallToDestroy = i + 1;
+                                break;
+                            }
+                    }
+                }
+                
+                if (vWall || hWall) {
+                    buildWall = true;
+                    // ++wallCount;
+                    // wallTimer = game.wallTime;
+                }
+            }
+            
+            if (wallTimer <= 1 && wallCount == game.maxNumWalls && game.maxNumWalls == 4 && wallToDestroy == 0) {
+                // In case we have to destroy a wall to build a new one (when game.maxNumWalls == 4)
+                
+                int[] dist = new int[] {Math.abs(preyPosition[0] - position[0]), Math.abs(preyPosition[1] - position[1]) };
+                
+                if (direction[0] == 1 && preyPosition[0] - position[0] > count % 2 + 1) {
                     for (int i = 0; i < wallCount; ++i)
-                        if (walls[i][0] < bounds[0] && walls[i][2] < bounds[0]) {
+                        if (walls[i][0] < position[0] && walls[i][2] < position[0] && dist[0] <= dist[1]) {
                             wallToDestroy = i + 1;
                             break;
                         }
-                } else {
+                } else if (direction[0] == -1 && position[0] - preyPosition[0] > count % 2 + 1) {
                     for (int i = 0; i < wallCount; ++i)
-                        if (walls[i][0] > bounds[2] && walls[i][2] > bounds[2]) {
+                        if (walls[i][0] > position[0] && walls[i][2] > position[0] && dist[0] <= dist[1]) {
                             wallToDestroy = i + 1;
                             break;
                         }
                 }
-            } else if (hWall) {
-                buildWall = true;
-                wall = new int[] {bounds[0], position[1], bounds[2], position[1] };
-                if (direction[1] == 1)
-                    bounds[1] = position[1] + 1;
-                else
-                    bounds[3] = position[1] - 1;
-                
-                // See if there's a wall that's out of bound and if there is,
-                // put it to wallToDestroy
-                if (direction[1] == 1) {
+                if (direction[1] == 1 && preyPosition[1] - position[1] > count % 2 + 1) {
                     for (int i = 0; i < wallCount; ++i)
-                        if (walls[i][1] < bounds[1] && walls[i][3] < bounds[1]) {
+                        if (walls[i][1] < position[1] && walls[i][3] < position[1] && dist[0] > dist[1]) {
                             wallToDestroy = i + 1;
                             break;
                         }
-                } else {
+                } else if (direction[1] == -1 && position[1] - preyPosition[1] > count % 2 + 1) {
                     for (int i = 0; i < wallCount; ++i)
-                        if (walls[i][1] > bounds[3] && walls[i][3] > bounds[3]) {
+                        if (walls[i][1] > position[1] && walls[i][3] > position[1] && dist[0] > dist[1]) {
                             wallToDestroy = i + 1;
                             break;
                         }
                 }
             }
             
-            if (vWall || hWall) {
-                buildWall = true;
-                // ++wallCount;
-                // wallTimer = game.wallTime;
+            if (!buildWall && wallToDestroy > 0) {
+                // See if there's any useless wall to destroy.
+                // NB: IF the architecture is changed that we can build and destroy in a same
+                // round, just remove "!buildWall &&".
+                
+                destroyWall = wallToDestroy;
+                wallToDestroy = 0;
+                // --wallCount;
             }
         }
-        
-        if (wallTimer <= 1 && wallCount == game.maxNumWalls && wallToDestroy == 0) {
-            // In case we have to destroy a wall to build a new one (when game.maxNumWalls == 4)
-            
-            int[] dist = new int[] {Math.abs(preyPosition[0] - position[0]), Math.abs(preyPosition[1] - position[1]) };
-            
-            if (direction[0] == 1 && preyPosition[0] - position[0] > count % 2 + 1) {
-                for (int i = 0; i < wallCount; ++i)
-                    if (walls[i][0] < position[0] && walls[i][2] < position[0] && dist[0] <= dist[1]) {
-                        wallToDestroy = i + 1;
-                        break;
-                    }
-            } else if (direction[0] == -1 && position[0] - preyPosition[0] > count % 2 + 1) {
-                for (int i = 0; i < wallCount; ++i)
-                    if (walls[i][0] > position[0] && walls[i][2] > position[0] && dist[0] <= dist[1]) {
-                        wallToDestroy = i + 1;
-                        break;
-                    }
-            }
-            if (direction[1] == 1 && preyPosition[1] - position[1] > count % 2 + 1) {
-                for (int i = 0; i < wallCount; ++i)
-                    if (walls[i][1] < position[1] && walls[i][3] < position[1] && dist[0] > dist[1]) {
-                        wallToDestroy = i + 1;
-                        break;
-                    }
-            } else if (direction[1] == -1 && position[1] - preyPosition[1] > count % 2 + 1) {
-                for (int i = 0; i < wallCount; ++i)
-                    if (walls[i][1] > position[1] && walls[i][3] > position[1] && dist[0] > dist[1]) {
-                        wallToDestroy = i + 1;
-                        break;
-                    }
-            }
-        }
-        
-        if (!buildWall && wallToDestroy > 0) {
-            // See if there's any useless wall to destroy.
-            // NB: IF the architecture is changed that we can build and destroy in a same
-            // round, just remove "!buildWall &&".
-            
-            destroyWall = wallToDestroy;
-            wallToDestroy = 0;
-            // --wallCount;
-        }
-        
         // if (wallTimer > 0)
         // --wallTimer;
         return new HunterMove(direction, buildWall, destroyWall, wall);
+        
+        /*
+         if (game.maxNumWalls < 5) {
+         if (pBounds[0] != -1 && position[0] + direction[0] == pBounds[0] && (!vFirst || pBounds[1] == -1)) {
+         for (int i = 0; i < wallCount; ++i)
+         if (walls[i][0] == pBounds[0] && walls[i][2] == pBounds[0])
+         wallToDestroy = i + 1;
+         pBounds[0] = -1;
+         destroyFirst = true;
+         } else if (pBounds[1] != -1 && position[1] + direction[1] == pBounds[1]
+         && (vFirst || pBounds[0] == -1)) {
+         for (int i = 0; i < wallCount; ++i)
+         if (walls[i][1] == pBounds[1] &&
+         walls[i][3] == pBounds[1])
+         wallToDestroy = i + 1;
+         pBounds[1] = -1;
+         destroyFirst = true;
+         }
+         }
+         
+         if (wallTimer == 0 && wallCount < game.maxNumWalls && !destroyFirst) {
+         // If we are allowed to build a wall
+         
+         // Turn these on, in case we want to build a wall
+         boolean vWall = false;
+         boolean hWall = false;
+         
+         int[] dist = new int[] {Math.abs(preyPosition[0] - position[0]), Math.abs(preyPosition[1] - position[1]) };
+         int minDist = (dist[0] < dist[1]) ? dist[0] : dist[1];
+         
+         if (direction[0] == 1 && preyPosition[0] - position[0] > 0) {
+         if (dist[0] <= WALL_CONST)
+         vWall = true;
+         } else if (direction[0] == -1 && position[0] - preyPosition[0] > 0) {
+         if (dist[0] <= WALL_CONST)
+         vWall = true;
+         }
+         
+         if (direction[1] == 1 && preyPosition[1] - position[1] > 0) {
+         if (dist[1] <= WALL_CONST)
+         hWall = true;
+         } else if (direction[1] == -1 && position[1] - preyPosition[1] > 0) {
+         if (dist[1] <= WALL_CONST)
+         hWall = true;
+         }
+         
+         if (game.maxNumWalls < 5) {
+         if (pBounds[0] != -1 && position[0] + direction[0] * (game.wallTime + 1) == pBounds[0])
+         vWall = true;
+         if (pBounds[1] != -1 && position[1] + direction[1] * (game.wallTime + 1) == pBounds[1])
+         hWall = true;
+         
+         if (pBounds[0] != -1 && position[0] + direction[0] * (game.wallTime + 1) * 2 == pBounds[0])
+         hWall = true;
+         if (pBounds[1] != -1 && position[1] + direction[1] * (game.wallTime + 1) * 2 == pBounds[1])
+         vWall = true;
+         }
+         
+         // Partial wall
+         if ((direction[0] == 1 && preyPosition[0] < position[0] && bounds[2] - position[0] >= game.wallTime / 2
+         || direction[0] == -1 && preyPosition[0] > position[0]
+         && position[0] - bounds[0] >= game.wallTime / 2)
+         && (direction[1] == 1 && preyPosition[1] < position[1]
+         && bounds[3] - position[1] >= game.wallTime / 2
+         || direction[1] == -1 && preyPosition[1] > position[1]
+         && position[1] - bounds[1] >= game.wallTime / 2)) {
+         // We are moving away from the prey
+         
+         int width = 9999;
+         int height = 9999;
+         if (pBounds[0] == -1)
+         width = (direction[0] == 1) ? position[0] - bounds[0] : bounds[2] - position[0];
+         if (pBounds[1] == -1)
+         height = (direction[1] == 1) ? position[1] - bounds[1] : bounds[3] - position[1];
+         
+         if (width <= height && width < 9999) {
+         if (pBounds[1] == -1) {
+         vFirst = true;
+         if (direction[1] == 1)
+         wall = new int[] {position[0], bounds[1], position[0], position[1] + game.wallTime };
+         else
+         wall = new int[] {position[0], position[1] - game.wallTime, position[0], bounds[3] };
+         } else {
+         if (direction[1] == 1)
+         wall = new int[] {position[0], bounds[1], position[0], position[1] };
+         else
+         wall = new int[] {position[0], position[1], position[0], bounds[3] };
+         }
+         pBounds[0] = position[0];
+         buildWall = true;
+         } else if (height < width) {
+         if (pBounds[0] == -1) {
+         vFirst = false;
+         if (direction[0] == 1)
+         wall = new int[] {bounds[0], position[1], position[0] + game.wallTime, position[1] };
+         else
+         wall = new int[] {position[0] - game.wallTime, position[1], bounds[2], position[1] };
+         } else {
+         if (direction[0] == 1)
+         wall = new int[] {bounds[0], position[1], position[0], position[1] };
+         else
+         wall = new int[] {position[0], position[1], bounds[2], position[1] };
+         }
+         pBounds[1] = position[1];
+         buildWall = true;
+         }
+         
+         if (buildWall) {
+         return new HunterMove(direction, buildWall, destroyWall, wall);
+         }
+         }
+         
+         // Don't bother if our bounds are tight enough
+         if (vWall && bounds[2] - bounds[0] <= 5)
+         vWall = false;
+         if (hWall && bounds[3] - bounds[1] <= 5)
+         hWall = false;
+         
+         if (vWall) {
+         buildWall = true;
+         wall = new int[] {position[0], bounds[1], position[0], bounds[3] };
+         if (direction[0] == 1)
+         bounds[0] = position[0] + 1;
+         else
+         bounds[2] = position[0] - 1;
+         
+         // See if there's a wall that's out of bound and if there is,
+         // put it to wallToDestroy
+         if (direction[0] == 1) {
+         for (int i = 0; i < wallCount; ++i)
+         if (walls[i][0] < bounds[0] && walls[i][2] < bounds[0]) {
+         wallToDestroy = i + 1;
+         break;
+         }
+         } else {
+         for (int i = 0; i < wallCount; ++i)
+         if (walls[i][0] > bounds[2] && walls[i][2] > bounds[2]) {
+         wallToDestroy = i + 1;
+         break;
+         }
+         }
+         } else if (hWall) {
+         buildWall = true;
+         wall = new int[] {bounds[0], position[1], bounds[2], position[1] };
+         if (direction[1] == 1)
+         bounds[1] = position[1] + 1;
+         else
+         bounds[3] = position[1] - 1;
+         
+         // See if there's a wall that's out of bound and if there is,
+         // put it to wallToDestroy
+         if (direction[1] == 1) {
+         for (int i = 0; i < wallCount; ++i)
+         if (walls[i][1] < bounds[1] && walls[i][3] < bounds[1]) {
+         wallToDestroy = i + 1;
+         break;
+         }
+         } else {
+         for (int i = 0; i < wallCount; ++i)
+         if (walls[i][1] > bounds[3] && walls[i][3] > bounds[3]) {
+         wallToDestroy = i + 1;
+         break;
+         }
+         }
+         }
+         
+         if (vWall || hWall) {
+         buildWall = true;
+         // ++wallCount;
+         // wallTimer = game.wallTime;
+         }
+         }
+         
+         if (wallTimer <= 1 && wallCount == game.maxNumWalls && wallToDestroy == 0) {
+         // In case we have to destroy a wall to build a new one (when game.maxNumWalls == 4)
+         
+         int[] dist = new int[] {Math.abs(preyPosition[0] - position[0]), Math.abs(preyPosition[1] - position[1]) };
+         
+         if (direction[0] == 1 && preyPosition[0] - position[0] > count % 2 + 1) {
+         for (int i = 0; i < wallCount; ++i)
+         if (walls[i][0] < position[0] && walls[i][2] < position[0] && dist[0] <= dist[1]) {
+         wallToDestroy = i + 1;
+         break;
+         }
+         } else if (direction[0] == -1 && position[0] - preyPosition[0] > count % 2 + 1) {
+         for (int i = 0; i < wallCount; ++i)
+         if (walls[i][0] > position[0] && walls[i][2] > position[0] && dist[0] <= dist[1]) {
+         wallToDestroy = i + 1;
+         break;
+         }
+         }
+         if (direction[1] == 1 && preyPosition[1] - position[1] > count % 2 + 1) {
+         for (int i = 0; i < wallCount; ++i)
+         if (walls[i][1] < position[1] && walls[i][3] < position[1] && dist[0] > dist[1]) {
+         wallToDestroy = i + 1;
+         break;
+         }
+         } else if (direction[1] == -1 && position[1] - preyPosition[1] > count % 2 + 1) {
+         for (int i = 0; i < wallCount; ++i)
+         if (walls[i][1] > position[1] && walls[i][3] > position[1] && dist[0] > dist[1]) {
+         wallToDestroy = i + 1;
+         break;
+         }
+         }
+         }
+         
+         if (!buildWall && wallToDestroy > 0) {
+         // See if there's any useless wall to destroy.
+         // NB: IF the architecture is changed that we can build and destroy in a same
+         // round, just remove "!buildWall &&".
+         
+         destroyWall = wallToDestroy;
+         wallToDestroy = 0;
+         // --wallCount;
+         }
+         
+         // if (wallTimer > 0)
+         // --wallTimer;
+         return new HunterMove(direction, buildWall, destroyWall, wall);
+         */
     }
     
     public Hunter(Evasion game) {
