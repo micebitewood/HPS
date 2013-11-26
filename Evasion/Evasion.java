@@ -409,6 +409,11 @@ class Hunter {
             if (pBounds[1] != -1 && position[1] + direction[1] * (game.wallTime+1) == pBounds[1])
                 hWall = true;
             
+            if (pBounds[0] != -1 && position[0] + direction[0] * (game.wallTime+1) * 2 == pBounds[0])
+                hWall = true;
+            if (pBounds[1] != -1 && position[1] + direction[1] * (game.wallTime+1) * 2 == pBounds[1])
+                vWall = true;
+            
             // Partial wall
             if ((direction[0] == 1 && preyPosition[0] < position[0] && bounds[2]-position[0] >= game.wallTime/2
                  || direction[0] == -1 && preyPosition[0] > position[0] && position[0]-bounds[0] >= game.wallTime/2)
