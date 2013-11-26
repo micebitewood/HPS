@@ -74,6 +74,7 @@ public class Evasion {
         }
         String[] specs = str.split("\n");
         wallCount = Integer.parseInt(specs[1]);
+        System.out.println("wallCount: " + wallCount);
         verticalWalls.clear();
         horizontalWalls.clear();
         for (int i = 0; i < wallCount; i++) {
@@ -379,6 +380,8 @@ class Hunter {
                    && (vFirst || pBounds[0] == -1)) {
             System.out.println("BUILD!!");
             wall = new int[] {bounds[0], position[1], position[0], position[1] };
+            bounds[3] = position[1];
+            bounds[2] = pBounds[0];
             specialCase = true;
             specialBounds[1] = position[1] + direction[1];
             return new HunterMove(direction, true, destroyWall, wall);
@@ -390,14 +393,14 @@ class Hunter {
         } else if (specialCase && pBounds[1] != -1 && position[1] == pBounds[1] + 1 && direction[0] == -1
                    && (vFirst || pBounds[0] == -1)) {
             System.out.println("WARNING!");
-            if (position[0] == pBounds[0] + 1 && preyPosition[1] < position[1] - 3) {
+            if (position[0] == pBounds[0] + 1 && preyPosition[0] >= position[0] - 3) {
                 System.out.println("DESTROY!");
                 for (int i = 0; i < wallCount; i++)
                     if (walls[i][1] == pBounds[1] && walls[i][3] == pBounds[1])
                         destroyWall = i + 1;
                 pBounds[1] = -1;
                 destroyFirst = true;
-            } else if (preyPosition[0] == position[0] - 2) {
+            } else if (position[0] <= pBounds[0] && preyPosition[0] >= position[0] - 3) {
                 for (int i = 0; i < wallCount; i++)
                     if (walls[i][1] == pBounds[1] && walls[i][3] == pBounds[1])
                         destroyWall = i + 1;
@@ -410,22 +413,47 @@ class Hunter {
         
         if (specialCase && pBounds[1] == -1) {
             System.out.println("SPECIAL!!");
-            if (position[0] == bounds[0] + 1) {
-                return new HunterMove(direction, false, destroyWall, wall);
-            }
             if (position[0] == pBounds[0]) {
                 wall = new int[] {position[0], specialBounds[1] - 1, position[0], specialBounds[1] };
                 return new HunterMove(direction, true, destroyWall, wall);
             }
-            if (preyPosition[0] == position[0] - 1 && direction[0] == -1) {
+            if (preyPosition[0] <= position[0] - 3 && direction[0] == -1
+                && wallTimer <= 1 && wallCount == game.maxNumWalls) {
+                System.out.println("bounds: " + bounds[0] + ", " + bounds[1] + ", " + bounds[2] + ", " + bounds[3]);
+                for (int i = 0; i < wallCount; i++) {
+                    System.out.println("walls: " + walls[i][0] + ", " + walls[i][1] + ", " + walls[i][2] + ", "
+                                       + walls[i][3]);
+                    if (walls[i][0] == bounds[2] + 1 && walls[i][2] == bounds[2] + 1)
+                        destroyWall = i + 1;
+                }
+                System.out.println("SPECIALDESTROY!! " + destroyWall);
+                return new HunterMove(direction, false, destroyWall, wall);
+            } else if (preyPosition[0] >= position[0] + 3 && direction[0] == 1
+                       && wallTimer <= 1 && wallCount == game.maxNumWalls) {
+                System.out.println("bounds: " + bounds[0] + ", " + bounds[1] + ", " + bounds[2] + ", " + bounds[3]);
+                for (int i = 0; i < wallCount; i++) {
+                    System.out.println("walls: " + walls[i][0] + ", " + walls[i][1] + ", " + walls[i][2] + ", "
+                                       + walls[i][3]);
+                    if (walls[i][0] == bounds[0] - 1 && walls[i][2] == bounds[0] - 1)
+                        destroyWall = i + 1;
+                }
+                System.out.println("SPECIALDESTROY!! " + destroyWall);
+                return new HunterMove(direction, false, destroyWall, wall);
+            }
+            if (preyPosition[0] < position[0] && preyPosition[0] >= position[0] - 2 && direction[0] == -1
+                && wallCount < game.maxNumWalls) {
+                System.out.println("SPECIALBUILD!");
                 wall = new int[] {position[0], bounds[1], position[0], specialBounds[1] };
-                specialCase = false;
+                bounds[2] = position[0] - 1;
                 return new HunterMove(direction, true, destroyWall, wall);
-            } else if (preyPosition[0] == position[0] + 1 && direction[0] == 1) {
+            } else if (preyPosition[0] > position[0] && preyPosition[0] <= position[0] + 2 && direction[0] == 1
+                       && wallCount < game.maxNumWalls) {
+                System.out.println("SPECIALBUILD!!");
                 wall = new int[] {position[0], bounds[1], position[0], specialBounds[1] };
-                specialCase = false;
+                bounds[0] = position[0] + 1;
                 return new HunterMove(direction, true, destroyWall, wall);
             }
+            return new HunterMove(direction, false, destroyWall, wall);
         }
         // Check if we are about to hit the partial walls
         
@@ -776,15 +804,23 @@ class Prey {
         if ((status = atFinalStage()) > 0) {
             System.out.println("warning!!");
             boolean isOutside = false;
+            int[] lastDirection = {this.direction[0], this.direction[1] };
             this.direction[0] = 0;
             this.direction[1] = 0;
             if (status == 1) {
-                // if (position[1] > this.position[1]) {
-                // this.direction[1] = -1;
-                // this.direction[0] = 1;
-                // }
-                // else
-                // this.direction[1] = 1;
+                if (game.maxNumWalls > 4) {
+                    if (position[1] > this.position[1]) {
+                        this.direction[1] = -1;
+                        /*
+                         * if (lastDirection[1] == 0) lastDirection[1] = 1; if (Math.random() < 0.2) this.direction[1] =
+                         * -lastDirection[1]; else this.direction[1] = lastDirection[1]; if (lastDirection[0] == 0)
+                         * lastDirection[0] = 1; if (Math.random() < 0.1) this.direction[0] = -lastDirection[0]; else
+                         * this.direction[0] = lastDirection[0];
+                         */
+                    }
+                    else
+                        this.direction[1] = 1;
+                }
                 
                 if (this.direction[1] == 0) {
                     if (position[0] < this.position[0]) {
@@ -843,10 +879,12 @@ class Prey {
                 }
                 
             } else {
-                if (position[0] > this.position[0])
-                    this.direction[0] = -1;
-                else
-                    this.direction[0] = 1;
+                if (game.maxNumWalls > 4) {
+                    if (position[0] > this.position[0])
+                        this.direction[0] = -1;
+                    else
+                        this.direction[0] = 1;
+                }
                 
                 if (this.direction[0] == 0) {
                     if (position[1] < this.position[1]) {
