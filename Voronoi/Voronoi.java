@@ -138,6 +138,7 @@ class Player {
     int pid;
     Voronoi game;
     Set<Integer> moves;
+    List<Integer> history;
     Random random;
     
     public Player(Voronoi game, int pid) {
@@ -145,10 +146,19 @@ class Player {
         this.pid = pid;
         random = new Random(System.currentTimeMillis());
         moves = new HashSet<Integer>();
+        history = new ArrayList<Integer>();
     }
     
     private int getPosition(int x, int y) {
         return x * game.dimen + y;
+    }
+    
+    private int getX(int position) {
+        return position / game.dimen;
+    }
+    
+    private int getY(int position) {
+        return position % game.dimen;
     }
     
     private double getPull(int x1, int y1, int x2, int y2) {
@@ -180,16 +190,67 @@ class Player {
     }
     
     public Move move() {
-        return randomMove();
+        return triangleMove();
+        // return randomMove();
     }
     
-    public Move randomMove() {
+    private Move triangleMove() {
+        if (moves.size() % 3 == 0) {
+            return randomMove();
+        }
+        else if (moves.size() % 3 == 1) {
+            int lastMove = history.get(history.size() - 1);
+            int lastX = getX(lastMove);
+            int lastY = getY(lastMove);
+            int maxScore = 0;
+            int x = 0;
+            int y = lastY;
+            for (int i = 1; i < 100; i += 4) {
+                int score = tryPosition(lastX + i, lastY);
+                if (score > maxScore) {
+                    x = lastX + i;
+                    maxScore = score;
+                }
+                score = tryPosition(lastX - i, lastY);
+                if (score > maxScore) {
+                    x = lastX - i;
+                    maxScore = score;
+                }
+            }
+            history.add(getPosition(x, y));
+            return new Move(pid, x, y);
+        } else {
+            int[] lastTwoMoves = {history.get(history.size() - 1), history.get(history.size() - 2) };
+            int x = (getX(lastTwoMoves[0]) + getX(lastTwoMoves[1])) / 2;
+            int lastY = getY(lastTwoMoves[0]);
+            int y = 0;
+            int maxScore = 0;
+            for (int i = 1; i < 100; i += 4) {
+                int score = tryPosition(x, lastY + i);
+                if (score > maxScore) {
+                    y = lastY + i;
+                    maxScore = score;
+                }
+                score = tryPosition(x, lastY - i);
+                if (score > maxScore) {
+                    y = lastY - i;
+                    maxScore = score;
+                }
+            }
+            history.add(getPosition(x, y));
+            return new Move(pid, x, y);
+        }
+    }
+    
+    private Move randomMove() {
         int maxScore = 0;
         int x = 0;
         int y = 0;
         for (int i = 0; i < 100; i++) {
             int xx = random.nextInt(game.dimen);
             int yy = random.nextInt(game.dimen);
+            if (game.allMoves.contains(getPosition(xx, yy)))
+                continue;
             int score = tryPosition(xx, yy);
             if (score > maxScore) {
                 x = xx;
@@ -203,10 +264,15 @@ class Player {
                 y = random.nextInt(game.dimen);
             }
         }
+        history.add(getPosition(x, y));
         return new Move(pid, x, y);
     }
     
     private int tryPosition(int xx, int yy) {
+        if (xx < 0 || xx > game.dimen)
+            return 0;
+        if (yy < 0 || yy > game.dimen)
+            return 0;
         double[][][] board = game.board;
         int score = 0;
         for (int i = 0; i < game.dimen; i++) {
