@@ -567,24 +567,17 @@ MouseMotionListener {
     
     private double[] getAccel(double locX, double locY) {
         // System.out.println("projectile locs: " + locX + ", " + locY);
-        double x1 = getX(locations[0]);
-        double y1 = getY(locations[0]);
-        double x2 = getX(locations[1]);
-        double y2 = getY(locations[1]);
-        // System.out.println("planet locs: " + x1 + ", " + y1 + " | " + x2 + ", " + y2);
-        double distSq1 = Math.pow(x1 - locX, 2) + Math.pow(y1 - locY, 2);
-        double dist1 = Math.sqrt(distSq1);
-        double accel1 = weights[0] / distSq1;
-        double a1X = accel1 * (x1 - locX) / dist1;
-        double a1Y = accel1 * (y1 - locY) / dist1;
-        // System.out.println("a1: " + a1X + ", " + a1Y);
-        double distSq2 = Math.pow(x2 - locX, 2) + Math.pow(y2 - locY, 2);
-        double dist2 = Math.sqrt(distSq2);
-        double accel2 = weights[1] / distSq2;
-        double a2X = accel2 * (x2 - locX) / dist2;
-        double a2Y = accel2 * (y2 - locY) / dist2;
-        // System.out.println("a2: " + a2X + ", " + a2Y);
-        return new double[] {a1X + a2X, a1Y + a2Y, Math.max(accel1, accel2) };
+        double aX = 0;
+        double aY = 0;
+        double maxA = 0;
+        for (int i = 0; i < NUM_PLANETS; i++) {
+            double[] pulls = getPulls(getX(locations[i]) - locX, getY(locations[i]) - locY, weights[i]);
+            aX += pulls[0];
+            aY += pulls[1];
+            if (pulls[2] > maxA)
+                maxA = pulls[2];
+        }
+        return new double[] {aX, aY, maxA };
     }
     
     private double[] getPulls(double relX, double relY, double weight) {
