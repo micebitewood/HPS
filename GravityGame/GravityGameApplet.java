@@ -78,6 +78,8 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
     boolean placing; // Are we placing planets now?
     boolean selected; // Is a planet selected?
     int selectedPlanet; // Selected planet
+    String winner;
+    String winnerScore;
     
     // Extra stuffs
     Random random;
@@ -125,6 +127,14 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
     private Label srcColor;
     private Label dstColor;
     private Button changePlanets;
+    
+    public String getWinner() {
+        return winner;
+    }
+    
+    public String getWinnerScore() {
+        return winnerScore;
+    }
     
     public void init() {
         started = false;
@@ -340,11 +350,12 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
         return true;
     }
     
-    // checked
     private void initGame() {
         started = false;
         showPlanets = false;
         placing = true;
+        winner = "unknown";
+        winnerScore = "0";
         
         // Switch the panel
         gameModes.setVisible(true);
@@ -485,6 +496,8 @@ public class GravityGameApplet extends JApplet implements ActionListener, MouseL
                 tfTrial.setText("Done shooting");
                 butShoot.setEnabled(false);
                 changePlanets.setEnabled(true);
+                winner = "seeker";
+                winnerScore = String.valueOf(tfScore.getText());
             }
         } else {
             tfTrial.setText((trial + 1) + "");
