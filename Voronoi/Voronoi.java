@@ -26,6 +26,8 @@ public class Voronoi {
     public static Object lock = new Object();
     
     private Player[] players;
+    Set<Integer> allMoves;
+    double[][][] board;
     
     public Voronoi(int port) throws UnknownHostException, IOException {
         socket = new Socket("127.0.0.1", port);
@@ -127,6 +129,8 @@ public class Voronoi {
         players = new Player[numOfPlayers];
         for (int i = 1; i <= numOfPlayers; i++)
             players[i - 1] = new Player(this, i);
+        allMoves = new HashSet<Integer>();
+        board = new double[numOfPlayers][dimen][dimen];
     }
 }
 
@@ -134,7 +138,6 @@ class Player {
     int pid;
     Voronoi game;
     Set<Integer> moves;
-    double[][] board;
     Random random;
     
     public Player(Voronoi game, int pid) {
@@ -142,7 +145,6 @@ class Player {
         this.pid = pid;
         random = new Random(System.currentTimeMillis());
         moves = new HashSet<Integer>();
-        board = new double[game.dimen][game.dimen];
     }
     
     private int getPosition(int x, int y) {
@@ -154,6 +156,7 @@ class Player {
     }
     
     private void addStone(int x, int y) {
+        double[][] board = game.board[pid - 1];
         for (int i = 0; i < game.dimen; i++) {
             for (int j = 0; j < game.dimen; j++) {
                 board[i][j] += getPull(i, j, x, y);
@@ -169,6 +172,9 @@ class Player {
                     moves.add(position);
                     addStone(move.x, move.y);
                 }
+                if (!game.allMoves.contains(position)) {
+                    game.allMoves.add(position);
+                }
             }
         }
     }
@@ -178,7 +184,54 @@ class Player {
     }
     
     public Move randomMove() {
-        return new Move(pid, random.nextInt(game.dimen), random.nextInt(game.dimen));
+        int maxScore = 0;
+        int x = 0;
+        int y = 0;
+        for (int i = 0; i < 100; i++) {
+            int xx = random.nextInt(game.dimen);
+            int yy = random.nextInt(game.dimen);
+            int score = tryPosition(xx, yy);
+            if (score > maxScore) {
+                x = xx;
+                y = yy;
+                maxScore = score;
+            }
+        }
+        if (x == 0 && y == 0) {
+            while (game.allMoves.contains(getPosition(x, y))) {
+                x = random.nextInt(game.dimen);
+                y = random.nextInt(game.dimen);
+            }
+        }
+        return new Move(pid, x, y);
+    }
+    
+    private int tryPosition(int xx, int yy) {
+        double[][][] board = game.board;
+        int score = 0;
+        for (int i = 0; i < game.dimen; i++) {
+            for (int j = 0; j < game.dimen; j++) {
+                double max = 0;
+                int maxPid = 0;
+                for (int pid = 1; pid <= game.numOfPlayers; pid++) {
+                    if (pid == this.pid) {
+                        double pull = board[pid - 1][i][j] + getPull(i, j, xx, yy);
+                        if (pull > max) {
+                            max = pull;
+                            maxPid = pid;
+                        }
+                        continue;
+                    }
+                    if (board[pid - 1][i][j] > max) {
+                        max = board[pid - 1][i][j];
+                        maxPid = pid;
+                    }
+                }
+                if (maxPid == this.pid)
+                    score++;
+            }
+        }
+        return score;
     }
 }
 
