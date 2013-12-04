@@ -57,9 +57,7 @@ public class Voronoi {
                 break;
             }
         }
-        synchronized (lock) {
-            System.out.println("From Server:\n" + sb.toString());
-        }
+        System.out.println("!! " + sb.toString() + " !!");
         return sb.toString();
     }
     
@@ -115,8 +113,11 @@ public class Voronoi {
         for (int i = 0; i < stones; i++) {
             for (int j = 1; j <= numOfPlayers; j++) {
                 Step next = parseStep(read());
-                players[j - 1].addStep(next);
-                if (next.pid == pid) {
+                int pid = j - 2;
+                if (pid < 0)
+                    pid = numOfPlayers - 1;
+                players[pid].addStep(next);
+                if (next.pid == this.pid) {
                     Move move = players[j - 1].move();
                     send(move.toString());
                 }
@@ -162,6 +163,8 @@ class Player {
     }
     
     private double getPull(int x1, int y1, int x2, int y2) {
+        if (x1 == x2 && y1 == y2)
+            return 1000;
         return 1. / ((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
     }
     
@@ -175,11 +178,15 @@ class Player {
     }
     
     public void addStep(Step step) {
+        System.out.println("my id is: " + this.pid);
         for (Move move : step.moves) {
             if (move.playerId == this.pid) {
                 int position = getPosition(move.x, move.y);
                 if (!moves.contains(position)) {
                     moves.add(position);
+                    System.out.println("** new pos " + move.x + ", " + move.y + ", "
+                                       + step.areas.get(pid - 1).toString()
+                                       + " **");
                     addStone(move.x, move.y);
                 }
                 if (!game.allMoves.contains(position)) {
@@ -218,6 +225,8 @@ class Player {
                 }
             }
             history.add(getPosition(x, y));
+            System.out.println("best score: " + maxScore);
+            System.out.println(" x, y: " + x + ", " + y);
             return new Move(pid, x, y);
         } else {
             int[] lastTwoMoves = {history.get(history.size() - 1), history.get(history.size() - 2) };
@@ -237,6 +246,8 @@ class Player {
                     maxScore = score;
                 }
             }
+            System.out.println("best score: " + maxScore);
+            System.out.println(" x, y: " + x + ", " + y);
             history.add(getPosition(x, y));
             return new Move(pid, x, y);
         }
@@ -264,6 +275,8 @@ class Player {
                 y = random.nextInt(game.dimen);
             }
         }
+        System.out.println("best score: " + maxScore);
+        System.out.println(" x, y: " + x + ", " + y);
         history.add(getPosition(x, y));
         return new Move(pid, x, y);
     }
@@ -314,6 +327,11 @@ class Step {
         public Area(int pid, int area) {
             this.pid = pid;
             this.area = area;
+        }
+        
+        @Override
+        public String toString() {
+            return "pid: " + pid + ", are: " + area;
         }
     }
     
