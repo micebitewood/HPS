@@ -55,10 +55,10 @@ MouseMotionListener {
     static final double SCALER = 1;
     static final int DOT_SIZE = 5;
     static final int INDICATOR_DIST = DOT_SIZE / 2 + 2;
-    static final Color COLOR_SOURCE = Color.YELLOW;
-    static final Color COLOR_DESTINATION = Color.WHITE;
-    static final Color COLOR_PLANETS = Color.BLUE;
-    static final Color COLOR_PULL = Color.RED;
+    static final Color COLOR_SOURCE = new Color(127, 127, 255);
+    static final Color COLOR_DESTINATION = new Color(255, 127, 63);
+    static final Color COLOR_PLANETS = Color.WHITE;
+    static final Color COLOR_PULL = new Color(0, 127, 63);
     static final double GRADIENT_SCALER = 10.0;
     static final int BOARD_WIDTH = (int) ((SIZE_X + 1) * SCALER + 0.5);
     static final int BOARD_HEIGHT = (int) ((SIZE_Y + 1) * SCALER + 0.5);
@@ -86,6 +86,7 @@ MouseMotionListener {
     boolean playing; // Are we playing now?
     String winner;
     String winnerScore;
+    final static String WARNING = "<html>You can keep on playing, but this is your final score: ";
     
     // Extra stuffs
     Random random;
@@ -122,15 +123,12 @@ MouseMotionListener {
     TextField tfScore;
     Button butShoot;
     Button butRestart;
+    Label warningSeeker;
     
     private Panel gameModes;
     private Button seekerMode;
     private Button manualMode;
-    private Panel seekerModes;
-    private Button endlessMode;
-    private Button storyMode;
     private Label labGame;
-    private Label labSeekerModes;
     private Label srcColor;
     private Label dstColor;
     private Button changePlanets;
@@ -156,15 +154,25 @@ MouseMotionListener {
         
         gameModes = new Panel();
         labGame = new Label("Welcom to the gravity game!");
-        srcColor = new Label("Source: Yellow");
-        dstColor = new Label("Target: White");
+        srcColor = new Label("Source: Blue");
+        dstColor = new Label("Target: Red");
         seekerMode = new Button("Seeker Mode");
         manualMode = new Button("Manual Mode");
         
-        seekerModes = new Panel();
-        labSeekerModes = new Label("There are only 5 trials in Story mode");
-        endlessMode = new Button("Endless");
-        storyMode = new Button("Story");
+        panelSeeker = new Panel();
+        labSeeker = new Label("Shoot projectiles!");
+        labTrial = new Label("Trial:");
+        labVelAngle = new Label("Velocity Angle:");
+        labScore = new Label("Score:");
+        tfTrial = new TextField();
+        tfTrial.setEditable(false);
+        tfVelAngle = new TextField();
+        tfScore = new TextField();
+        tfScore.setEditable(false);
+        butShoot = new Button("Shoot");
+        butRestart = new Button("Restart");
+        changePlanets = new Button("Show/Hide Planets");
+        warningSeeker = new Label();
         
         panelHider = new Panel();
         labHider = new Label("Place your planets");
@@ -186,24 +194,6 @@ MouseMotionListener {
         sbWeights.setMaximum(SUM_PLANET_WEIGHTS);
         butStart = new Button("Start");
         
-        panelSeeker = new Panel();
-        labSeeker = new Label("Shoot projectiles!");
-        labTrial = new Label("Trial:");
-        // labVelX = new Label("X Velocity:");
-        // labVelY = new Label("Y Velocity:");
-        labVelAngle = new Label("Velocity Angle:");
-        labScore = new Label("Score:");
-        tfTrial = new TextField();
-        tfTrial.setEditable(false);
-        // tfVelX = new TextField();
-        // tfVelY = new TextField();
-        tfVelAngle = new TextField();
-        tfScore = new TextField();
-        tfScore.setEditable(false);
-        butShoot = new Button("Shoot");
-        butRestart = new Button("Restart");
-        changePlanets = new Button("Show/Hide Planets");
-        
         createUI();
     }
     
@@ -218,8 +208,6 @@ MouseMotionListener {
         canvas.setBounds(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
         add(gameModes);
         gameModes.setBounds(BOARD_WIDTH, 0, EXTRA_WIDTH, BOARD_HEIGHT);
-        add(seekerModes);
-        seekerModes.setBounds(BOARD_WIDTH, 0, EXTRA_WIDTH, BOARD_HEIGHT);
         add(panelHider);
         panelHider.setBounds(BOARD_WIDTH, 0, EXTRA_WIDTH, BOARD_HEIGHT);
         add(panelSeeker);
@@ -243,14 +231,6 @@ MouseMotionListener {
         gameModes.add(manualMode);
         seekerMode.addActionListener(this);
         manualMode.addActionListener(this);
-        
-        seekerModes.setLayout(new GridLayout(10, 1));
-        seekerModes.setSize(EXTRA_WIDTH, BOARD_HEIGHT);
-        seekerModes.add(labSeekerModes);
-        seekerModes.add(endlessMode);
-        seekerModes.add(storyMode);
-        endlessMode.addActionListener(this);
-        storyMode.addActionListener(this);
         
         panelHider.setLayout(new GridLayout(10, 1));
         panelHider.setSize(EXTRA_WIDTH, BOARD_HEIGHT);
@@ -311,14 +291,7 @@ MouseMotionListener {
         p.setLayout(new GridLayout(1, 2));
         p.add(labVelAngle);
         p.add(tfVelAngle);
-        // p.add(labVelX);
-        // p.add(tfVelX);
         panelSeeker.add(p);
-        // p = new Panel();
-        // p.setLayout(new GridLayout(1, 2));
-        // p.add(labVelY);
-        // p.add(tfVelY);
-        // panelSeeker.add(p);
         p = new Panel();
         p.setLayout(new GridLayout(1, 2));
         p.add(labScore);
@@ -327,8 +300,7 @@ MouseMotionListener {
         panelSeeker.add(butShoot);
         panelSeeker.add(butRestart);
         panelSeeker.add(changePlanets);
-        // panelSeeker.add(srcColor);
-        // panelSeeker.add(dstColor);
+        panelSeeker.add(warningSeeker);
         tfVelAngle.addActionListener(this);
         butShoot.addActionListener(this);
         butRestart.addActionListener(this);
@@ -374,9 +346,9 @@ MouseMotionListener {
         
         // Switch the panel
         gameModes.setVisible(true);
-        seekerModes.setVisible(false);
         panelSeeker.setVisible(false);
         panelHider.setVisible(false);
+        warningSeeker.setText("");
         
         source = getLoc(random.nextInt(SIZE_X), random.nextInt(SIZE_Y));
         do {
@@ -448,17 +420,11 @@ MouseMotionListener {
         
         // Switch the panel
         gameModes.setVisible(false);
-        seekerModes.setVisible(false);
         panelHider.setVisible(false);
         panelSeeker.setVisible(true);
         
         // Default values
-        if (!isEndless)
-            tfTrial.setText("1 / " + NUM_TRIALS);
-        else
-            tfTrial.setText("1");
-        // tfVelX.setText("");
-        // tfVelY.setText("");
+        tfTrial.setText("1");
         tfVelAngle.setText("");
         tfScore.setText("N/A");
         
@@ -484,23 +450,11 @@ MouseMotionListener {
         System.out.println("source locs: " + locX + ", " + locY);
         
         while (locX >= 0 && locX <= SIZE_X && locY >= 0 && locY <= SIZE_Y) {
-            // double sumPulls = 0.0;
-            // for (int i = 0; i < NUM_PLANETS; ++i) {
-            // double[] pulls = getPulls(getX(locations[i]) - locX, getY(locations[i]) - locY, weights[i]);
-            // velX += pulls[0];
-            // velY += pulls[1];
-            // sumPulls += pulls[2];
-            // }
-            
-            // locX += velX;
-            // locY += velY;
-            
-            // updateCanvasSeeker(locX, locY, sumPulls);
             
             double[] accel = getAccel(locX, locY);
             System.out.println("accel: " + accel[0] + ", " + accel[1]);
             System.out.println("vel: " + velX + ", " + velY);
-            if (Math.abs(accel[2]) > 30)
+            if (Math.abs(accel[2]) > 15)
                 break;
             locX += velX + accel[0] / 2;
             locY += velY + accel[1] / 2;
@@ -520,21 +474,11 @@ MouseMotionListener {
         }
         
         ++trial;
-        if (!isEndless) {
-            if (trial < NUM_TRIALS) {
-                tfTrial.setText((trial + 1) + " / " + NUM_TRIALS);
-            } else {
-                tfTrial.setText("Done shooting");
-                playing = false;
-                butShoot.setEnabled(false);
-                changePlanets.setEnabled(true);
-                winner = "seeker";
-                winnerScore = String.valueOf(tfScore.getText());
-            }
-        } else {
-            tfTrial.setText((trial + 1) + "");
-            if (trial == NUM_TRIALS)
-                changePlanets.setEnabled(true);
+        tfTrial.setText((trial + 1) + "");
+        if (trial == NUM_TRIALS) {
+            changePlanets.setEnabled(true);
+            if (!showPlanets)
+                warningSeeker.setText(WARNING + String.format("%.2f", bestScore));
         }
         shooting = false;
     }
@@ -614,8 +558,8 @@ MouseMotionListener {
         // double velX = Double.parseDouble(tfVelX.getText());
         // double velY = Double.parseDouble(tfVelY.getText());
         double velAngle = Double.parseDouble(tfVelAngle.getText()) * Math.PI / 180;
-        double velX = SUM_VELOCITIES / NUM_TRIALS * Math.cos(velAngle);
-        double velY = -SUM_VELOCITIES / NUM_TRIALS * Math.sin(velAngle);
+        double velX = SUM_VELOCITIES * Math.cos(velAngle);
+        double velY = -SUM_VELOCITIES * Math.sin(velAngle);
         
         shootProjectile(velX, velY);
     }
@@ -704,9 +648,8 @@ MouseMotionListener {
         
         // Switch the panel
         gameModes.setVisible(false);
-        seekerModes.setVisible(true);
         panelHider.setVisible(false);
-        panelSeeker.setVisible(false);
+        panelSeeker.setVisible(true);
         
         started = true;
         placing = false;
@@ -714,12 +657,12 @@ MouseMotionListener {
         butShoot.setEnabled(true);
         changePlanets.setEnabled(false);
         placePlanets();
+        startGame();
     }
     
     private void onClickManual() {
         // Switch the panel
         gameModes.setVisible(false);
-        seekerModes.setVisible(false);
         panelHider.setVisible(true);
         panelSeeker.setVisible(false);
         
@@ -730,16 +673,6 @@ MouseMotionListener {
         butShoot.setEnabled(true);
         hiderConfig();
         initCanvasHider();
-    }
-    
-    private void onClickEndless() {
-        isEndless = true;
-        startGame();
-    }
-    
-    private void onClickStory() {
-        isEndless = false;
-        startGame();
     }
     
     private void onClickPlanets() {
@@ -809,10 +742,6 @@ MouseMotionListener {
             onClickSeeker();
         else if (obj == manualMode)
             onClickManual();
-        else if (obj == endlessMode)
-            onClickEndless();
-        else if (obj == storyMode)
-            onClickStory();
         else if (obj == changePlanets)
             onClickPlanets();
         else if (obj == tfVelAngle)
