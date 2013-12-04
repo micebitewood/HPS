@@ -41,7 +41,8 @@ import javax.swing.JApplet;
  * @author JunHeeLee, JohnMu
  *
  */
-public class GravityGameApplet extends JApplet implements ActionListener, AdjustmentListener, MouseListener, MouseMotionListener {
+public class GravityGameApplet extends JApplet implements ActionListener, AdjustmentListener, MouseListener,
+MouseMotionListener {
     // Constants
     static final int SIZE_X = 500;
     static final int SIZE_Y = 500;
@@ -54,10 +55,10 @@ public class GravityGameApplet extends JApplet implements ActionListener, Adjust
     static final double SCALER = 1;
     static final int DOT_SIZE = 5;
     static final int INDICATOR_DIST = DOT_SIZE / 2 + 2;
-    static final Color COLOR_SOURCE = Color.YELLOW;
-    static final Color COLOR_DESTINATION = Color.WHITE;
-    static final Color COLOR_PLANETS = Color.BLUE;
-    static final Color COLOR_PULL = Color.RED;
+    static final Color COLOR_SOURCE = new Color(127, 127, 255);
+    static final Color COLOR_DESTINATION = new Color(255, 127, 63);
+    static final Color COLOR_PLANETS = Color.WHITE;
+    static final Color COLOR_PULL = new Color(0, 127, 63);
     static final double GRADIENT_SCALER = 10.0;
     static final int BOARD_WIDTH = (int) ((SIZE_X + 1) * SCALER + 0.5);
     static final int BOARD_HEIGHT = (int) ((SIZE_Y + 1) * SCALER + 0.5);
@@ -155,8 +156,8 @@ public class GravityGameApplet extends JApplet implements ActionListener, Adjust
         
         gameModes = new Panel();
         labGame = new Label("Welcom to the gravity game!");
-        srcColor = new Label("Source: Yellow");
-        dstColor = new Label("Target: White");
+        srcColor = new Label("Source: Blue");
+        dstColor = new Label("Target: Red");
         seekerMode = new Button("Seeker Mode");
         manualMode = new Button("Manual Mode");
         
@@ -480,23 +481,37 @@ public class GravityGameApplet extends JApplet implements ActionListener, Adjust
         
         double locX = getX(source);
         double locY = getY(source);
+        System.out.println("source locs: " + locX + ", " + locY);
         
         while (locX >= 0 && locX <= SIZE_X && locY >= 0 && locY <= SIZE_Y) {
-            double sumPulls = 0.0;
-            for (int i = 0; i < NUM_PLANETS; ++i) {
-                double[] pulls = getPulls(getX(locations[i]) - locX, getY(locations[i]) - locY, weights[i]);
-                velX += pulls[0];
-                velY += pulls[1];
-                sumPulls += pulls[2];
-            }
+            // double sumPulls = 0.0;
+            // for (int i = 0; i < NUM_PLANETS; ++i) {
+            // double[] pulls = getPulls(getX(locations[i]) - locX, getY(locations[i]) - locY, weights[i]);
+            // velX += pulls[0];
+            // velY += pulls[1];
+            // sumPulls += pulls[2];
+            // }
             
-            locX += velX;
-            locY += velY;
+            // locX += velX;
+            // locY += velY;
             
-            updateCanvasSeeker(locX, locY, sumPulls);
+            // updateCanvasSeeker(locX, locY, sumPulls);
+            
+            double[] accel = getAccel(locX, locY);
+            System.out.println("accel: " + accel[0] + ", " + accel[1]);
+            System.out.println("vel: " + velX + ", " + velY);
+            if (Math.abs(accel[2]) > 30)
+                break;
+            locX += velX + accel[0] / 2;
+            locY += velY + accel[1] / 2;
+            velX += accel[0];
+            velY += accel[1];
+            
+            updateCanvasSeeker(locX, locY, accel[2]);
             
             double dist =
-            Math.sqrt((getX(destination) - locX) * (getX(destination) - locX) + (getY(destination) - locY)
+            Math.sqrt((getX(destination) - locX) * (getX(destination) - locX)
+                      + (getY(destination) - locY)
                       * (getY(destination) - locY));
             if (dist < bestScore) {
                 bestScore = dist;
@@ -550,6 +565,21 @@ public class GravityGameApplet extends JApplet implements ActionListener, Adjust
         canvas.repaint();
     }
     
+    private double[] getAccel(double locX, double locY) {
+        // System.out.println("projectile locs: " + locX + ", " + locY);
+        double aX = 0;
+        double aY = 0;
+        double maxA = 0;
+        for (int i = 0; i < NUM_PLANETS; i++) {
+            double[] pulls = getPulls(getX(locations[i]) - locX, getY(locations[i]) - locY, weights[i]);
+            aX += pulls[0];
+            aY += pulls[1];
+            if (pulls[2] > maxA)
+                maxA = pulls[2];
+        }
+        return new double[] {aX, aY, maxA };
+    }
+    
     private double[] getPulls(double relX, double relY, double weight) {
         double distSq = relX * relX + relY * relY;
         double dist = Math.sqrt(distSq);
@@ -583,9 +613,9 @@ public class GravityGameApplet extends JApplet implements ActionListener, Adjust
         
         // double velX = Double.parseDouble(tfVelX.getText());
         // double velY = Double.parseDouble(tfVelY.getText());
-        double velAngle = Double.parseDouble(tfVelAngle.getText());
-        double velX = SUM_VELOCITIES / NUM_TRIALS * Math.cos(Math.PI * velAngle / 180);
-        double velY = -SUM_VELOCITIES / NUM_TRIALS * Math.sin(Math.PI * velAngle / 180);
+        double velAngle = Double.parseDouble(tfVelAngle.getText()) * Math.PI / 180;
+        double velX = SUM_VELOCITIES * Math.cos(velAngle);
+        double velY = -SUM_VELOCITIES * Math.sin(velAngle);
         
         shootProjectile(velX, velY);
     }
@@ -731,7 +761,8 @@ public class GravityGameApplet extends JApplet implements ActionListener, Adjust
     }
     
     private void onClickAngle() {
-        if (!isValid(tfVelAngle.getText())) return;
+        if (!isValid(tfVelAngle.getText()))
+            return;
         
         double angle = Double.parseDouble(tfVelAngle.getText()) * Math.PI / 180;
         
@@ -747,7 +778,7 @@ public class GravityGameApplet extends JApplet implements ActionListener, Adjust
         g.setColor(COLOR_SOURCE);
         g.fillOval((int) (getX(source) * SCALER) - DOT_SIZE / 2, (int) (getY(source) * SCALER) - DOT_SIZE / 2,
                    DOT_SIZE, DOT_SIZE);
-//        g.drawLine((int) (getX(source) * SCALER), (int) (getY(source) * SCALER), x, y);
+        // g.drawLine((int) (getX(source) * SCALER), (int) (getY(source) * SCALER), x, y);
         g.drawRect(x, y, 1, 1);
         
         canvas.repaint();
@@ -876,7 +907,8 @@ public class GravityGameApplet extends JApplet implements ActionListener, Adjust
     }
     
     public void mouseMoved(MouseEvent e) {
-        if (shooting || !playing) return;
+        if (shooting || !playing)
+            return;
         
         // JL: for some reason, these are off by (2, 4)
         int x = e.getX() - 2;
@@ -894,7 +926,8 @@ public class GravityGameApplet extends JApplet implements ActionListener, Adjust
     }
     
     public void mouseClicked(MouseEvent e) {
-        if (shooting || !playing) return;
+        if (shooting || !playing)
+            return;
         
         onClickShoot();
     }
