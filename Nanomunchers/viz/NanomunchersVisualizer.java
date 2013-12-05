@@ -14,10 +14,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import javax.swing.JApplet;
+import javax.swing.JFrame;
 
-public class NanomunchersVisualizer extends JApplet {
+public class NanomunchersVisualizer extends JFrame {
     
+    private static final long serialVersionUID = 1L;
     static final int SIZE_X = 20;
     static final int SIZE_Y = 10;
     static final int MAX_NUM_NODES = SIZE_X * SIZE_Y;
@@ -33,6 +34,7 @@ public class NanomunchersVisualizer extends JApplet {
     static final int[] DIR_ANGLE = {90, 180, 270, 0 };
     
     static final int PORT = 9394;
+    private int port;
     
     static Socket client;
     static PrintWriter out;
@@ -52,7 +54,22 @@ public class NanomunchersVisualizer extends JApplet {
     
     private NanomunchersCanvas m_canvas;
     
+    public static void main(String[] args) {
+        
+        int port = (args[0] == null) ? PORT : Integer.parseInt(args[0]);
+        new NanomunchersVisualizer(port);
+    }
+    
+    public NanomunchersVisualizer(int port) {
+        this.port = port;
+        init();
+        setSize(APPLET_WIDTH, APPLET_HEIGHT + 20);
+        setVisible(true);
+        start();
+    }
+    
     private void parseData(String data) {
+        System.out.println("parsing");
         String[] specs = data.split("\n");
         int count = 0;
         boolean startNodes = false;
@@ -125,8 +142,9 @@ public class NanomunchersVisualizer extends JApplet {
         teamNames = new String[2];
         scores = new int[2];
         vizUpdate = new ArrayList<VizData>();
-        String arg = this.getParameter("port");
-        int port = (arg == null) ? PORT : Integer.parseInt(arg);
+        m_canvas = new NanomunchersCanvas(APPLET_WIDTH, APPLET_HEIGHT);
+        m_canvas.setBackground(Color.BLACK);
+        
         boolean isDone = false;
         while (!isDone) {
             try {
@@ -135,17 +153,30 @@ public class NanomunchersVisualizer extends JApplet {
                 in = new BufferedReader(new InputStreamReader(client.getInputStream()));
                 parseData(receive());
                 isDone = true;
-            } catch (IOException | InterruptedException | NullPointerException e) {
+            } catch (IOException e) {
                 System.out.println("port is unavailable, waiting 5 seconds");
                 try {
                     Thread.sleep(5000);
                 } catch (InterruptedException e1) {
                     e1.printStackTrace();
                 }
+            } catch (InterruptedException e) {
+                System.out.println("port is unavailable, waiting 5 seconds");
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e1) {
+                    e1.printStackTrace();
+                }
+            } catch (NullPointerException e) {
+                System.out.println("port is unavailable, waiting 5 seconds");
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e1) {
+                    e1.printStackTrace();
+                }
+                
             }
         }
-        m_canvas = new NanomunchersCanvas(APPLET_WIDTH, APPLET_HEIGHT);
-        m_canvas.setBackground(Color.BLACK);
     }
     
     public void stop() {
@@ -164,13 +195,14 @@ public class NanomunchersVisualizer extends JApplet {
     }
     
     public void start() {
+        System.out.println("let's start!");
         while (true) {
             // Let the server know we are ready
             send("DONE");
             
             // Create layout
             setLayout(null);
-            setSize(APPLET_WIDTH, APPLET_HEIGHT);
+            setSize(APPLET_WIDTH, APPLET_HEIGHT + 20);
             
             add(m_canvas);
             m_canvas.setBounds(0, 0, APPLET_WIDTH, APPLET_HEIGHT);
