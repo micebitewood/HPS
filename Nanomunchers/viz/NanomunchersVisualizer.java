@@ -106,7 +106,8 @@ public class NanomunchersVisualizer extends JApplet {
         vizUpdate.clear();
         for (String stat : stats) {
             String[] items = stat.split(",");
-            vizUpdate.add(new VizData(Integer.parseInt(items[0]), Integer.parseInt(items[1]), items[2].charAt(0), items[3].charAt(0)));
+            vizUpdate.add(new VizData(Integer.parseInt(items[0]), Integer.parseInt(items[1]), items[2].charAt(0),
+                                      items[3].charAt(0)));
         }
         
         return true;
@@ -185,11 +186,12 @@ public class NanomunchersVisualizer extends JApplet {
                             break;
                         }
                     }
-                    for (int i=(isNewMuncher?0:2); i<4; ++i) {
+                    for (int i = (isNewMuncher ? 0 : 2); i < 4; ++i) {
                         updateCanvas(i);
                         Thread.sleep(delay);
                     }
-                    System.out.println(String.format("[SCORES] %s: %d, %s: %d", teamNames[0], scores[0], teamNames[1], scores[1]));
+                    System.out.println(String.format("[SCORES] %s: %d, %s: %d", teamNames[0], scores[0], teamNames[1],
+                                                     scores[1]));
                     send("DONE");
                 }
                 vizUpdate.clear();
@@ -275,7 +277,8 @@ public class NanomunchersVisualizer extends JApplet {
         
         if (scene % 2 == 0) {
             for (VizData update : vizUpdate) {
-                if (update.nextDir == 'x') continue;
+                if (update.nextDir == 'x')
+                    continue;
                 if (scene == 0 && update.dir == 'n' || scene == 2 && update.dir != 'n')
                     scores[update.player]++;
             }
@@ -287,7 +290,7 @@ public class NanomunchersVisualizer extends JApplet {
                     if (board[x * SIZE_Y + y] < 0) {
                         g.setColor(Color.BLACK);
                         g.fillOval(x * CELL_SIZE + 5, y * CELL_SIZE + 5, 29, 29);
-                        g.setColor(PLAYER_COLOR_DARKER[board[x * SIZE_Y + y]+2]);
+                        g.setColor(PLAYER_COLOR_DARKER[board[x * SIZE_Y + y] + 2]);
                         g.fillOval(x * CELL_SIZE + 16, y * CELL_SIZE + 16, 7, 7);
                     }
                 }
@@ -295,8 +298,10 @@ public class NanomunchersVisualizer extends JApplet {
         }
         
         for (VizData update : vizUpdate) {
-            if (update.dir == 'c') continue;
-            if (scene / 2 == 0 && update.dir != 'n' || scene / 2 == 1 && update.dir == 'n') continue;
+            if (update.dir == 'c')
+                continue;
+            if (scene / 2 == 0 && update.dir != 'n' || scene / 2 == 1 && update.dir == 'n')
+                continue;
             
             if (update.nextDir != 'x') {
                 char dir = (scene % 2 == 0) ? update.dir : update.nextDir;
@@ -304,7 +309,7 @@ public class NanomunchersVisualizer extends JApplet {
                 int loc = locs.get(update.node);
                 int x = loc / SIZE_Y;
                 int y = loc % SIZE_Y;
-                board[x * SIZE_Y + y] = update.player-2;
+                board[x * SIZE_Y + y] = update.player - 2;
                 
                 int dx = (update.dir == 'l' ? -1 : update.dir == 'r' ? 1 : 0);
                 int dy = (update.dir == 'u' ? -1 : update.dir == 'd' ? 1 : 0);
@@ -313,7 +318,8 @@ public class NanomunchersVisualizer extends JApplet {
                     g.setColor(Color.BLACK);
                     g.fillOval(x * CELL_SIZE + 5, y * CELL_SIZE + 5, 29, 29);
                     if (scene == 3)
-                        g.fillOval(x * CELL_SIZE - dx * CELL_SIZE/2 + 5, y * CELL_SIZE - dy * CELL_SIZE/2 + 5, 29, 29);
+                        g.fillOval(x * CELL_SIZE - dx * CELL_SIZE / 2 + 5, y * CELL_SIZE - dy * CELL_SIZE / 2 + 5, 29,
+                                   29);
                     g.setColor(PLAYER_COLOR[update.player]);
                     if (dir != 'n')
                         g.fillArc(x * CELL_SIZE + 5, y * CELL_SIZE + 5, 29, 29, angle + 30, 300);
@@ -323,7 +329,8 @@ public class NanomunchersVisualizer extends JApplet {
                     g.setColor(Color.BLACK);
                     g.fillOval(x * CELL_SIZE + 5, y * CELL_SIZE + 5, 29, 29);
                     g.setColor(PLAYER_COLOR[update.player]);
-                    g.fillArc(x * CELL_SIZE - dx * CELL_SIZE/2 + 5, y * CELL_SIZE - dy * CELL_SIZE/2 + 5, 29, 29, angle + 15, 330);
+                    g.fillArc(x * CELL_SIZE - dx * CELL_SIZE / 2 + 5, y * CELL_SIZE - dy * CELL_SIZE / 2 + 5, 29, 29,
+                              angle + 15, 330);
                 }
             } else if (update.dir == 'x') {
                 int loc = locs.get(update.node);
@@ -369,7 +376,9 @@ public class NanomunchersVisualizer extends JApplet {
         g.setColor(Color.LIGHT_GRAY);
         g.fillRect(BOARD_WIDTH, 0, TEXT_WIDTH, BOARD_HEIGHT);
         
-        String str = String.format("[SCORES]\n\n%s: %d\n%s: %d\n\n\n", teamNames[0], scores[0], teamNames[1], scores[1]);
+        String str =
+        String.format("[SCORES]\n\n<Yellow>\n%s: %d\n\n<Red>\n%s: %d\n\n\n",
+                      teamNames[0], scores[0], teamNames[1], scores[1]);
         if (scene < 2) {
             str += "New munchers are landing\n\n\n";
         } else {
@@ -377,8 +386,12 @@ public class NanomunchersVisualizer extends JApplet {
         }
         
         int[] numNewMunchers = getNumNewMunchers(scene);
-        str += String.format("%s:\n%d new munchers\n%d live munchers\n\n\n", teamNames[0], numNewMunchers[0], numNewMunchers[2]);
-        str += String.format("%s:\n%d new munchers\n%d live munchers\n\n\n", teamNames[1], numNewMunchers[1], numNewMunchers[3]);
+        str +=
+        String.format("%s:\n%d new munchers\n%d live munchers\n\n\n", teamNames[0], numNewMunchers[0],
+                      numNewMunchers[2]);
+        str +=
+        String.format("%s:\n%d new munchers\n%d live munchers\n\n\n", teamNames[1], numNewMunchers[1],
+                      numNewMunchers[3]);
         
         g.setColor(Color.BLACK);
         drawMultilineText(g, str, BOARD_WIDTH + 10, 20);
@@ -392,10 +405,10 @@ public class NanomunchersVisualizer extends JApplet {
             }
             if (scene < 2) {
                 if (update.dir != 'n')
-                    numNewMunchers[update.player+2]++;
+                    numNewMunchers[update.player + 2]++;
             } else {
                 if (update.dir != 'n' && update.nextDir != 'x')
-                    numNewMunchers[update.player+2]++;
+                    numNewMunchers[update.player + 2]++;
             }
         }
         return numNewMunchers;
