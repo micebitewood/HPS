@@ -70,7 +70,7 @@ class Game {
         else if (identity.equals("a"))
             bid = ambitiousBid();
         else
-            bid = patientBid();
+            bid = ambitiousBid();
         send(bid + "");
         parseLastBid(receive());
         passedCounts[items.get(round).num]++;
@@ -320,7 +320,7 @@ class Game {
             System.out.println();
             Arrays.sort(secondOrder);
             if (items.get(order[0]).num == type || items.get(secondOrder[0]).num == type) {
-                return 100 / winningNum;
+                return 100 / winningNum + 1;
             }
         } else {
             Player myPlayer = players.get(myId);
@@ -339,11 +339,11 @@ class Game {
                         int winningPosition = positions.get(type).get(passedCounts[type] + winningNum - count - 1);
                         if (winningPosition < myWinningPosition) {
                             System.out.println(player.id + " is gonna win before me! " + winningPosition);
-                            int estimatePrice = player.budget / Math.max(1, (winningNum - count)) / 2 + 1;
+                            int estimatePrice = player.budget / Math.max(1, (winningNum - count)) / 3 + 1;
                             if (winningNum - count == 2)
-                                estimatePrice = player.budget / (winningNum - count);
+                                estimatePrice = player.budget / 4;
                             if (winningNum - count == 1)
-                                estimatePrice = player.budget / (winningNum - count) + 1;
+                                estimatePrice = player.budget + 1;
                             System.out.println(" estimate price is: " + estimatePrice);
                             if (estimatePrice > maxPrice) {
                                 maxPrice = estimatePrice;
