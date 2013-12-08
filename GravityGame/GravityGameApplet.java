@@ -1,13 +1,8 @@
-import java.awt.Button;
 import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.GridLayout;
 import java.awt.Image;
-import java.awt.Label;
-import java.awt.Panel;
-import java.awt.Scrollbar;
-import java.awt.TextField;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
@@ -18,6 +13,11 @@ import java.awt.event.MouseMotionListener;
 import java.util.Random;
 
 import javax.swing.JApplet;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollBar;
+import javax.swing.JTextField;
 
 /**
  * Our improvements:
@@ -47,10 +47,9 @@ MouseMotionListener {
     static final int SIZE_X = 500;
     static final int SIZE_Y = 500;
     static final int NUM_PLANETS = 2;
-    static final int SUM_PLANET_WEIGHTS = 1000; // JL: Should this be a double? JM: I think int is fine.
+    static final int SUM_PLANET_WEIGHTS = 1000;
     static final int NUM_TRIALS = 5;
-    static final double SUM_VELOCITIES = 10; // JL: Should this be a double? JM: I think int is fine but double is
-    // better.
+    static final double SPEED = 5;
     
     static final double SCALER = 1;
     static final int DOT_SIZE = 5;
@@ -58,7 +57,8 @@ MouseMotionListener {
     static final Color COLOR_SOURCE = new Color(127, 127, 255);
     static final Color COLOR_DESTINATION = new Color(255, 127, 63);
     static final Color COLOR_PLANETS = Color.WHITE;
-    static final Color COLOR_PULL = new Color(0, 127, 63);
+    static final Color COLOR_INDICATOR = Color.GREEN;
+    static final Color COLOR_PULL = new Color(0, 95, 47);
     static final double GRADIENT_SCALER = 10.0;
     static final int BOARD_WIDTH = (int) ((SIZE_X + 1) * SCALER + 0.5);
     static final int BOARD_HEIGHT = (int) ((SIZE_Y + 1) * SCALER + 0.5);
@@ -66,7 +66,10 @@ MouseMotionListener {
     static final int APPLET_WIDTH = BOARD_WIDTH + EXTRA_WIDTH;
     static final int APPLET_HEIGHT = BOARD_HEIGHT;
     
-    static final double MIN_DIST_BETWEEN_S_D = 300;
+    static final double MIN_DIST_BETWEEN_S_D = 400;
+    static final double MIN_DIST_BETWEEN_SD_P = 50;
+    static final double MIN_DIST_BETWEEN_PLANETS = 100;
+    static final int MIN_PLANET_WEIGHT = 100;
     
     // Game data
     boolean started; // Has the game started?
@@ -78,7 +81,6 @@ MouseMotionListener {
     int sumVelocities; // Sum of velocities so far
     double bestScore; // Best score so far
     boolean shooting; // Are we shooting now?
-    boolean isEndless; // For seeker mode
     boolean showPlanets; // For seeker mode
     boolean placing; // Are we placing planets now?
     boolean selected; // Is a planet selected?
@@ -86,54 +88,48 @@ MouseMotionListener {
     boolean playing; // Are we playing now?
     String winner;
     String winnerScore;
+    final static String WARNING = "<html>You can keep on playing, but this is your final score: ";
     
     // Extra stuffs
     Random random;
     
     // GUI
     GravityGameCanvas canvas;
-    Panel panelHider;
-    Label labHider;
-    Label labLocX1;
-    Label labLocY1;
-    Label labWeight1;
-    Label labLocX2;
-    Label labLocY2;
-    Label labWeight2;
-    TextField tfLocX1;
-    TextField tfLocY1;
-    TextField tfWeight1;
-    TextField tfLocX2;
-    TextField tfLocY2;
-    TextField tfWeight2;
-    Scrollbar sbWeights;
-    Button butStart;
-    Panel panelSeeker;
-    Label labSeeker;
-    Label labTrial;
-    // Label labVelX;
-    // Label labVelY;
-    Label labVelAngle;
-    Label labScore;
-    TextField tfTrial;
-    // TextField tfVelX;
-    // TextField tfVelY;
-    TextField tfVelAngle;
-    TextField tfScore;
-    Button butShoot;
-    Button butRestart;
+    JPanel panelHider;
+    JLabel labHider;
+    JLabel labLocX1;
+    JLabel labLocY1;
+    JLabel labWeight1;
+    JLabel labLocX2;
+    JLabel labLocY2;
+    JLabel labWeight2;
+    JTextField tfLocX1;
+    JTextField tfLocY1;
+    JTextField tfWeight1;
+    JTextField tfLocX2;
+    JTextField tfLocY2;
+    JTextField tfWeight2;
+    JScrollBar sbWeights;
+    JButton butStart;
+    JPanel panelSeeker;
+    JLabel labSeeker;
+    JLabel labTrial;
+    JLabel labVelAngle;
+    JLabel labScore;
+    JTextField tfTrial;
+    JTextField tfVelAngle;
+    JTextField tfScore;
+    JButton butShoot;
+    JButton butRestart;
+    JLabel warningSeeker;
     
-    private Panel gameModes;
-    private Button seekerMode;
-    private Button manualMode;
-    private Panel seekerModes;
-    private Button endlessMode;
-    private Button storyMode;
-    private Label labGame;
-    private Label labSeekerModes;
-    private Label srcColor;
-    private Label dstColor;
-    private Button changePlanets;
+    private JPanel gameModes;
+    private JButton seekerMode;
+    private JButton manualMode;
+    private JLabel labGame;
+    private JLabel srcColor;
+    private JLabel dstColor;
+    private JButton changePlanets;
     
     public String getWinner() {
         return winner;
@@ -154,55 +150,47 @@ MouseMotionListener {
         canvas.addMouseListener(this);
         canvas.addMouseMotionListener(this);
         
-        gameModes = new Panel();
-        labGame = new Label("Welcom to the gravity game!");
-        srcColor = new Label("Source: Blue");
-        dstColor = new Label("Target: Red");
-        seekerMode = new Button("Seeker Mode");
-        manualMode = new Button("Manual Mode");
+        gameModes = new JPanel();
+        labGame = new JLabel("Welcom to the gravity game!");
+        srcColor = new JLabel("Source: Blue");
+        dstColor = new JLabel("Target: Red");
+        seekerMode = new JButton("Seeker Mode");
+        manualMode = new JButton("Manual Mode");
         
-        seekerModes = new Panel();
-        labSeekerModes = new Label("There are only 5 trials in Story mode");
-        endlessMode = new Button("Endless");
-        storyMode = new Button("Story");
+        panelSeeker = new JPanel();
+        labSeeker = new JLabel("Shoot projectiles!");
+        labTrial = new JLabel("Trial:");
+        labVelAngle = new JLabel("Velocity Angle:");
+        labScore = new JLabel("Score:");
+        tfTrial = new JTextField();
+        tfTrial.setEditable(false);
+        tfVelAngle = new JTextField();
+        tfScore = new JTextField();
+        tfScore.setEditable(false);
+        butShoot = new JButton("Shoot");
+        butRestart = new JButton("Restart");
+        changePlanets = new JButton("Show/Hide Planets");
+        warningSeeker = new JLabel();
         
-        panelHider = new Panel();
-        labHider = new Label("Place your planets");
-        labLocX1 = new Label("Planet 1 X:");
-        labLocY1 = new Label("Planet 1 Y:");
-        labWeight1 = new Label("Planet 1 Weight:");
-        labLocX2 = new Label("Planet 2 X:");
-        labLocY2 = new Label("Planet 2 Y:");
-        labWeight2 = new Label("Planet 2 Weight:");
-        tfLocX1 = new TextField();
-        tfLocY1 = new TextField();
-        tfWeight1 = new TextField();
-        tfLocX2 = new TextField();
-        tfLocY2 = new TextField();
-        tfWeight2 = new TextField();
-        sbWeights = new Scrollbar();
-        sbWeights.setOrientation(Scrollbar.HORIZONTAL);
+        panelHider = new JPanel();
+        labHider = new JLabel("Place your planets");
+        labLocX1 = new JLabel("Planet 1 X:");
+        labLocY1 = new JLabel("Planet 1 Y:");
+        labWeight1 = new JLabel("Planet 1 Weight:");
+        labLocX2 = new JLabel("Planet 2 X:");
+        labLocY2 = new JLabel("Planet 2 Y:");
+        labWeight2 = new JLabel("Planet 2 Weight:");
+        tfLocX1 = new JTextField();
+        tfLocY1 = new JTextField();
+        tfWeight1 = new JTextField();
+        tfLocX2 = new JTextField();
+        tfLocY2 = new JTextField();
+        tfWeight2 = new JTextField();
+        sbWeights = new JScrollBar();
+        sbWeights.setOrientation(JScrollBar.HORIZONTAL);
         sbWeights.setMinimum(10);
         sbWeights.setMaximum(SUM_PLANET_WEIGHTS);
-        butStart = new Button("Start");
-        
-        panelSeeker = new Panel();
-        labSeeker = new Label("Shoot projectiles!");
-        labTrial = new Label("Trial:");
-        // labVelX = new Label("X Velocity:");
-        // labVelY = new Label("Y Velocity:");
-        labVelAngle = new Label("Velocity Angle:");
-        labScore = new Label("Score:");
-        tfTrial = new TextField();
-        tfTrial.setEditable(false);
-        // tfVelX = new TextField();
-        // tfVelY = new TextField();
-        tfVelAngle = new TextField();
-        tfScore = new TextField();
-        tfScore.setEditable(false);
-        butShoot = new Button("Shoot");
-        butRestart = new Button("Restart");
-        changePlanets = new Button("Show/Hide Planets");
+        butStart = new JButton("Start");
         
         createUI();
     }
@@ -218,8 +206,6 @@ MouseMotionListener {
         canvas.setBounds(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
         add(gameModes);
         gameModes.setBounds(BOARD_WIDTH, 0, EXTRA_WIDTH, BOARD_HEIGHT);
-        add(seekerModes);
-        seekerModes.setBounds(BOARD_WIDTH, 0, EXTRA_WIDTH, BOARD_HEIGHT);
         add(panelHider);
         panelHider.setBounds(BOARD_WIDTH, 0, EXTRA_WIDTH, BOARD_HEIGHT);
         add(panelSeeker);
@@ -232,7 +218,7 @@ MouseMotionListener {
     // Checked
     private void createUI() {
         // Temporary panel
-        Panel p;
+        JPanel p;
         
         gameModes.setLayout(new GridLayout(10, 1));
         gameModes.setSize(EXTRA_WIDTH, BOARD_HEIGHT);
@@ -244,44 +230,36 @@ MouseMotionListener {
         seekerMode.addActionListener(this);
         manualMode.addActionListener(this);
         
-        seekerModes.setLayout(new GridLayout(10, 1));
-        seekerModes.setSize(EXTRA_WIDTH, BOARD_HEIGHT);
-        seekerModes.add(labSeekerModes);
-        seekerModes.add(endlessMode);
-        seekerModes.add(storyMode);
-        endlessMode.addActionListener(this);
-        storyMode.addActionListener(this);
-        
         panelHider.setLayout(new GridLayout(10, 1));
         panelHider.setSize(EXTRA_WIDTH, BOARD_HEIGHT);
         panelHider.add(labHider);
-        p = new Panel();
+        p = new JPanel();
         p.setLayout(new GridLayout(1, 2));
         p.add(labLocX1);
         p.add(tfLocX1);
         panelHider.add(p);
-        p = new Panel();
+        p = new JPanel();
         p.setLayout(new GridLayout(1, 2));
         p.add(labLocY1);
         p.add(tfLocY1);
         panelHider.add(p);
-        p = new Panel();
+        p = new JPanel();
         p.setLayout(new GridLayout(1, 2));
         p.add(labWeight1);
         p.add(tfWeight1);
         panelHider.add(p);
         panelHider.add(sbWeights);
-        p = new Panel();
+        p = new JPanel();
         p.setLayout(new GridLayout(1, 2));
         p.add(labLocX2);
         p.add(tfLocX2);
         panelHider.add(p);
-        p = new Panel();
+        p = new JPanel();
         p.setLayout(new GridLayout(1, 2));
         p.add(labLocY2);
         p.add(tfLocY2);
         panelHider.add(p);
-        p = new Panel();
+        p = new JPanel();
         p.setLayout(new GridLayout(1, 2));
         p.add(labWeight2);
         p.add(tfWeight2);
@@ -302,24 +280,17 @@ MouseMotionListener {
         panelSeeker.setLayout(new GridLayout(10, 1));
         panelSeeker.setSize(EXTRA_WIDTH, BOARD_HEIGHT);
         panelSeeker.add(labSeeker);
-        p = new Panel();
+        p = new JPanel();
         p.setLayout(new GridLayout(1, 2));
         p.add(labTrial);
         p.add(tfTrial);
         panelSeeker.add(p);
-        p = new Panel();
+        p = new JPanel();
         p.setLayout(new GridLayout(1, 2));
         p.add(labVelAngle);
         p.add(tfVelAngle);
-        // p.add(labVelX);
-        // p.add(tfVelX);
         panelSeeker.add(p);
-        // p = new Panel();
-        // p.setLayout(new GridLayout(1, 2));
-        // p.add(labVelY);
-        // p.add(tfVelY);
-        // panelSeeker.add(p);
-        p = new Panel();
+        p = new JPanel();
         p.setLayout(new GridLayout(1, 2));
         p.add(labScore);
         p.add(tfScore);
@@ -327,8 +298,7 @@ MouseMotionListener {
         panelSeeker.add(butShoot);
         panelSeeker.add(butRestart);
         panelSeeker.add(changePlanets);
-        // panelSeeker.add(srcColor);
-        // panelSeeker.add(dstColor);
+        panelSeeker.add(warningSeeker);
         tfVelAngle.addActionListener(this);
         butShoot.addActionListener(this);
         butRestart.addActionListener(this);
@@ -340,7 +310,7 @@ MouseMotionListener {
         int y1 = getY(source);
         int x2 = getX(destination);
         int y2 = getY(destination);
-        return Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
+        return Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
     }
     
     private int getLoc(int x, int y) {
@@ -364,6 +334,34 @@ MouseMotionListener {
         return true;
     }
     
+    boolean checkSrcDstLocations() {
+        if (getDist(source, destination) < MIN_DIST_BETWEEN_S_D
+         || getX(source) / (SIZE_X/4) == getX(destination) / (SIZE_X/4)
+         || getY(source) / (SIZE_Y/4) == getY(destination) / (SIZE_Y/4))
+            return false;
+        return true;
+    }
+    
+    boolean checkPlanetLocations() {
+        double distSrcDst = getDist(source, destination);
+        for (int i = 0; i < NUM_PLANETS; ++i) {
+            if (getDist(source, locations[i]) < MIN_DIST_BETWEEN_SD_P
+             || getDist(source, locations[i]) > distSrcDst * 0.7
+             || getDist(destination, locations[i]) < MIN_DIST_BETWEEN_SD_P
+             || getDist(destination, locations[i]) > distSrcDst * 0.7)
+                return false;
+            for (int j = i + 1; j < NUM_PLANETS; ++j)
+                if (getDist(locations[i], locations[j]) < MIN_DIST_BETWEEN_PLANETS)
+                    return false;
+        }
+        double dot = ((getX(source)-getX(destination)) * (getX(locations[0]) - getX(locations[1]))
+                    + (getY(source)-getY(destination)) * (getY(locations[0]) - getY(locations[1])))
+                    / getDist(source, destination) / getDist(locations[0], locations[1]);
+        if (Math.abs(dot) < 0.3)
+            return false;
+        return true;
+    }
+    
     private void initGame() {
         started = false;
         showPlanets = false;
@@ -374,14 +372,15 @@ MouseMotionListener {
         
         // Switch the panel
         gameModes.setVisible(true);
-        seekerModes.setVisible(false);
         panelSeeker.setVisible(false);
         panelHider.setVisible(false);
+        warningSeeker.setText("");
         
-        source = getLoc(random.nextInt(SIZE_X), random.nextInt(SIZE_Y));
         do {
+            source = getLoc(random.nextInt(SIZE_X), random.nextInt(SIZE_Y));
             destination = getLoc(random.nextInt(SIZE_X), random.nextInt(SIZE_Y));
-        } while (getDist(source, destination) < MIN_DIST_BETWEEN_S_D);
+        } while (!checkSrcDstLocations());
+        
         // Default planet locations for NUM_PLANETS=2
         locations[0] = getLoc(SIZE_X / 4, 2 * SIZE_Y / 3);
         locations[1] = getLoc(3 * SIZE_X / 4, SIZE_Y / 4);
@@ -438,9 +437,12 @@ MouseMotionListener {
     }
     
     private void placePlanets() {
-        locations[0] = getLoc(random.nextInt(SIZE_X), random.nextInt(SIZE_Y));
-        locations[1] = getLoc(random.nextInt(SIZE_X), random.nextInt(SIZE_Y));
-        weights[0] = random.nextInt(SUM_PLANET_WEIGHTS);
+        do {
+            locations[0] = getLoc(random.nextInt(SIZE_X), random.nextInt(SIZE_Y));
+            locations[1] = getLoc(random.nextInt(SIZE_X), random.nextInt(SIZE_Y));
+        } while (!checkPlanetLocations());
+        
+        weights[0] = random.nextInt(SUM_PLANET_WEIGHTS - 2 * MIN_PLANET_WEIGHT) + MIN_PLANET_WEIGHT;
         weights[1] = SUM_PLANET_WEIGHTS - weights[0];
     }
     
@@ -448,17 +450,11 @@ MouseMotionListener {
         
         // Switch the panel
         gameModes.setVisible(false);
-        seekerModes.setVisible(false);
         panelHider.setVisible(false);
         panelSeeker.setVisible(true);
         
         // Default values
-        if (!isEndless)
-            tfTrial.setText("1 / " + NUM_TRIALS);
-        else
-            tfTrial.setText("1");
-        // tfVelX.setText("");
-        // tfVelY.setText("");
+        tfTrial.setText("1");
         tfVelAngle.setText("");
         tfScore.setText("N/A");
         
@@ -481,27 +477,17 @@ MouseMotionListener {
         
         double locX = getX(source);
         double locY = getY(source);
-        System.out.println("source locs: " + locX + ", " + locY);
+        // System.out.println("source locs: " + locX + ", " + locY);
         
-        while (locX >= 0 && locX <= SIZE_X && locY >= 0 && locY <= SIZE_Y) {
-            // double sumPulls = 0.0;
-            // for (int i = 0; i < NUM_PLANETS; ++i) {
-            // double[] pulls = getPulls(getX(locations[i]) - locX, getY(locations[i]) - locY, weights[i]);
-            // velX += pulls[0];
-            // velY += pulls[1];
-            // sumPulls += pulls[2];
-            // }
-            
-            // locX += velX;
-            // locY += velY;
-            
-            // updateCanvasSeeker(locX, locY, sumPulls);
+        while (locX >= -SIZE_X && locX <= 2 * SIZE_X && locY >= -SIZE_Y && locY <= 2 * SIZE_Y) {
             
             double[] accel = getAccel(locX, locY);
-            System.out.println("accel: " + accel[0] + ", " + accel[1]);
-            System.out.println("vel: " + velX + ", " + velY);
-            if (Math.abs(accel[2]) > 30)
+            // System.out.println("accel: " + accel[0] + ", " + accel[1]);
+            // System.out.println("vel: " + velX + ", " + velY);
+            
+            if (Math.abs(accel[2]) > 20)
                 break;
+            
             locX += velX + accel[0] / 2;
             locY += velY + accel[1] / 2;
             velX += accel[0];
@@ -520,22 +506,14 @@ MouseMotionListener {
         }
         
         ++trial;
-        if (!isEndless) {
-            if (trial < NUM_TRIALS) {
-                tfTrial.setText((trial + 1) + " / " + NUM_TRIALS);
-            } else {
-                tfTrial.setText("Done shooting");
-                playing = false;
-                butShoot.setEnabled(false);
-                changePlanets.setEnabled(true);
-                winner = "seeker";
-                winnerScore = String.valueOf(tfScore.getText());
-            }
-        } else {
-            tfTrial.setText((trial + 1) + "");
-            if (trial == NUM_TRIALS)
-                changePlanets.setEnabled(true);
+        tfTrial.setText((trial + 1) + "");
+        if (trial == NUM_TRIALS) {
+            changePlanets.setEnabled(true);
+            if (!showPlanets)
+                warningSeeker.setText(WARNING + String.format("%.2f", bestScore));
         }
+        
+        onClickAngle();
         shooting = false;
     }
     
@@ -558,7 +536,6 @@ MouseMotionListener {
     private void updateCanvasSeeker(double locX, double locY, double pull) {
         Graphics g = canvas.getOffscreenGraphics();
         
-        // TODO: Map pull to color gradient
         g.setColor(getGradient(pull));
         g.drawRect((int) (locX * SCALER + 0.5), (int) (locY * SCALER + 0.5), 1, 1);
         
@@ -600,22 +577,17 @@ MouseMotionListener {
     }
     
     private void onClickShoot() {
-        if (shooting) {
-            // If we are already shooting, just return
+        if (shooting)
             return;
-        }
         
-        // if (!isValid(tfVelX.getText()) || !isValid(tfVelY.getText())) {
-        if (!isValid(tfVelAngle.getText())) {
-            // TODO: Display error message
+        if (!isValid(tfVelAngle.getText()))
             return;
-        }
         
         // double velX = Double.parseDouble(tfVelX.getText());
         // double velY = Double.parseDouble(tfVelY.getText());
         double velAngle = Double.parseDouble(tfVelAngle.getText()) * Math.PI / 180;
-        double velX = SUM_VELOCITIES * Math.cos(velAngle);
-        double velY = -SUM_VELOCITIES * Math.sin(velAngle);
+        double velX = SPEED * Math.cos(velAngle);
+        double velY = -SPEED * Math.sin(velAngle);
         
         shootProjectile(velX, velY);
     }
@@ -704,9 +676,8 @@ MouseMotionListener {
         
         // Switch the panel
         gameModes.setVisible(false);
-        seekerModes.setVisible(true);
         panelHider.setVisible(false);
-        panelSeeker.setVisible(false);
+        panelSeeker.setVisible(true);
         
         started = true;
         placing = false;
@@ -714,12 +685,12 @@ MouseMotionListener {
         butShoot.setEnabled(true);
         changePlanets.setEnabled(false);
         placePlanets();
+        startGame();
     }
     
     private void onClickManual() {
         // Switch the panel
         gameModes.setVisible(false);
-        seekerModes.setVisible(false);
         panelHider.setVisible(true);
         panelSeeker.setVisible(false);
         
@@ -730,16 +701,6 @@ MouseMotionListener {
         butShoot.setEnabled(true);
         hiderConfig();
         initCanvasHider();
-    }
-    
-    private void onClickEndless() {
-        isEndless = true;
-        startGame();
-    }
-    
-    private void onClickStory() {
-        isEndless = false;
-        startGame();
     }
     
     private void onClickPlanets() {
@@ -778,7 +739,7 @@ MouseMotionListener {
         g.setColor(COLOR_SOURCE);
         g.fillOval((int) (getX(source) * SCALER) - DOT_SIZE / 2, (int) (getY(source) * SCALER) - DOT_SIZE / 2,
                    DOT_SIZE, DOT_SIZE);
-        // g.drawLine((int) (getX(source) * SCALER), (int) (getY(source) * SCALER), x, y);
+        g.setColor(COLOR_INDICATOR);
         g.drawRect(x, y, 1, 1);
         
         canvas.repaint();
@@ -809,10 +770,6 @@ MouseMotionListener {
             onClickSeeker();
         else if (obj == manualMode)
             onClickManual();
-        else if (obj == endlessMode)
-            onClickEndless();
-        else if (obj == storyMode)
-            onClickStory();
         else if (obj == changePlanets)
             onClickPlanets();
         else if (obj == tfVelAngle)
