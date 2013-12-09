@@ -603,14 +603,14 @@ MouseMotionListener {
     
     private void hiderConfig() {
         tfSrcX.setText("" + getX(source));
-        tfSrcY.setText("" + (SIZE_Y - getY(source)));
+        tfSrcY.setText("" + (SIZE_Y - getY(source) - 1));
         tfDstX.setText("" + getX(destination));
-        tfDstY.setText("" + (SIZE_Y - getY(destination)));
+        tfDstY.setText("" + (SIZE_Y - getY(destination) - 1));
         tfLocX1.setText("" + getX(locations[0]));
-        tfLocY1.setText("" + (SIZE_Y - getY(locations[0])));
+        tfLocY1.setText("" + (SIZE_Y - getY(locations[0]) - 1));
         tfWeight1.setText("" + weights[0]);
         tfLocX2.setText("" + getX(locations[1]));
-        tfLocY2.setText("" + (SIZE_Y - getY(locations[1])));
+        tfLocY2.setText("" + (SIZE_Y - getY(locations[1]) - 1));
         tfWeight2.setText("" + weights[1]);
         sbWeights.setValue(weights[1]);
     }
@@ -750,7 +750,7 @@ MouseMotionListener {
     private void onEditSrcX() {
         try {
             int val = Integer.parseInt(tfSrcX.getText());
-            if (val >= 0 && val <= SIZE_X) {
+            if (val >= 0 && val < SIZE_X) {
                 source = getLoc(val, getY(source));
                 initCanvasHider();
             }
@@ -761,20 +761,20 @@ MouseMotionListener {
     
     private void onEditSrcY() {
         try {
-            int val = SIZE_Y - Integer.parseInt(tfSrcY.getText());
-            if (val >= 0 && val <= SIZE_Y) {
+            int val = SIZE_Y - Integer.parseInt(tfSrcY.getText()) - 1;
+            if (val >= 0 && val < SIZE_Y) {
                 source = getLoc(getX(source), val);
                 initCanvasHider();
             }
         } catch (NumberFormatException e) {
         }
-        tfSrcY.setText("" + (SIZE_Y - getY(source)));
+        tfSrcY.setText("" + (SIZE_Y - getY(source) - 1));
     }
     
     private void onEditDstX() {
         try {
             int val = Integer.parseInt(tfDstX.getText());
-            if (val >= 0 && val <= SIZE_X) {
+            if (val >= 0 && val < SIZE_X) {
                 destination = getLoc(val, getY(destination));
                 initCanvasHider();
             }
@@ -785,20 +785,20 @@ MouseMotionListener {
     
     private void onEditDstY() {
         try {
-            int val = SIZE_Y - Integer.parseInt(tfDstY.getText());
-            if (val >= 0 && val <= SIZE_Y) {
+            int val = SIZE_Y - Integer.parseInt(tfDstY.getText()) - 1;
+            if (val >= 0 && val < SIZE_Y) {
                 destination = getLoc(getX(destination), val);
                 initCanvasHider();
             }
         } catch (NumberFormatException e) {
         }
-        tfDstY.setText("" + (SIZE_Y - getY(destination)));
+        tfDstY.setText("" + (SIZE_Y - getY(destination) - 1));
     }
     
     private void onEditLocX1() {
         try {
             int val = Integer.parseInt(tfLocX1.getText());
-            if (val >= 0 && val <= SIZE_X) {
+            if (val >= 0 && val < SIZE_X) {
                 locations[0] = getLoc(val, getY(locations[0]));
                 initCanvasHider();
             }
@@ -809,14 +809,14 @@ MouseMotionListener {
     
     private void onEditLocY1() {
         try {
-            int val = SIZE_Y - Integer.parseInt(tfLocY1.getText());
-            if (val >= 0 && val <= SIZE_Y) {
+            int val = SIZE_Y - Integer.parseInt(tfLocY1.getText()) - 1;
+            if (val >= 0 && val < SIZE_Y) {
                 locations[0] = getLoc(getX(locations[0]), val);
                 initCanvasHider();
             }
         } catch (NumberFormatException e) {
         }
-        tfLocY1.setText("" + (SIZE_Y - getY(locations[0])));
+        tfLocY1.setText("" + (SIZE_Y - getY(locations[0]) - 1));
     }
     
     private void onEditWeight1() {
@@ -837,7 +837,7 @@ MouseMotionListener {
     private void onEditLocX2() {
         try {
             int val = Integer.parseInt(tfLocX2.getText());
-            if (val >= 0 && val <= SIZE_X) {
+            if (val >= 0 && val < SIZE_X) {
                 locations[1] = getLoc(val, getY(locations[1]));
                 initCanvasHider();
             }
@@ -848,14 +848,14 @@ MouseMotionListener {
     
     private void onEditLocY2() {
         try {
-            int val = SIZE_Y - Integer.parseInt(tfLocY2.getText());
-            if (val >= 0 && val <= SIZE_Y) {
+            int val = SIZE_Y - Integer.parseInt(tfLocY2.getText()) - 1;
+            if (val >= 0 && val < SIZE_Y) {
                 locations[1] = getLoc(getX(locations[1]), val);
                 initCanvasHider();
             }
         } catch (NumberFormatException e) {
         }
-        tfLocY2.setText("" + (SIZE_Y - getY(locations[1])));
+        tfLocY2.setText("" + (SIZE_Y - getY(locations[1]) - 1));
     }
     
     private void onEditWeight2() {
