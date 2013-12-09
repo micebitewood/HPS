@@ -659,6 +659,9 @@ MouseMotionListener {
             tfTrial.setText("FINISHED");
             warningSeeker.setVisible(true);
             changePlanets.setEnabled(true);
+            
+            winner = "Seeker";
+            winnerScore = bestScore + "";
         }
         
         onClickAngle();
