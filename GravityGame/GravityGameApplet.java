@@ -62,7 +62,7 @@ MouseMotionListener {
     static final double GRADIENT_SCALER = 4.0;
     static final int BOARD_WIDTH = (int) ((SIZE_X + 1) * SCALER + 0.5);
     static final int BOARD_HEIGHT = (int) ((SIZE_Y + 1) * SCALER + 0.5);
-    static final int EXTRA_WIDTH = 240;
+    static final int EXTRA_WIDTH = 250;
     static final int APPLET_WIDTH = BOARD_WIDTH + EXTRA_WIDTH;
     static final int APPLET_HEIGHT = BOARD_HEIGHT;
     static final Color COLOR_PANEL_TEXTS = new Color(178, 167, 160);
@@ -165,18 +165,18 @@ MouseMotionListener {
         gameModes.setBackground(COLOR_PANEL_BACKGROUND);
         labGame = new JLabel("<html><b>Welcome to the Gravity Game!</b></html>", JLabel.CENTER);
         labGame.setForeground(COLOR_PANEL_TEXTS);
-        labInstr = new JLabel("<html>Send a projectile from source (blue) to target (red) in an unknown gravitational field by two planets.</html>");
+        labInstr = new JLabel("<html><center>Send a projectile from source (blue) to target (red) in an unknown gravitational field by two planets.</center></html>");
         labInstr.setForeground(COLOR_PANEL_TEXTS);
-        labModes = new JLabel("<html>You can play a normal game with hidden planets in seeker mode, or a practice game with custom positions in manual mode.</html>");
+        labModes = new JLabel("<html><center>You can play a normal game with hidden planets in seeker mode, or a practice game with custom positions in manual mode.</center></html>");
         labModes.setForeground(COLOR_PANEL_TEXTS);
-        labGoal = new JLabel("<html>You have 5 chances to shoot. Your score is the closest distance you get to the target. The score is only recorded in seeker mode.</html>");
+        labGoal = new JLabel("<html><center>You have 5 chances to shoot. Your score is the closest distance you get to the target. The score is only recorded in seeker mode.</center></html>");
         labGoal.setForeground(COLOR_PANEL_TEXTS);
         seekerMode = new JButton("Start Game in Seeker Mode");
         manualMode = new JButton("Place Planets in Manual Mode");
         
         panelSeeker = new JPanel();
         panelSeeker.setBackground(COLOR_PANEL_BACKGROUND);
-        labSeeker = new JLabel("<html><b>Aim and shoot projectiles!</b></html>", JLabel.CENTER);
+        labSeeker = new JLabel("<html><b>Aim and click on screen to shoot!</b></html>", JLabel.CENTER);
         labSeeker.setForeground(COLOR_PANEL_TEXTS);
         labTrial = new JLabel("Trial:", JLabel.RIGHT);
         labTrial.setForeground(COLOR_PANEL_TEXTS);
@@ -195,10 +195,10 @@ MouseMotionListener {
         tfScore.setForeground(COLOR_PANEL_TEXTS);
         tfScore.setBackground(COLOR_PANEL_BACKGROUND);
         tfScore.setEditable(false);
-        butShoot = new JButton("Shoot");
+        butShoot = new JButton("Shoot Projectile");
         butRestart = new JButton("Restart");
         changePlanets = new JButton("Show/Hide Planets");
-        warningSeeker = new JLabel("<html>You can keep playing, but the score will not be updated.</html>");
+        warningSeeker = new JLabel("<html><center>You can keep playing, but the score will not be updated.</center></html>");
         warningSeeker.setForeground(COLOR_PANEL_TEXTS);
         warningSeeker.setVisible(false);
         
