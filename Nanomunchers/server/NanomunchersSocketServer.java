@@ -208,12 +208,14 @@ public class NanomunchersSocketServer {
                 if (isLarger(dir1, dir2)) {
                     vizUpdate.remove("1," + id + "," + dir2);
                     vizUpdate.put("1," + id + "," + dir2, "x");
+                    muncher2.programCounter = -1;
                     System.out.println("       " + player1.teamName + "'s muncher wins and lives on");
                     player2.idToMunchers.remove(id);
                     player2.score--;
                 } else {
                     vizUpdate.remove("0," + id + "," + dir1);
                     vizUpdate.put("0," + id + "," + dir1, "x");
+                    muncher1.programCounter = -1;
                     System.out.println("       " + player2.teamName + "'s muncher wins and lives on");
                     player1.idToMunchers.remove(id);
                     player1.score--;
@@ -390,6 +392,7 @@ class Player extends Thread {
                 Map<Character, Integer> edges = game.edges.get(muncher.position);
                 if (edges == null) {
                     game.vizUpdate.put(playerid + "," + muncher.position + ",x", "x");
+                    muncher.programCounter = -1;
                     System.out.println("       Nowhere to go, starved at node " + muncher.position);
                     continue;
                 }
@@ -405,7 +408,8 @@ class Player extends Thread {
                                                + game.locations.get(id)[0] + ", " + game.locations.get(id)[1] + ")");
                             char prevDirection = moves.get(id).program.charAt(moves.get(id).programCounter);
                             if (game.isLarger(prevDirection, direction)) {
-                                game.vizUpdate.put(playerid + "," + id + "," + direction, "x");
+                                game.vizUpdate.put(playerid + "," + muncher.position + "," + direction, "x");
+                                muncher.programCounter = -1;
                                 System.out.println("       Confliction detected at " + id + ", this muncher dies");
                                 break;
                             } else {
