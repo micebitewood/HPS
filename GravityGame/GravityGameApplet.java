@@ -51,20 +51,20 @@ MouseMotionListener {
     static final int NUM_TRIALS = 5;
     static final double SPEED = 3;
     
-    static final double SCALER = 1;
-    static final int DOT_SIZE = 5;
-    static final int INDICATOR_DIST = DOT_SIZE / 2 + 2;
+    static final int PLANET_SIZE = 13;
+    static final int INDICATOR_DIST = PLANET_SIZE / 2 + 2;
     static final Color COLOR_SOURCE = new Color(127, 127, 255);
-    static final Color COLOR_DESTINATION = new Color(255, 127, 63);
+    static final Color COLOR_DESTINATION = new Color(255, 63, 63);
     static final Color COLOR_PLANETS = Color.WHITE;
     static final Color COLOR_INDICATOR = Color.GREEN;
     static final Color COLOR_PULL = new Color(41, 47, 24);
     static final double GRADIENT_SCALER = 4.0;
-    static final int BOARD_WIDTH = (int) ((SIZE_X + 1) * SCALER + 0.5);
-    static final int BOARD_HEIGHT = (int) ((SIZE_Y + 1) * SCALER + 0.5);
+    static final int BOARD_WIDTH = SIZE_X + 1;
+    static final int BOARD_HEIGHT = SIZE_Y + 1;
     static final int EXTRA_WIDTH = 250;
+    static final int EXTRA_HEIGHT = 24;
     static final int APPLET_WIDTH = BOARD_WIDTH + EXTRA_WIDTH;
-    static final int APPLET_HEIGHT = BOARD_HEIGHT;
+    static final int APPLET_HEIGHT = BOARD_HEIGHT + EXTRA_HEIGHT;
     static final Color COLOR_PANEL_TEXTS = new Color(178, 167, 160);
     static final Color COLOR_PANEL_BACKGROUND = new Color(51, 37, 24);
     
@@ -72,6 +72,8 @@ MouseMotionListener {
     static final double MIN_DIST_BETWEEN_SD_P = 50;
     static final double MIN_DIST_BETWEEN_PLANETS = 100;
     static final int MIN_PLANET_WEIGHT = 100;
+    
+    final double[] PLANET_SHADE = getPlanetShade();
     
     // Game data
     boolean started; // Has the game started?
@@ -132,6 +134,8 @@ MouseMotionListener {
     JButton butShoot;
     JButton butRestart;
     JLabel warningSeeker;
+    JPanel panelAuthors;
+    JLabel labAuthors;
     
     private JPanel gameModes;
     private JButton seekerMode;
@@ -201,6 +205,11 @@ MouseMotionListener {
         warningSeeker = new JLabel("<html><center>You can keep playing, but the score will not be updated.</center></html>");
         warningSeeker.setForeground(COLOR_PANEL_TEXTS);
         warningSeeker.setVisible(false);
+        
+        panelAuthors = new JPanel();
+        panelAuthors.setBackground(COLOR_PANEL_BACKGROUND);
+        labAuthors = new JLabel("<html><center><b>JJ</b>: Jun Hee Lee, John Mu (2013)</center></html>");
+        labAuthors.setForeground(COLOR_PANEL_TEXTS);
         
         panelHider = new JPanel();
         panelHider.setBackground(COLOR_PANEL_BACKGROUND);
@@ -276,11 +285,13 @@ MouseMotionListener {
         add(canvas);
         canvas.setBounds(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
         add(gameModes);
-        gameModes.setBounds(BOARD_WIDTH, 0, EXTRA_WIDTH, BOARD_HEIGHT);
+        gameModes.setBounds(BOARD_WIDTH, 0, EXTRA_WIDTH, APPLET_HEIGHT);
         add(panelHider);
-        panelHider.setBounds(BOARD_WIDTH, 0, EXTRA_WIDTH, BOARD_HEIGHT);
+        panelHider.setBounds(BOARD_WIDTH, 0, EXTRA_WIDTH, APPLET_HEIGHT);
         add(panelSeeker);
-        panelSeeker.setBounds(BOARD_WIDTH, 0, EXTRA_WIDTH, BOARD_HEIGHT);
+        panelSeeker.setBounds(BOARD_WIDTH, 0, EXTRA_WIDTH, APPLET_HEIGHT);
+        add(panelAuthors);
+        panelAuthors.setBounds(0, BOARD_HEIGHT, BOARD_WIDTH, EXTRA_HEIGHT);
         
         // Init game
         initGame();
@@ -419,6 +430,8 @@ MouseMotionListener {
         butShoot.addActionListener(this);
         butRestart.addActionListener(this);
         changePlanets.addActionListener(this);
+        
+        panelAuthors.add(labAuthors);
     }
     
     private double getDist(int source, int destination) {
@@ -515,18 +528,42 @@ MouseMotionListener {
         initCanvasSeeker();
     }
     
+    private double[] getPlanetShade() {
+        double[] planetShade = new double[PLANET_SIZE * PLANET_SIZE];
+        double halfSize = (double) PLANET_SIZE / 2;
+        
+        for (int i = 0; i < PLANET_SIZE; ++i) {
+            double x = ((double) i - halfSize) / halfSize;
+            int w = (int) (Math.sqrt(1.0 - x * x) * halfSize + 0.5);
+            for (int j = -w + (int) (halfSize + 0.5); j < w + (int) (halfSize + 0.5); ++j) {
+                double y = ((double) j - halfSize) / halfSize;
+                double z = Math.sqrt(1.0 - x * x - y * y);
+                planetShade[i * PLANET_SIZE + j] = 0.3 + 0.7 * Math.pow(Math.max((x * .35 - y * .35 + z * .87), 0.0), 1.5);
+            }
+        }
+        
+        return planetShade;
+    }
+    
+    private void drawPlanet(Graphics g, Color c, double x, double y) {
+        for (int i = 0; i < PLANET_SIZE * PLANET_SIZE; ++i)
+            if (PLANET_SHADE[i] > 0) {
+                g.setColor(new Color((int) (c.getRed() * PLANET_SHADE[i]),
+                        (int) (c.getGreen() * PLANET_SHADE[i]),
+                        (int) (c.getBlue() * PLANET_SHADE[i])));
+                g.drawLine((int) x + i / PLANET_SIZE - PLANET_SIZE / 2, (int) y + i % PLANET_SIZE - PLANET_SIZE / 2,
+                        (int) x + i / PLANET_SIZE - PLANET_SIZE / 2, (int) y + i % PLANET_SIZE - PLANET_SIZE / 2);
+            }
+    }
+    
     private void initCanvasSeeker() {
         Graphics g = canvas.getOffscreenGraphics();
         
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
         
-        g.setColor(COLOR_SOURCE);
-        g.fillOval((int) (getX(source) * SCALER) - DOT_SIZE / 2, (int) (getY(source) * SCALER) - DOT_SIZE / 2,
-                   DOT_SIZE, DOT_SIZE);
-        g.setColor(COLOR_DESTINATION);
-        g.fillOval((int) (getX(destination) * SCALER) - DOT_SIZE / 2,
-                   (int) (getY(destination) * SCALER) - DOT_SIZE / 2, DOT_SIZE, DOT_SIZE);
+        drawPlanet(g, COLOR_SOURCE, getX(source), getY(source));
+        drawPlanet(g, COLOR_DESTINATION, getX(destination), getY(destination));
         
         canvas.repaint();
     }
@@ -537,18 +574,11 @@ MouseMotionListener {
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, BOARD_WIDTH, BOARD_HEIGHT);
         
-        g.setColor(COLOR_SOURCE);
-        g.fillOval((int) (getX(source) * SCALER) - DOT_SIZE / 2, (int) (getY(source) * SCALER) - DOT_SIZE / 2,
-                   DOT_SIZE, DOT_SIZE);
-        g.setColor(COLOR_DESTINATION);
-        g.fillOval((int) (getX(destination) * SCALER) - DOT_SIZE / 2,
-                   (int) (getY(destination) * SCALER) - DOT_SIZE / 2, DOT_SIZE, DOT_SIZE);
+        drawPlanet(g, COLOR_SOURCE, getX(source), getY(source));
+        drawPlanet(g, COLOR_DESTINATION, getX(destination), getY(destination));
         
-        for (int i = 0; i < NUM_PLANETS; ++i) {
-            g.setColor(getPlanetColor(weights[i]));
-            g.fillOval((int) (getX(locations[i]) * SCALER) - DOT_SIZE / 2, (int) (getY(locations[i]) * SCALER)
-                       - DOT_SIZE / 2, DOT_SIZE, DOT_SIZE);
-        }
+        for (int i = 0; i < NUM_PLANETS; ++i)
+            drawPlanet(g, getPlanetColor(weights[i]), getX(locations[i]), getY(locations[i]));
         
         canvas.repaint();
     }
@@ -688,7 +718,7 @@ MouseMotionListener {
         Graphics g = canvas.getOffscreenGraphics();
         
         g.setColor(getGradient(pull));
-        g.drawRect((int) (locX * SCALER + 0.5), (int) (locY * SCALER + 0.5), 1, 1);
+        g.drawRect((int) (locX + 0.5), (int) (locY + 0.5), 1, 1);
         
         canvas.repaint();
     }
@@ -912,16 +942,13 @@ MouseMotionListener {
         
         showPlanets = !showPlanets;
         if (showPlanets) {
-            for (int i = 0; i < NUM_PLANETS; ++i) {
-                g.setColor(getPlanetColor(weights[i]));
-                g.fillOval((int) (getX(locations[i]) * SCALER) - DOT_SIZE / 2, (int) (getY(locations[i]) * SCALER)
-                           - DOT_SIZE / 2, DOT_SIZE, DOT_SIZE);
-            }
+            for (int i = 0; i < NUM_PLANETS; ++i)
+                drawPlanet(g, getPlanetColor(weights[i]), getX(locations[i]), getY(locations[i]));
         } else {
             g.setColor(Color.BLACK);
             for (int i = 0; i < NUM_PLANETS; ++i)
-                g.fillOval((int) (getX(locations[i]) * SCALER) - DOT_SIZE / 2, (int) (getY(locations[i]) * SCALER)
-                           - DOT_SIZE / 2, DOT_SIZE, DOT_SIZE);
+                g.fillOval(getX(locations[i]) - PLANET_SIZE / 2,
+                           getY(locations[i]) - PLANET_SIZE / 2, PLANET_SIZE, PLANET_SIZE);
         }
         canvas.repaint();
     }
@@ -938,12 +965,10 @@ MouseMotionListener {
         int y = (int) (getY(source) - Math.sin(angle) * INDICATOR_DIST + 0.5);
         
         g.setColor(Color.BLACK);
-        g.fillOval((int) (getX(source) * SCALER) - DOT_SIZE / 2 - INDICATOR_DIST,
-                   (int) (getY(source) * SCALER) - DOT_SIZE / 2 - INDICATOR_DIST,
-                   DOT_SIZE + INDICATOR_DIST * 2 + 1, DOT_SIZE + INDICATOR_DIST * 2 + 1);
-        g.setColor(COLOR_SOURCE);
-        g.fillOval((int) (getX(source) * SCALER) - DOT_SIZE / 2, (int) (getY(source) * SCALER) - DOT_SIZE / 2,
-                   DOT_SIZE, DOT_SIZE);
+        g.fillOval(getX(source) - PLANET_SIZE / 2 - INDICATOR_DIST,
+                   getY(source) - PLANET_SIZE / 2 - INDICATOR_DIST,
+                   PLANET_SIZE + INDICATOR_DIST * 2 + 1, PLANET_SIZE + INDICATOR_DIST * 2 + 1);
+        drawPlanet(g, COLOR_SOURCE, getX(source), getY(source));
         g.setColor(COLOR_INDICATOR);
         g.drawRect(x, y, 1, 1);
         
@@ -1007,7 +1032,7 @@ MouseMotionListener {
         int planet = -1;
         double minDist = SIZE_X * SIZE_X + SIZE_Y * SIZE_Y;
         for (int i = 0; i < NUM_PLANETS; ++i) {
-            double dist = getDist(locations[i], getLoc((int) (x / SCALER), (int) (y / SCALER)));
+            double dist = getDist(locations[i], getLoc(x, y));
             if (dist < minDist) {
                 planet = i;
                 minDist = dist;
@@ -1019,12 +1044,12 @@ MouseMotionListener {
             selected = true;
             selectedPlanet = planet;
         } else {
-            double dist = getDist(source, getLoc((int) (x / SCALER), (int) (y / SCALER)));
+            double dist = getDist(source, getLoc(x, y));
             if (dist < 10) {
                 selected = true;
                 selectedPlanet = Integer.MAX_VALUE;
             } else {
-                dist = getDist(destination, getLoc((int) (x / SCALER), (int) (y / SCALER)));
+                dist = getDist(destination, getLoc(x, y));
                 if (dist < 10) {
                     selected = true;
                     selectedPlanet = Integer.MIN_VALUE;
@@ -1042,8 +1067,8 @@ MouseMotionListener {
         int y = e.getY() - 4;
         
         // Calculate new planet location
-        int newX = (int) (x / SCALER + 0.5);
-        int newY = (int) (y / SCALER + 0.5);
+        int newX = x;
+        int newY = y;
         
         // Check ranges
         if (newX < 0)
