@@ -167,7 +167,7 @@ MouseMotionListener {
         
         gameModes = new JPanel();
         gameModes.setBackground(COLOR_PANEL_BACKGROUND);
-        labGame = new JLabel("<html><b>Welcome to the Gravity Game!</b></html>", JLabel.CENTER);
+        labGame = new JLabel("<html><b>Welcome to Gravity Game!</b></html>", JLabel.CENTER);
         labGame.setForeground(COLOR_PANEL_TEXTS);
         labInstr = new JLabel("<html><center>Send a projectile from source (blue) to target (red) in an unknown gravitational field by two planets.</center></html>");
         labInstr.setForeground(COLOR_PANEL_TEXTS);
